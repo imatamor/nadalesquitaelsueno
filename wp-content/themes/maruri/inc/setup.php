@@ -76,3 +76,14 @@ function maruri_register_sidebars() {
 	);
 }
 add_action( 'widgets_init', 'maruri_register_sidebars' );
+
+/**
+ * Nombre: maruri_disable_block_widgets_editor
+ * Descripcion: Fuerza la pantalla clasica de widgets para evitar incompatibilidades del editor por bloques en este theme.
+ * Uso: Hookeada al filtro use_widgets_block_editor.
+ * Retorna: False para desactivar el editor de widgets por bloques.
+ */
+function maruri_disable_block_widgets_editor() {
+	return false;
+}
+add_filter( 'use_widgets_block_editor', 'maruri_disable_block_widgets_editor' );
