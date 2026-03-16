@@ -22,6 +22,33 @@ function maruri_get_theme_options() {
 }
 
 /**
+ * Nombre: maruri_get_theme_option_defaults
+ * Descripcion: Define valores por defecto reutilizables para opciones clave del theme.
+ * Uso: $defaults = maruri_get_theme_option_defaults();
+ * Retorna: Array asociativo con defaults del theme.
+ */
+function maruri_get_theme_option_defaults() {
+	return array(
+		'brand_name'       => '',
+		'contact_email'    => '',
+		'footer_copyright' => '',
+		'sidebar_behavior' => 'auto',
+		'social_links'     => '',
+		'accent_color'     => '#9a3412',
+		'background_color' => '#f5f1e8',
+		'surface_color'    => '#fffdf8',
+		'text_color'       => '#1e1d1a',
+		'shell_width'      => 0,
+		'reading_width'    => 0,
+		'custom_css'       => '',
+		'custom_js'        => '',
+		'head_scripts'     => '',
+		'body_open_scripts'=> '',
+		'footer_scripts'   => '',
+	);
+}
+
+/**
  * Nombre: maruri_get_theme_option
  * Descripcion: Devuelve una opcion puntual del theme usando un fallback si no existe.
  * Uso: maruri_get_theme_option( 'brand_name', get_bloginfo( 'name' ) )
@@ -33,7 +60,17 @@ function maruri_get_theme_options() {
 function maruri_get_theme_option( $key, $default = '' ) {
 	$options = maruri_get_theme_options();
 
-	return isset( $options[ $key ] ) ? $options[ $key ] : $default;
+	if ( isset( $options[ $key ] ) ) {
+		return $options[ $key ];
+	}
+
+	$defaults = maruri_get_theme_option_defaults();
+
+	if ( array_key_exists( $key, $defaults ) ) {
+		return $defaults[ $key ];
+	}
+
+	return $default;
 }
 
 /**
@@ -187,7 +224,7 @@ function maruri_get_social_links() {
 function maruri_get_social_icon_svg( $network ) {
 	$network = sanitize_key( $network );
 	$icons   = array(
-		'instagram' => '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4.25"></circle><circle cx="17.25" cy="6.75" r="1.25"></circle></svg>',
+		'instagram' => '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="1.75"></rect><circle cx="12" cy="12" r="4.25" fill="none" stroke="currentColor" stroke-width="1.75"></circle><circle cx="17.25" cy="6.75" r="1.25" fill="currentColor"></circle></svg>',
 		'linkedin'  => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 8.25a1.75 1.75 0 1 1 0-3.5 1.75 1.75 0 0 1 0 3.5Zm-1.5 2.25h3v9H5v-9Zm5 0h2.88v1.3h.04c.4-.76 1.38-1.55 2.83-1.55 3.03 0 3.59 1.99 3.59 4.58v4.67h-3v-4.14c0-.99-.02-2.26-1.38-2.26-1.38 0-1.59 1.08-1.59 2.19v4.21h-3v-9Z"></path></svg>',
 		'facebook'  => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.25 20v-7h2.35l.4-3h-2.75V8.12c0-.87.24-1.46 1.49-1.46H16V4.02c-.23-.03-1.03-.1-1.96-.1-1.94 0-3.29 1.18-3.29 3.36V10H8.5v3h2.25v7h2.5Z"></path></svg>',
 		'youtube'   => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.1 8.2a2.98 2.98 0 0 0-2.1-2.1C17.1 5.5 12 5.5 12 5.5s-5.1 0-7 .6A2.98 2.98 0 0 0 2.9 8.2c-.5 1.9-.5 3.8-.5 3.8s0 1.9.5 3.8a2.98 2.98 0 0 0 2.1 2.1c1.9.6 7 .6 7 .6s5.1 0 7-.6a2.98 2.98 0 0 0 2.1-2.1c.5-1.9.5-3.8.5-3.8s0-1.9-.5-3.8ZM10 15.25v-6.5L15.5 12 10 15.25Z"></path></svg>',

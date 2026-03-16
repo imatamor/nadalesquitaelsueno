@@ -26,6 +26,25 @@ function maruri_register_theme_options_page() {
 add_action( 'admin_menu', 'maruri_register_theme_options_page' );
 
 /**
+ * Nombre: maruri_enqueue_theme_options_assets
+ * Descripcion: Carga estilos y scripts livianos para mejorar la experiencia del panel de opciones del theme.
+ * Uso: Hookeada a admin_enqueue_scripts.
+ * Parametros:
+ * - $hook_suffix: Pantalla actual de admin.
+ */
+function maruri_enqueue_theme_options_assets( $hook_suffix ) {
+	if ( 'appearance_page_maruri-theme-options' !== $hook_suffix ) {
+		return;
+	}
+
+	wp_enqueue_style( 'wp-color-picker' );
+	wp_enqueue_style( 'maruri-admin-options', MARURI_THEME_URL . '/assets/css/admin-options.css', array( 'wp-color-picker' ), MARURI_THEME_VERSION );
+	wp_enqueue_script( 'wp-color-picker' );
+	wp_enqueue_script( 'maruri-admin-options', MARURI_THEME_URL . '/assets/js/admin-options.js', array( 'jquery', 'wp-color-picker' ), MARURI_THEME_VERSION, true );
+}
+add_action( 'admin_enqueue_scripts', 'maruri_enqueue_theme_options_assets' );
+
+/**
  * Nombre: maruri_register_theme_settings
  * Descripcion: Registra ajustes y campos del theme para branding, contacto y snippets globales.
  * Uso: Hookeada a admin_init.
@@ -94,10 +113,10 @@ function maruri_register_theme_settings() {
 		'maruri-theme-options'
 	);
 
-	add_settings_field( 'accent_color', __( 'Accent Color', 'maruri' ), 'maruri_render_text_field', 'maruri-theme-options', 'maruri_design_section', array( 'key' => 'accent_color', 'type' => 'color' ) );
-	add_settings_field( 'background_color', __( 'Background Color', 'maruri' ), 'maruri_render_text_field', 'maruri-theme-options', 'maruri_design_section', array( 'key' => 'background_color', 'type' => 'color' ) );
-	add_settings_field( 'surface_color', __( 'Surface Color', 'maruri' ), 'maruri_render_text_field', 'maruri-theme-options', 'maruri_design_section', array( 'key' => 'surface_color', 'type' => 'color' ) );
-	add_settings_field( 'text_color', __( 'Text Color', 'maruri' ), 'maruri_render_text_field', 'maruri-theme-options', 'maruri_design_section', array( 'key' => 'text_color', 'type' => 'color' ) );
+	add_settings_field( 'accent_color', __( 'Accent Color', 'maruri' ), 'maruri_render_color_field', 'maruri-theme-options', 'maruri_design_section', array( 'key' => 'accent_color' ) );
+	add_settings_field( 'background_color', __( 'Background Color', 'maruri' ), 'maruri_render_color_field', 'maruri-theme-options', 'maruri_design_section', array( 'key' => 'background_color' ) );
+	add_settings_field( 'surface_color', __( 'Surface Color', 'maruri' ), 'maruri_render_color_field', 'maruri-theme-options', 'maruri_design_section', array( 'key' => 'surface_color' ) );
+	add_settings_field( 'text_color', __( 'Text Color', 'maruri' ), 'maruri_render_color_field', 'maruri-theme-options', 'maruri_design_section', array( 'key' => 'text_color' ) );
 	add_settings_field( 'shell_width', __( 'Shell Width (px)', 'maruri' ), 'maruri_render_text_field', 'maruri-theme-options', 'maruri_design_section', array( 'key' => 'shell_width', 'type' => 'number' ) );
 	add_settings_field( 'reading_width', __( 'Reading Width (px)', 'maruri' ), 'maruri_render_text_field', 'maruri-theme-options', 'maruri_design_section', array( 'key' => 'reading_width', 'type' => 'number' ) );
 
@@ -164,6 +183,35 @@ function maruri_render_text_field( $args ) {
 	<?php if ( ! empty( $args['description'] ) ) : ?>
 		<p class="description"><?php echo esc_html( $args['description'] ); ?></p>
 	<?php endif; ?>
+	<?php
+}
+
+/**
+ * Nombre: maruri_render_color_field
+ * Descripcion: Imprime un campo de color compacto con accion para volver al valor por defecto del theme.
+ * Uso: Callback de add_settings_field para tokens de color.
+ * Parametros:
+ * - $args: Configuracion del campo.
+ */
+function maruri_render_color_field( $args ) {
+	$key      = isset( $args['key'] ) ? $args['key'] : '';
+	$defaults = maruri_get_theme_option_defaults();
+	$default  = isset( $defaults[ $key ] ) ? $defaults[ $key ] : '';
+	$value    = maruri_get_theme_option( $key, $default );
+	?>
+	<div class="maruri-color-field">
+		<input
+			class="maruri-color-picker"
+			type="text"
+			name="maruri_theme_options[<?php echo esc_attr( $key ); ?>]"
+			value="<?php echo esc_attr( $value ); ?>"
+			data-default-color="<?php echo esc_attr( $default ); ?>"
+			data-maruri-default="<?php echo esc_attr( $default ); ?>"
+		>
+		<button type="button" class="button button-secondary maruri-color-reset" data-target-name="maruri_theme_options[<?php echo esc_attr( $key ); ?>]" data-default-color="<?php echo esc_attr( $default ); ?>">
+			<?php esc_html_e( 'Default', 'maruri' ); ?>
+		</button>
+	</div>
 	<?php
 }
 
