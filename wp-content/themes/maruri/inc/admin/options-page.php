@@ -188,7 +188,7 @@ function maruri_render_text_field( $args ) {
 
 /**
  * Nombre: maruri_render_color_field
- * Descripcion: Imprime un campo de color compacto con accion para volver al valor por defecto del theme.
+ * Descripcion: Imprime un campo de color compacto usando el color picker nativo de WordPress.
  * Uso: Callback de add_settings_field para tokens de color.
  * Parametros:
  * - $args: Configuracion del campo.
@@ -206,11 +206,7 @@ function maruri_render_color_field( $args ) {
 			name="maruri_theme_options[<?php echo esc_attr( $key ); ?>]"
 			value="<?php echo esc_attr( $value ); ?>"
 			data-default-color="<?php echo esc_attr( $default ); ?>"
-			data-maruri-default="<?php echo esc_attr( $default ); ?>"
 		>
-		<button type="button" class="button button-secondary maruri-color-reset" data-target-name="maruri_theme_options[<?php echo esc_attr( $key ); ?>]" data-default-color="<?php echo esc_attr( $default ); ?>">
-			<?php esc_html_e( 'Default', 'maruri' ); ?>
-		</button>
 	</div>
 	<?php
 }

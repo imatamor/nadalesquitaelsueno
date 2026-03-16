@@ -1,35 +1,16 @@
 .maruri-color-field {
-	display: flex;
-	align-items: center;
-	gap: 8px;
+	display: inline-block;
 }
 
 .maruri-color-field .wp-picker-container {
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
+	display: inline-block;
 }
 
 .maruri-color-field .wp-color-result.button {
 	margin: 0;
 }
 
-.maruri-color-field .wp-picker-input-wrap {
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-}
-
-.maruri-color-field .wp-picker-input-wrap label {
-	display: inline-flex;
-	align-items: center;
-}
-
-.maruri-color-field .wp-color-picker {
+.maruri-color-field .wp-picker-input-wrap .wp-color-picker {
 	width: 96px;
 	min-width: 96px;
-}
-
-.maruri-color-reset {
-	white-space: nowrap;
 }
