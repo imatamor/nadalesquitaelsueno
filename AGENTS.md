@@ -42,13 +42,13 @@ Define how agents should collaborate in this project.
   - code-documentation-standards
   - human-in-the-loop
 - Playbooks:
-  - C:\Users\IMatamoros\OneDrive - MARURI ECUADOR S.A\Maruri\Codex\playbooks\wordpress-development.md
+  - ../../playbooks/wordpress-development.md
 - Teams:
-  - C:\Users\IMatamoros\OneDrive - MARURI ECUADOR S.A\Maruri\Codex\teams\wordpress-agency-team.md
+  - ../../teams/wordpress-agency-team.md
 - Templates:
-  - C:\Users\IMatamoros\OneDrive - MARURI ECUADOR S.A\Maruri\Codex\templates\wordpress-agency-starter
+  - ../../templates/wordpress-agency-starter
 - Plans:
-  - C:\Users\IMatamoros\OneDrive - MARURI ECUADOR S.A\Maruri\Codex\plans\PLAN_TEMPLATE.md
+  - ../../plans/PLAN_TEMPLATE.md
 
 ## Default Workflow
 1. Understand the objective and affected layers.
@@ -105,9 +105,9 @@ Define how agents should collaborate in this project.
 - No usar staging como fuente unica de verdad para codigo o configuracion critica.
 
 ## Memory Rules
-- Engram vive en C:\Users\IMatamoros\.engram.
-- La memoria documental del proyecto se guarda en C:\Users\IMatamoros\OneDrive - MARURI ECUADOR S.A\Maruri\Codex\memory.
-- Toda decision reusable de arquitectura debe dejar un resumen legible en Codex\memory aunque la persistencia en Engram no se ejecute desde esta sesion.
+- Engram usa `ENGRAM_DATA_DIR` apuntando a `../../memory`.
+- La memoria documental del proyecto se guarda en `../../memory`.
+- Toda decision reusable de arquitectura debe dejar un resumen legible en `../../memory` aunque la persistencia en Engram no se ejecute desde esta sesion.
 
 ## Documentation Rules
 - Documentar funciones, clases, hooks y bloques no obvios con code-documentation-standards.
