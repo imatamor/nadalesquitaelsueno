@@ -6,6 +6,9 @@ wp-content/advanced-cache.php
 wp-content/backup*
 *.log
 .env
-node_modules
-vendor
+node_modules/
+vendor/
 .DS_Store
+Thumbs.db
+*.sql
+
