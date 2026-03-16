@@ -65,6 +65,45 @@ Define how agents should collaborate in this project.
 - Toda logica especifica de campana, integraciones externas y widgets personalizados debe vivir en plugins o modulos del proyecto.
 - Evitar wrappers rigidos o decisiones visuales que rompan builders o contenido nativo.
 
+## Sync Strategy
+- Git es la fuente de verdad para todo el codigo custom del proyecto.
+- Staging es el entorno principal para validacion funcional, integraciones y maquetacion real.
+- Produccion no se modifica manualmente.
+- Ningun cambio de codigo debe existir solo en staging o produccion: si se toca un archivo en servidor, debe traerse de vuelta al proyecto y commitearse.
+
+## What Goes In Git
+- wp-content/themes/maruri
+- plugins custom del proyecto
+- CSS, JS, PHP y assets propios
+- documentacion tecnica y estrategias operativas
+- exportables de Elementor cuando se decida conservarlos como respaldo
+
+## What Does Not Sync Automatically With Git
+- contenido y configuracion guardados en base de datos
+- activacion de plugins
+- settings internos de WordPress o Elementor
+- uploads y media
+- plugins instalados manualmente desde admin si no estan versionados
+
+## Elementor Rules
+- Elementor puede instalarse en staging para maquetacion, pero su presencia no define la arquitectura del theme.
+- Todo soporte tecnico para Elementor debe vivir en Git como codigo del theme o plugins custom.
+- Los layouts importantes hechos en Elementor deben exportarse o documentarse si se quieren reproducir en otros entornos.
+- Elementor Pro no debe subirse al repo; su instalacion se maneja de forma controlada por entorno.
+
+## Environment Workflow
+1. Desarrollar codigo custom en local o en el workspace versionado.
+2. Hacer commit a develop.
+3. Dejar que GitHub Actions despliegue a staging.
+4. Validar en staging.
+5. Exportar o documentar cambios de DB/Elementor cuando sean relevantes.
+6. Promover a main solo despues de aprobacion.
+
+## Recovery Rules
+- Si se instala o modifica algo manualmente en staging y afecta archivos, esos cambios deben copiarse de vuelta al proyecto, revisarse y commitearse.
+- Los cambios de base de datos no se consideran sincronizados por estar en staging; requieren export, documentacion o recreacion controlada.
+- No usar staging como fuente unica de verdad para codigo o configuracion critica.
+
 ## Memory Rules
 - Engram vive en C:\Users\IMatamoros\.engram.
 - La memoria documental del proyecto se guarda en C:\Users\IMatamoros\OneDrive - MARURI ECUADOR S.A\Maruri\Codex\memory.
