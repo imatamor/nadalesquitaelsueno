@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-if ( ! is_active_sidebar( 'sidebar-1' ) || maruri_is_full_width_context() ) {
+if ( ! maruri_should_display_sidebar() ) {
 	return;
 }
 ?>

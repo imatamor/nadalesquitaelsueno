@@ -18,6 +18,19 @@ function maruri_enqueue_assets() {
 	wp_enqueue_style( 'maruri-base', MARURI_THEME_URL . '/assets/css/base.css', array(), MARURI_THEME_VERSION );
 	wp_enqueue_script( 'maruri-navigation', MARURI_THEME_URL . '/assets/js/navigation.js', array(), MARURI_THEME_VERSION, true );
 
+	$design_tokens = maruri_get_design_tokens();
+	if ( ! empty( $design_tokens ) ) {
+		$css = ":root {\n";
+
+		foreach ( $design_tokens as $token_name => $token_value ) {
+			$token_name = preg_replace( '/[^a-z0-9\-]/i', '', (string) $token_name );
+			$css       .= sprintf( "  %s: %s;\n", $token_name, esc_html( $token_value ) );
+		}
+
+		$css .= "}\n";
+		wp_add_inline_style( 'maruri-base', $css );
+	}
+
 	$custom_css = trim( (string) maruri_get_theme_option( 'custom_css', '' ) );
 	if ( '' !== $custom_css ) {
 		wp_add_inline_style( 'maruri-base', $custom_css );

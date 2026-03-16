@@ -13,14 +13,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<div class="maruri-shell maruri-shell--footer">
 			<div class="site-info">
 				<p>
-					<?php
-					printf(
-						/* translators: %s: current year */
-						esc_html__( '%s Maruri. Todos los derechos reservados.', 'maruri' ),
-						esc_html( gmdate( 'Y' ) )
-					);
-					?>
+					<?php echo esc_html( maruri_get_footer_copyright() ); ?>
 				</p>
+				<?php $maruri_contact_email = maruri_get_contact_email(); ?>
+				<?php if ( $maruri_contact_email ) : ?>
+					<p class="site-contact">
+						<a href="mailto:<?php echo esc_attr( antispambot( $maruri_contact_email ) ); ?>"><?php echo esc_html( antispambot( $maruri_contact_email ) ); ?></a>
+					</p>
+				<?php endif; ?>
+				<?php maruri_render_social_links(); ?>
 			</div>
 			<?php if ( is_active_sidebar( 'footer-1' ) ) : ?>
 				<div class="footer-widgets">
