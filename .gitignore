@@ -1,0 +1,11 @@
+wp-config.php
+wp-content/uploads
+wp-content/cache
+wp-content/upgrade
+wp-content/advanced-cache.php
+wp-content/backup*
+*.log
+.env
+node_modules
+vendor
+.DS_Store
