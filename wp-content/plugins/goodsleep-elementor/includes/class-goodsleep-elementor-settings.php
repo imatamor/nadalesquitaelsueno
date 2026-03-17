@@ -61,7 +61,13 @@ class Goodsleep_Elementor_Settings {
 		$this->add_text_field( 'terms_url', __( 'Terms URL', 'goodsleep-elementor' ), 'url' );
 		$this->add_text_field( 'terms_text', __( 'Terms Text', 'goodsleep-elementor' ) );
 		$this->add_textarea_field( 'whatsapp_share_text', __( 'WhatsApp Share Text', 'goodsleep-elementor' ), 3 );
-		$this->add_textarea_field( 'tracks_catalog_json', __( 'Tracks Catalog JSON', 'goodsleep-elementor' ), 8, 'goodsleep_catalog_section' );
+		$this->add_textarea_field(
+			'tracks_catalog_json',
+			__( 'Catálogo manual de tracks (JSON)', 'goodsleep-elementor' ),
+			8,
+			'goodsleep_catalog_section',
+			__( 'Aquí pegas manualmente un arreglo JSON con los tracks disponibles. Cada track debe tener id y label. Ejemplo: [{"id":"track-01","label":"Piano suave"}].', 'goodsleep-elementor' )
+		);
 
 		add_settings_field( 'voice_whitelist', __( 'Allowed Voices', 'goodsleep-elementor' ), array( $this, 'render_voice_whitelist' ), 'goodsleep-elementor', 'goodsleep_catalog_section' );
 		add_settings_field( 'track_whitelist', __( 'Allowed Tracks', 'goodsleep-elementor' ), array( $this, 'render_track_whitelist' ), 'goodsleep-elementor', 'goodsleep_catalog_section' );
@@ -89,8 +95,8 @@ class Goodsleep_Elementor_Settings {
 	 * @param string $section Seccion.
 	 * @return void
 	 */
-	protected function add_textarea_field( $key, $label, $rows = 6, $section = 'goodsleep_api_section' ) {
-		add_settings_field( $key, $label, array( $this, 'render_textarea_field' ), 'goodsleep-elementor', $section, compact( 'key', 'rows' ) );
+	protected function add_textarea_field( $key, $label, $rows = 6, $section = 'goodsleep_api_section', $description = '' ) {
+		add_settings_field( $key, $label, array( $this, 'render_textarea_field' ), 'goodsleep-elementor', $section, compact( 'key', 'rows', 'description' ) );
 	}
 
 	/**
@@ -176,6 +182,9 @@ class Goodsleep_Elementor_Settings {
 		$value = 'tracks_catalog_json' === $key ? wp_json_encode( goodsleep_get_cached_tracks(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) : goodsleep_get_setting( $key, '' );
 		?>
 		<textarea class="large-text code" rows="<?php echo esc_attr( $rows ); ?>" name="goodsleep_elementor_settings[<?php echo esc_attr( $key ); ?>]"><?php echo esc_textarea( (string) $value ); ?></textarea>
+		<?php if ( ! empty( $args['description'] ) ) : ?>
+			<p class="description"><?php echo esc_html( $args['description'] ); ?></p>
+		<?php endif; ?>
 		<?php
 	}
 

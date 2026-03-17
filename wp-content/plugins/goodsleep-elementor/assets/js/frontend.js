@@ -74,8 +74,72 @@
 			return;
 		}
 
+		function getValidationMessage( field ) {
+			if ( ! field ) {
+				return '';
+			}
+
+			if ( 'name' === field.name ) {
+				if ( field.value !== field.value.replace( /\s+/g, '' ) ) {
+					return 'El nombre no puede contener espacios.';
+				}
+
+				if ( ! field.value.trim() ) {
+					return 'Ingresa tu nombre.';
+				}
+			}
+
+			if ( 'email' === field.name ) {
+				if ( ! field.value.trim() ) {
+					return 'Ingresa tu correo electrónico.';
+				}
+
+				if ( field.validity.typeMismatch ) {
+					return 'Ingresa un correo electrónico válido.';
+				}
+			}
+
+			if ( 'story_text' === field.name && ! field.value.trim() ) {
+				return 'Escribe tu historia.';
+			}
+
+			if ( 'voice_id' === field.name && ! field.value ) {
+				return 'Selecciona una voz.';
+			}
+
+			if ( 'accepted_terms' === field.name && ! field.checked ) {
+				return 'Debes aceptar los términos y condiciones.';
+			}
+
+			return '';
+		}
+
+		form.querySelectorAll( 'input, textarea, select' ).forEach( function( field ) {
+			field.addEventListener( 'invalid', function() {
+				field.setCustomValidity( getValidationMessage( field ) );
+			} );
+
+			field.addEventListener( 'input', function() {
+				field.setCustomValidity( '' );
+			} );
+
+			field.addEventListener( 'change', function() {
+				field.setCustomValidity( '' );
+			} );
+		} );
+
+		const nameField = form.querySelector( '[name="name"]' );
+		if ( nameField ) {
+			nameField.addEventListener( 'keydown', function( event ) {
+				if ( ' ' === event.key ) {
+					event.preventDefault();
+				}
+			} );
+		}
+
 		form.addEventListener( 'input', function( event ) {
 			if ( event.target.name === 'name' ) {
+				event.target.value = event.target.value.replace( /\s+/g, '' );
 				const value = event.target.value.trim();
 				phraseNode.textContent = phraseTemplate ? phraseTemplate.replace( '%s', value ) : '';
 			}
@@ -88,6 +152,10 @@
 		form.addEventListener( 'submit', async function( event ) {
 			event.preventDefault();
 			feedback.textContent = '';
+
+			if ( ! form.reportValidity() ) {
+				return;
+			}
 
 			const formData = new FormData( form );
 			const name = ( formData.get( 'name' ) || '' ).toString().trim();
