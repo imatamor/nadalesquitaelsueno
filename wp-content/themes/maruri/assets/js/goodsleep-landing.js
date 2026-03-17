@@ -15,7 +15,7 @@
 				var delay = parseInt( scene.getAttribute( 'data-rules-delay' ), 10 );
 
 				if ( Number.isNaN( delay ) || delay < 0 ) {
-					delay = 1800;
+					delay = 1200;
 				}
 
 				if ( entry.isIntersecting ) {
