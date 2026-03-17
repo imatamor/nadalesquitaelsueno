@@ -7,7 +7,6 @@ Pega este bloque en un `HTML widget` dentro de la seccion `Reglas` en Elementor:
   <div class="goodsleep-rules-scene__bg goodsleep-rules-scene__bg--off" aria-hidden="true"></div>
   <div class="goodsleep-rules-scene__bg goodsleep-rules-scene__bg--on" aria-hidden="true"></div>
   <div class="goodsleep-rules-scene__overlay" aria-hidden="true"></div>
-  <div class="goodsleep-rules-scene__lamp-button" aria-hidden="true"></div>
 
   <div class="goodsleep-rules-scene__content">
     <p class="goodsleep-rules-scene__eyebrow">Antes de publicar</p>
