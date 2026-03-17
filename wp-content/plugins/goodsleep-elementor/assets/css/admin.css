@@ -1,0 +1,23 @@
+.goodsleep-admin-picklist {
+  max-width: 720px;
+}
+
+.goodsleep-admin-picklist__search {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.goodsleep-admin-picklist__items {
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid #dcdcde;
+  background: #fff;
+  padding: 10px;
+}
+
+.goodsleep-admin-picklist__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}

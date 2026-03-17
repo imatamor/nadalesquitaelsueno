@@ -1,0 +1,255 @@
+<?php
+/**
+ * Helpers generales de Goodsleep Elementor.
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Devuelve la configuracion del plugin con defaults seguros.
+ *
+ * @return array<string,mixed>
+ */
+function goodsleep_get_settings() {
+	$defaults = array(
+		'speechify_api_key'       => '',
+		'speechify_base_url'      => 'https://api.sws.speechify.com',
+		'speechify_audio_path'    => '/v1/audio/speech',
+		'speechify_voices_path'   => '/v1/voices',
+		'mailjet_api_key'         => '',
+		'mailjet_secret_key'      => '',
+		'mailjet_from_email'      => '',
+		'mailjet_from_name'       => 'Goodsleep',
+		'mailjet_reply_to_email'  => '',
+		'mailjet_reply_to_name'   => '',
+		'whatsapp_share_text'     => 'Nada le quita el sueno a %s. Escucha esta historia: %s',
+		'terms_text'              => 'Acepto terminos y condiciones',
+		'terms_url'               => '',
+		'voice_whitelist'         => array(),
+		'track_whitelist'         => array(),
+		'tracks_catalog'          => array(),
+	);
+
+	$settings = get_option( 'goodsleep_elementor_settings', array() );
+	$settings = is_array( $settings ) ? $settings : array();
+
+	return wp_parse_args( $settings, $defaults );
+}
+
+/**
+ * Devuelve una opcion puntual del plugin.
+ *
+ * @param string $key     Clave del ajuste.
+ * @param mixed  $default Valor por defecto.
+ * @return mixed
+ */
+function goodsleep_get_setting( $key, $default = '' ) {
+	$settings = goodsleep_get_settings();
+
+	return array_key_exists( $key, $settings ) ? $settings[ $key ] : $default;
+}
+
+/**
+ * Genera una huella ligera del visitante.
+ *
+ * @return string
+ */
+function goodsleep_get_client_fingerprint() {
+	$parts = array(
+		isset( $_SERVER['REMOTE_ADDR'] ) ? wp_unslash( $_SERVER['REMOTE_ADDR'] ) : '',
+		isset( $_SERVER['HTTP_USER_AGENT'] ) ? wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) : '',
+		isset( $_SERVER['HTTP_ACCEPT_LANGUAGE'] ) ? wp_unslash( $_SERVER['HTTP_ACCEPT_LANGUAGE'] ) : '',
+	);
+
+	return wp_hash( implode( '|', $parts ) );
+}
+
+/**
+ * Normaliza un slug corto.
+ *
+ * @param string $value Texto base.
+ * @return string
+ */
+function goodsleep_normalize_slug( $value ) {
+	$value = sanitize_title( $value );
+
+	if ( '' === $value ) {
+		$value = 'historia';
+	}
+
+	return $value;
+}
+
+/**
+ * Sanitiza el nombre visible para la historia.
+ *
+ * @param string $name Nombre ingresado.
+ * @return string
+ */
+function goodsleep_sanitize_story_name( $name ) {
+	$name = preg_replace( '/\s+/', '', (string) $name );
+	$name = substr( $name, 0, 15 );
+
+	return sanitize_text_field( $name );
+}
+
+/**
+ * Determina si el usuario ya voto hoy por una historia.
+ *
+ * @param int $story_id ID de historia.
+ * @return bool
+ */
+function goodsleep_has_voted_today( $story_id ) {
+	$cookie_key  = 'goodsleep_vote_' . absint( $story_id );
+	$fingerprint = goodsleep_get_client_fingerprint();
+	$stored_hash = isset( $_COOKIE[ $cookie_key ] ) ? sanitize_text_field( wp_unslash( $_COOKIE[ $cookie_key ] ) ) : '';
+	$today       = gmdate( 'Y-m-d' );
+
+	return hash_equals( wp_hash( $fingerprint . '|' . $today ), $stored_hash );
+}
+
+/**
+ * Marca el voto del dia para una historia.
+ *
+ * @param int $story_id ID de historia.
+ * @return void
+ */
+function goodsleep_set_vote_cookie( $story_id ) {
+	$cookie_key = 'goodsleep_vote_' . absint( $story_id );
+	$value      = wp_hash( goodsleep_get_client_fingerprint() . '|' . gmdate( 'Y-m-d' ) );
+
+	setcookie( $cookie_key, $value, time() + DAY_IN_SECONDS, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
+	$_COOKIE[ $cookie_key ] = $value;
+}
+
+/**
+ * Devuelve si una historia esta marcada como favorita.
+ *
+ * @param int $story_id ID de historia.
+ * @return bool
+ */
+function goodsleep_is_favorite_story( $story_id ) {
+	$favorites = isset( $_COOKIE['goodsleep_favorites'] ) ? sanitize_text_field( wp_unslash( $_COOKIE['goodsleep_favorites'] ) ) : '';
+	$favorites = $favorites ? explode( ',', $favorites ) : array();
+
+	return in_array( (string) absint( $story_id ), $favorites, true );
+}
+
+/**
+ * Guarda la cookie de favoritos.
+ *
+ * @param array<int|string> $favorites IDs favoritos.
+ * @return void
+ */
+function goodsleep_store_favorites_cookie( $favorites ) {
+	$favorites = array_filter( array_map( 'absint', (array) $favorites ) );
+	$value     = implode( ',', $favorites );
+
+	setcookie( 'goodsleep_favorites', $value, time() + MONTH_IN_SECONDS, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
+	$_COOKIE['goodsleep_favorites'] = $value;
+}
+
+/**
+ * Devuelve la URL corta publica de una historia.
+ *
+ * @param int $story_id ID de historia.
+ * @return string
+ */
+function goodsleep_get_story_share_url( $story_id ) {
+	$slug = get_post_meta( $story_id, '_goodsleep_short_slug', true );
+
+	if ( ! $slug ) {
+		$slug = goodsleep_normalize_slug( get_the_title( $story_id ) ) . '-' . $story_id;
+		update_post_meta( $story_id, '_goodsleep_short_slug', $slug );
+	}
+
+	return home_url( '/h/' . rawurlencode( $slug ) . '/' );
+}
+
+/**
+ * Devuelve el catalogo cacheado de voces.
+ *
+ * @return array<int,array<string,mixed>>
+ */
+function goodsleep_get_cached_voices() {
+	$voices = get_option( 'goodsleep_elementor_voice_catalog', array() );
+
+	return is_array( $voices ) ? $voices : array();
+}
+
+/**
+ * Devuelve el catalogo cacheado de tracks.
+ *
+ * @return array<int,array<string,mixed>>
+ */
+function goodsleep_get_cached_tracks() {
+	$tracks = goodsleep_get_setting( 'tracks_catalog', array() );
+
+	return is_array( $tracks ) ? $tracks : array();
+}
+
+/**
+ * Devuelve las voces habilitadas por whitelist.
+ *
+ * @return array<int,array<string,mixed>>
+ */
+function goodsleep_get_allowed_voices() {
+	$catalog   = goodsleep_get_cached_voices();
+	$whitelist = (array) goodsleep_get_setting( 'voice_whitelist', array() );
+
+	if ( empty( $whitelist ) ) {
+		return $catalog;
+	}
+
+	return array_values(
+		array_filter(
+			$catalog,
+			static function ( $voice ) use ( $whitelist ) {
+				return isset( $voice['id'] ) && in_array( $voice['id'], $whitelist, true );
+			}
+		)
+	);
+}
+
+/**
+ * Devuelve los tracks habilitados por whitelist.
+ *
+ * @return array<int,array<string,mixed>>
+ */
+function goodsleep_get_allowed_tracks() {
+	$catalog   = goodsleep_get_cached_tracks();
+	$whitelist = (array) goodsleep_get_setting( 'track_whitelist', array() );
+
+	if ( empty( $whitelist ) ) {
+		return $catalog;
+	}
+
+	return array_values(
+		array_filter(
+			$catalog,
+			static function ( $track ) use ( $whitelist ) {
+				return isset( $track['id'] ) && in_array( $track['id'], $whitelist, true );
+			}
+		)
+	);
+}
+
+/**
+ * Limita la generacion de historias por visitante.
+ *
+ * @return true|WP_Error
+ */
+function goodsleep_assert_generation_rate_limit() {
+	$fingerprint = goodsleep_get_client_fingerprint();
+	$transient   = 'goodsleep_rate_' . md5( $fingerprint );
+
+	if ( get_transient( $transient ) ) {
+		return new WP_Error( 'goodsleep_rate_limited', __( 'Espera un momento antes de generar otra historia.', 'goodsleep-elementor' ), array( 'status' => 429 ) );
+	}
+
+	set_transient( $transient, 1, MINUTE_IN_SECONDS );
+
+	return true;
+}

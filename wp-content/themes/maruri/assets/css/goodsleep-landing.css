@@ -1,0 +1,122 @@
+.goodsleep-section {
+  min-height: 100svh;
+  position: relative;
+}
+
+.goodsleep-anchor-offset {
+  scroll-margin-top: 96px;
+}
+
+.goodsleep-rules-scene {
+  position: relative;
+  min-height: 100svh;
+  color: #ffffff;
+  overflow: hidden;
+}
+
+.goodsleep-rules-scene__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 5, 10, 0.7);
+  transition: background 0.9s ease;
+}
+
+.goodsleep-rules-scene__content {
+  position: relative;
+  z-index: 1;
+  max-width: 540px;
+  margin-left: auto;
+  padding: clamp(2rem, 6vw, 5rem);
+  transition: color 0.9s ease, transform 0.9s ease;
+}
+
+.goodsleep-rules-scene__title {
+  margin: 0 0 1rem;
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  line-height: 0.95;
+  font-weight: 700;
+}
+
+.goodsleep-rules-scene__copy {
+  margin: 0 0 1.5rem;
+  line-height: 1.5;
+}
+
+.goodsleep-rules-scene__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 220px;
+  padding: 0.9rem 1.4rem;
+  border-radius: 999px;
+  border: 2px solid #ff1b9c;
+  background: rgba(19, 20, 26, 0.66);
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 700;
+  text-transform: uppercase;
+  transition: background 0.6s ease, color 0.6s ease, border-color 0.6s ease;
+}
+
+.goodsleep-rules-scene__lamp-button {
+  position: absolute;
+  top: 8.5%;
+  left: 7%;
+  width: clamp(40px, 4vw, 58px);
+  height: clamp(40px, 4vw, 58px);
+  border-radius: 50%;
+  background: rgba(22, 20, 18, 0.8);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.08);
+  transition: background 0.6s ease, box-shadow 0.6s ease;
+}
+
+.goodsleep-rules-scene.is-on {
+  color: #fff7e8;
+}
+
+.goodsleep-rules-scene.is-on .goodsleep-rules-scene__overlay {
+  background: rgba(255, 196, 102, 0.18);
+}
+
+.goodsleep-rules-scene.is-on .goodsleep-rules-scene__cta {
+  background: #ff1b9c;
+  border-color: #ff1b9c;
+  color: #ffffff;
+}
+
+.goodsleep-rules-scene.is-on .goodsleep-rules-scene__lamp-button {
+  background: rgba(255, 210, 112, 0.96);
+  box-shadow: 0 0 24px rgba(255, 214, 126, 0.65);
+}
+
+.goodsleep-static-copy .n2-ss-layer,
+.goodsleep-static-copy .n2-ss-layer * {
+  animation: none !important;
+  transition: none !important;
+}
+
+.goodsleep-static-copy .n2-ss-layer {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+@media (max-width: 767px) {
+  .goodsleep-rules-scene__content {
+    max-width: none;
+    margin-left: 0;
+    padding: 2rem 1.5rem 3rem;
+    display: grid;
+    align-content: end;
+    min-height: 100svh;
+  }
+
+  .goodsleep-rules-scene__lamp-button {
+    top: 10%;
+    left: 10%;
+  }
+
+  .goodsleep-rules-scene__cta {
+    width: 100%;
+    min-width: 0;
+  }
+}

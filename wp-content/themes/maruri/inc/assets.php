@@ -16,7 +16,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function maruri_enqueue_assets() {
 	wp_enqueue_style( 'maruri-base', MARURI_THEME_URL . '/assets/css/base.css', array(), MARURI_THEME_VERSION );
+	wp_enqueue_style( 'maruri-goodsleep-landing', MARURI_THEME_URL . '/assets/css/goodsleep-landing.css', array( 'maruri-base' ), MARURI_THEME_VERSION );
 	wp_enqueue_script( 'maruri-navigation', MARURI_THEME_URL . '/assets/js/navigation.js', array(), MARURI_THEME_VERSION, true );
+	wp_enqueue_script( 'maruri-goodsleep-landing', MARURI_THEME_URL . '/assets/js/goodsleep-landing.js', array(), MARURI_THEME_VERSION, true );
 
 	$design_tokens = maruri_get_design_tokens();
 	if ( ! empty( $design_tokens ) ) {
