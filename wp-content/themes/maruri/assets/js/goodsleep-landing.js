@@ -12,6 +12,11 @@
 		var observer = new IntersectionObserver( function( entries ) {
 			entries.forEach( function( entry ) {
 				var scene = entry.target;
+				var delay = parseInt( scene.getAttribute( 'data-rules-delay' ), 10 );
+
+				if ( Number.isNaN( delay ) || delay < 0 ) {
+					delay = 1800;
+				}
 
 				if ( entry.isIntersecting ) {
 					if ( timers.has( scene ) ) {
@@ -22,7 +27,7 @@
 						scene,
 						window.setTimeout( function() {
 							scene.classList.add( 'is-on' );
-						}, 1800 )
+						}, delay )
 					);
 				} else {
 					if ( timers.has( scene ) ) {
