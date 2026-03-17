@@ -8,12 +8,12 @@
 }
 
 .goodsleep-rules-scene {
-  position: relative;
-  min-height: 100svh;
-  color: rgba(255, 255, 255, 0.82);
-  overflow: hidden;
-  isolation: isolate;
-  background: #09090c;
+	position: relative;
+	min-height: 100svh;
+	color: rgba(86, 86, 86, 0.23);
+	overflow: hidden;
+	isolation: isolate;
+	background: #09090c;
 }
 
 .goodsleep-rules-scene__bg {
@@ -46,13 +46,14 @@
 }
 
 .goodsleep-rules-scene__content {
-  position: relative;
-  z-index: 2;
-  max-width: 540px;
-  margin-left: auto;
-  padding: clamp(2rem, 6vw, 5rem);
-  transform: translateY(18px);
-  transition: color 1s ease, transform 1s ease, opacity 1s ease;
+	position: relative;
+	z-index: 2;
+	max-width: 855px;
+	margin-left: auto;
+	padding: clamp(2rem, 6vw, 5rem);
+	transform: translateY(18px);
+	transition: color 1s ease, transform 1s ease, opacity 1s ease;
+	margin-right: 50px;
 }
 
 .goodsleep-rules-scene__eyebrow {
@@ -67,35 +68,40 @@
 }
 
 .goodsleep-rules-scene__title {
-  margin: 0 0 1rem;
-  font-size: clamp(2.5rem, 6vw, 4.5rem);
-  line-height: 0.95;
-  font-weight: 700;
+	margin: 0 0 1rem;
+	font-size: clamp(2.5rem, 6vw, 4.5rem);
+	line-height: 1.2;
+	font-weight: 700;
+	font-family: "Montserrat ExtraBold";
 }
 
 .goodsleep-rules-scene__copy {
-  margin: 0 0 1.5rem;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.8);
-  transition: color 0.9s ease;
+	margin: 0 0 1.5rem;
+	line-height: 1.5;
+	color: rgba(86, 86, 86, 0.23);
+	transition: color 0.9s ease;
+	font-family: "Courier Prime";
+	font-size: 22px;
+	font-weight: bold;
 }
 
 .goodsleep-rules-scene__cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 220px;
-  padding: 0.9rem 1.4rem;
-  border-radius: 999px;
-  border: 2px solid #ff1b9c;
-  background: rgba(19, 20, 26, 0.66);
-  color: #ffffff;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-  text-decoration: none;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  transition: background 0.8s ease, color 0.8s ease, border-color 0.8s ease, box-shadow 0.8s ease, transform 0.8s ease;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 220px;
+	padding: 0.9rem 1.4rem;
+	border-radius: 10px;
+	border: 2px solid #ff1b9c2b;
+	background: rgba(19, 20, 26, 0.66);
+	color: rgba(86, 86, 86, 0.23);
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+	text-decoration: none;
+	font-weight: 400;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	transition: background 0.8s ease, color 0.8s ease, border-color 0.8s ease, box-shadow 0.8s ease, transform 0.8s ease;
+	font-family: "Montserrat", Sans-serif;
 }
 
 .goodsleep-rules-scene.is-on {
@@ -156,14 +162,15 @@
     background-position: 34% center;
   }
 
-  .goodsleep-rules-scene__content {
-    max-width: none;
-    margin-left: 0;
-    padding: 2rem 1.5rem 3rem;
-    display: grid;
-    align-content: end;
-    min-height: 100svh;
-  }
+	.goodsleep-rules-scene__content {
+		max-width: none;
+		margin-left: 0;
+		margin-right: 0;
+		padding: 2rem 1.5rem 3rem;
+		display: grid;
+		align-content: end;
+		min-height: 100svh;
+	}
 
   .goodsleep-rules-scene__cta {
     width: 100%;

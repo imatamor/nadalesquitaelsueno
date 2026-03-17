@@ -11,8 +11,9 @@ Pega este bloque en un `HTML widget` dentro de la seccion `Reglas` en Elementor:
   <div class="goodsleep-rules-scene__content">
     <h2 class="goodsleep-rules-scene__title">Respeta las reglas al publicar</h2>
     <p class="goodsleep-rules-scene__copy">
-      No hay temas tabu: expresate en 500 caracteres. Evita incluir datos personales, como numeros de telefono o numeros de cedula.
-      Cuida la ortografia, no agregues errores intencionales y recuerda que la historia debe poder publicarse.
+      No hay temas tabu: expresate en 500 caracteres. Evita datos personales, como numeros de telefono o numeros de cedula.
+      Lee y repasa tu mensaje. Escribe correctamente, evitando errores ortograficos y lenguaje SMS.
+      Los mensajes mal redactados y con errores no seran publicados. Si tu anecdota no es publicada, no te ofendas, y agradecemos enormemente tu colaboracion.
     </p>
     <a class="goodsleep-rules-scene__cta" href="#historia">Escribe tu historia</a>
   </div>
