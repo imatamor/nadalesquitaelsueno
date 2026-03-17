@@ -9,11 +9,10 @@ Pega este bloque en un `HTML widget` dentro de la seccion `Reglas` en Elementor:
   <div class="goodsleep-rules-scene__overlay" aria-hidden="true"></div>
 
   <div class="goodsleep-rules-scene__content">
-    <p class="goodsleep-rules-scene__eyebrow">Antes de publicar</p>
     <h2 class="goodsleep-rules-scene__title">Respeta las reglas al publicar</h2>
     <p class="goodsleep-rules-scene__copy">
-      No hay tema tabu, expresate en 500 caracteres. Evita datos personales como numeros de telefonos o numeros de cedula.
-      Usa ortografia clara, no incluyas errores intencionales y recuerda que las historias deben poder publicarse.
+      No hay temas tabu: expresate en 500 caracteres. Evita incluir datos personales, como numeros de telefono o numeros de cedula.
+      Cuida la ortografia, no agregues errores intencionales y recuerda que la historia debe poder publicarse.
     </p>
     <a class="goodsleep-rules-scene__cta" href="#historia">Escribe tu historia</a>
   </div>

@@ -24,6 +24,7 @@ Sitio WordPress de campana "Nada les quita el sueno".
 - no versionar uploads, cache, logs ni backups
 - mantener compatibilidad con WordPress y Apache
 - preferir cambios minimos y seguros
+- todo texto visible para usuario debe revisarse por ortografia, gramatica y tono antes de cerrar una tarea; no se permiten errores de redaccion en copies de frontend
 - si se modifica theme o plugin, indicar archivos tocados
 - no romper el flujo de deploy automatico
 - antes de cerrar una tarea, resumir que cambio
@@ -52,12 +53,13 @@ Define how agents should collaborate in this project.
 
 ## Default Workflow
 1. Understand the objective and affected layers.
-2. Route the task with wordpress-router when scope is broad.
-3. Present a plan first for architecture, risky flows or reusable foundations.
-4. Request human approval before risky or high-impact changes.
-5. Implement in small reversible steps.
-6. Document code using code-documentation-standards.
-7. Validate behavior in WordPress before closing the task.
+2. Consultar Engram al retomar contexto del proyecto o antes de continuar trabajo relacionado con decisiones, hallazgos o tareas previas.
+3. Route the task with wordpress-router when scope is broad.
+4. Present a plan first for architecture, risky flows or reusable foundations.
+5. Request human approval before risky or high-impact changes.
+6. Implement in small reversible steps.
+7. Document code using code-documentation-standards.
+8. Validate behavior in WordPress before closing the task.
 
 ## Architecture Rules
 - El theme base debe ser WordPress-first y builder-agnostic.
@@ -107,6 +109,8 @@ Define how agents should collaborate in this project.
 ## Memory Rules
 - Engram usa `ENGRAM_DATA_DIR` apuntando a `../../memory`.
 - La memoria documental del proyecto se guarda en `../../memory`.
+- Antes de retomar contexto, revisar Engram para recuperar decisiones, descubrimientos y trabajo previo del proyecto.
+- Toda decision, descubrimiento, cambio de configuracion, hito de implementacion o aprendizaje reusable importante debe guardarse en Engram y, cuando aplique, resumirse tambien en `../../memory`.
 - Toda decision reusable de arquitectura debe dejar un resumen legible en `../../memory` aunque la persistencia en Engram no se ejecute desde esta sesion.
 
 ## Documentation Rules
