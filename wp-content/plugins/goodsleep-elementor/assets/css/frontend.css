@@ -7,10 +7,11 @@
 .goodsleep-generator {
   position: relative;
   min-height: 100svh;
-  display: grid;
-  place-items: center;
+  display: flex;
   padding: 1rem;
   color: #fff;
+  align-items: center;
+  justify-content: center;
 }
 
 .goodsleep-generator__surface {
@@ -118,12 +119,16 @@
 
 .goodsleep-generator__controls select {
   width: 172px;
-  padding: 0.8rem 1.35rem;
+  padding: 0.8rem 2.6rem 0.8rem 1.35rem;
   background: #a3a3a3;
   color: #ffffff;
   font-size: 0.92rem;
   font-weight: 700;
   text-transform: none;
+  background-image: linear-gradient(45deg, transparent 50%, #ffffff 50%), linear-gradient(135deg, #ffffff 50%, transparent 50%);
+  background-position: calc(100% - 18px) calc(50% - 2px), calc(100% - 12px) calc(50% - 2px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
 }
 
 .goodsleep-generator__footer {
