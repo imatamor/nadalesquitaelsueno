@@ -46,7 +46,7 @@ class Goodsleep_Elementor_Settings {
 		);
 
 		add_settings_section( 'goodsleep_api_section', __( 'Credenciales e integraciones', 'goodsleep-elementor' ), '__return_false', 'goodsleep-elementor' );
-		add_settings_section( 'goodsleep_catalog_section', __( 'Catalogos de voces y tracks', 'goodsleep-elementor' ), '__return_false', 'goodsleep-elementor' );
+		add_settings_section( 'goodsleep_catalog_section', __( 'Catálogos de voces y tracks', 'goodsleep-elementor' ), '__return_false', 'goodsleep-elementor' );
 
 		$this->add_text_field( 'speechify_api_key', __( 'Speechify API Key', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'speechify_base_url', __( 'Speechify Base URL', 'goodsleep-elementor' ) );
@@ -58,19 +58,13 @@ class Goodsleep_Elementor_Settings {
 		$this->add_text_field( 'mailjet_from_name', __( 'Mailjet From Name', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'mailjet_reply_to_email', __( 'Reply-To Email', 'goodsleep-elementor' ), 'email' );
 		$this->add_text_field( 'mailjet_reply_to_name', __( 'Reply-To Name', 'goodsleep-elementor' ) );
-		$this->add_text_field( 'terms_url', __( 'Terms URL', 'goodsleep-elementor' ), 'url' );
-		$this->add_text_field( 'terms_text', __( 'Terms Text', 'goodsleep-elementor' ) );
-		$this->add_textarea_field( 'whatsapp_share_text', __( 'WhatsApp Share Text', 'goodsleep-elementor' ), 3 );
-		$this->add_textarea_field(
-			'tracks_catalog_json',
-			__( 'Catálogo manual de tracks (JSON)', 'goodsleep-elementor' ),
-			8,
-			'goodsleep_catalog_section',
-			__( 'Aquí pegas manualmente un arreglo JSON con los tracks disponibles. Cada track debe tener id y label. Ejemplo: [{"id":"track-01","label":"Piano suave"}].', 'goodsleep-elementor' )
-		);
+		$this->add_text_field( 'terms_url', __( 'URL de términos global', 'goodsleep-elementor' ), 'url' );
+		$this->add_text_field( 'terms_text', __( 'Texto de términos global', 'goodsleep-elementor' ) );
+		$this->add_textarea_field( 'whatsapp_share_text', __( 'Texto para compartir por WhatsApp', 'goodsleep-elementor' ), 3 );
 
-		add_settings_field( 'voice_whitelist', __( 'Allowed Voices', 'goodsleep-elementor' ), array( $this, 'render_voice_whitelist' ), 'goodsleep-elementor', 'goodsleep_catalog_section' );
-		add_settings_field( 'track_whitelist', __( 'Allowed Tracks', 'goodsleep-elementor' ), array( $this, 'render_track_whitelist' ), 'goodsleep-elementor', 'goodsleep_catalog_section' );
+		add_settings_field( 'tracks_catalog', __( 'Tracks manuales', 'goodsleep-elementor' ), array( $this, 'render_tracks_manager' ), 'goodsleep-elementor', 'goodsleep_catalog_section' );
+		add_settings_field( 'voice_whitelist', __( 'Voces habilitadas', 'goodsleep-elementor' ), array( $this, 'render_voice_whitelist' ), 'goodsleep-elementor', 'goodsleep_catalog_section' );
+		add_settings_field( 'track_whitelist', __( 'Tracks habilitados', 'goodsleep-elementor' ), array( $this, 'render_track_whitelist' ), 'goodsleep-elementor', 'goodsleep_catalog_section' );
 	}
 
 	/**
@@ -89,10 +83,11 @@ class Goodsleep_Elementor_Settings {
 	/**
 	 * Helper para textareas.
 	 *
-	 * @param string $key     Clave.
-	 * @param string $label   Etiqueta.
-	 * @param int    $rows    Filas.
-	 * @param string $section Seccion.
+	 * @param string $key         Clave.
+	 * @param string $label       Etiqueta.
+	 * @param int    $rows        Filas.
+	 * @param string $section     Seccion.
+	 * @param string $description Descripcion.
 	 * @return void
 	 */
 	protected function add_textarea_field( $key, $label, $rows = 6, $section = 'goodsleep_api_section', $description = '' ) {
@@ -126,26 +121,30 @@ class Goodsleep_Elementor_Settings {
 		$sanitized['track_whitelist']        = isset( $input['track_whitelist'] ) ? array_values( array_filter( array_map( 'sanitize_text_field', (array) $input['track_whitelist'] ) ) ) : array();
 
 		$tracks_catalog = array();
-		if ( ! empty( $input['tracks_catalog_json'] ) ) {
-			$decoded = json_decode( wp_unslash( $input['tracks_catalog_json'] ), true );
+		if ( ! empty( $input['tracks_catalog'] ) && is_array( $input['tracks_catalog'] ) ) {
+			foreach ( $input['tracks_catalog'] as $track ) {
+				if ( ! is_array( $track ) ) {
+					continue;
+				}
 
-			if ( is_array( $decoded ) ) {
-				$tracks_catalog = array_values(
-					array_filter(
-						array_map(
-							static function ( $track ) {
-								if ( ! is_array( $track ) || empty( $track['id'] ) || empty( $track['label'] ) ) {
-									return null;
-								}
+				$label         = isset( $track['label'] ) ? sanitize_text_field( $track['label'] ) : '';
+				$url           = isset( $track['url'] ) ? esc_url_raw( $track['url'] ) : '';
+				$attachment_id = isset( $track['attachment_id'] ) ? absint( $track['attachment_id'] ) : 0;
+				$id            = isset( $track['id'] ) ? sanitize_text_field( $track['id'] ) : '';
 
-								return array(
-									'id'    => sanitize_text_field( $track['id'] ),
-									'label' => sanitize_text_field( $track['label'] ),
-								);
-							},
-							$decoded
-						)
-					)
+				if ( '' === $label || '' === $url ) {
+					continue;
+				}
+
+				if ( '' === $id ) {
+					$id = $attachment_id ? 'track-' . $attachment_id : 'track-' . count( $tracks_catalog );
+				}
+
+				$tracks_catalog[] = array(
+					'id'            => $id,
+					'label'         => $label,
+					'url'           => $url,
+					'attachment_id' => $attachment_id,
 				);
 			}
 		}
@@ -179,7 +178,7 @@ class Goodsleep_Elementor_Settings {
 	public function render_textarea_field( $args ) {
 		$key   = $args['key'];
 		$rows  = isset( $args['rows'] ) ? (int) $args['rows'] : 6;
-		$value = 'tracks_catalog_json' === $key ? wp_json_encode( goodsleep_get_cached_tracks(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) : goodsleep_get_setting( $key, '' );
+		$value = goodsleep_get_setting( $key, '' );
 		?>
 		<textarea class="large-text code" rows="<?php echo esc_attr( $rows ); ?>" name="goodsleep_elementor_settings[<?php echo esc_attr( $key ); ?>]"><?php echo esc_textarea( (string) $value ); ?></textarea>
 		<?php if ( ! empty( $args['description'] ) ) : ?>
@@ -200,7 +199,7 @@ class Goodsleep_Elementor_Settings {
 			'voice_whitelist',
 			goodsleep_get_cached_voices(),
 			(array) goodsleep_get_setting( 'voice_whitelist', array() ),
-			__( 'No hay voces cacheadas todavia. Configura Speechify y sincronizalas por API.', 'goodsleep-elementor' )
+			__( 'No hay voces cacheadas todavía. Configura Speechify y sincronízalas por API.', 'goodsleep-elementor' )
 		);
 	}
 
@@ -214,17 +213,60 @@ class Goodsleep_Elementor_Settings {
 			'track_whitelist',
 			goodsleep_get_cached_tracks(),
 			(array) goodsleep_get_setting( 'track_whitelist', array() ),
-			__( 'Carga tracks desde el JSON del catalogo.', 'goodsleep-elementor' )
+			__( 'Añade tracks manuales en el gestor de arriba para habilitarlos aquí.', 'goodsleep-elementor' )
 		);
+	}
+
+	/**
+	 * Renderiza el gestor manual de tracks.
+	 *
+	 * @return void
+	 */
+	public function render_tracks_manager() {
+		$tracks = goodsleep_get_cached_tracks();
+
+		echo '<div class="goodsleep-admin-track-manager" data-goodsleep-track-manager>';
+		echo '<div class="goodsleep-admin-track-manager__list" data-track-list>';
+
+		foreach ( $tracks as $index => $track ) {
+			$label         = isset( $track['label'] ) ? $track['label'] : '';
+			$url           = isset( $track['url'] ) ? $track['url'] : '';
+			$id            = isset( $track['id'] ) ? $track['id'] : '';
+			$attachment_id = isset( $track['attachment_id'] ) ? (int) $track['attachment_id'] : 0;
+
+			echo '<div class="goodsleep-admin-track-row">';
+			echo '<div class="goodsleep-admin-track-row__field">';
+			echo '<label>' . esc_html__( 'Nombre del track', 'goodsleep-elementor' ) . '</label>';
+			echo '<input type="text" class="regular-text" name="goodsleep_elementor_settings[tracks_catalog][' . esc_attr( $index ) . '][label]" value="' . esc_attr( $label ) . '">';
+			echo '<input type="hidden" name="goodsleep_elementor_settings[tracks_catalog][' . esc_attr( $index ) . '][id]" value="' . esc_attr( $id ) . '">';
+			echo '<input type="hidden" name="goodsleep_elementor_settings[tracks_catalog][' . esc_attr( $index ) . '][attachment_id]" value="' . esc_attr( $attachment_id ) . '">';
+			echo '</div>';
+			echo '<div class="goodsleep-admin-track-row__field">';
+			echo '<label>' . esc_html__( 'Audio', 'goodsleep-elementor' ) . '</label>';
+			echo '<div class="goodsleep-admin-track-row__audio">';
+			echo '<input type="text" class="regular-text goodsleep-admin-track-row__audio-url" name="goodsleep_elementor_settings[tracks_catalog][' . esc_attr( $index ) . '][url]" value="' . esc_attr( $url ) . '" readonly>';
+			echo '<button type="button" class="button" data-select-track>' . esc_html__( 'Seleccionar audio', 'goodsleep-elementor' ) . '</button>';
+			echo '</div>';
+			echo '</div>';
+			echo '<div class="goodsleep-admin-track-row__remove">';
+			echo '<button type="button" class="button-link-delete" data-remove-track>' . esc_html__( 'Eliminar', 'goodsleep-elementor' ) . '</button>';
+			echo '</div>';
+			echo '</div>';
+		}
+
+		echo '</div>';
+		echo '<p><button type="button" class="button button-secondary" data-add-track>' . esc_html__( 'Añadir track', 'goodsleep-elementor' ) . '</button></p>';
+		echo '<p class="description">' . esc_html__( 'Añade manualmente cada track con nombre y archivo de audio desde la galería de medios.', 'goodsleep-elementor' ) . '</p>';
+		echo '</div>';
 	}
 
 	/**
 	 * Renderiza una picklist con filtro.
 	 *
-	 * @param string              $field_name Nombre del campo.
-	 * @param array<int,array>    $items      Items.
-	 * @param array<int,string>   $selected   Seleccionados.
-	 * @param string              $empty_text Texto vacio.
+	 * @param string            $field_name Nombre del campo.
+	 * @param array<int,array>  $items      Items.
+	 * @param array<int,string> $selected   Seleccionados.
+	 * @param string            $empty_text Texto vacio.
 	 * @return void
 	 */
 	protected function render_multicheck_list( $field_name, $items, $selected, $empty_text ) {
@@ -263,7 +305,7 @@ class Goodsleep_Elementor_Settings {
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Goodsleep Elementor', 'goodsleep-elementor' ); ?></h1>
-			<p><?php esc_html_e( 'Configura integraciones y catalogos de la campana Goodsleep.', 'goodsleep-elementor' ); ?></p>
+			<p><?php esc_html_e( 'Configura integraciones, voces y tracks manuales de la campaña Goodsleep.', 'goodsleep-elementor' ); ?></p>
 			<form method="post" action="options.php">
 				<?php settings_fields( 'goodsleep_elementor_settings_group' ); ?>
 				<?php do_settings_sections( 'goodsleep-elementor' ); ?>

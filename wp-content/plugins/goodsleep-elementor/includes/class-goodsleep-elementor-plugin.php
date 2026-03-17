@@ -113,14 +113,19 @@ class Goodsleep_Elementor_Plugin {
 			return;
 		}
 
+		wp_enqueue_media();
 		wp_enqueue_style( 'goodsleep-elementor-admin', GOODSLEEP_ELEMENTOR_URL . 'assets/css/admin.css', array(), GOODSLEEP_ELEMENTOR_VERSION );
 		wp_enqueue_script( 'goodsleep-elementor-admin', GOODSLEEP_ELEMENTOR_URL . 'assets/js/admin.js', array(), GOODSLEEP_ELEMENTOR_VERSION, true );
 		wp_localize_script(
 			'goodsleep-elementor-admin',
 			'goodsleepAdmin',
 			array(
-				'restUrl' => esc_url_raw( rest_url( 'goodsleep/v1/' ) ),
-				'nonce'   => wp_create_nonce( 'wp_rest' ),
+				'restUrl'          => esc_url_raw( rest_url( 'goodsleep/v1/' ) ),
+				'nonce'            => wp_create_nonce( 'wp_rest' ),
+				'trackTitle'       => __( 'Seleccionar track de audio', 'goodsleep-elementor' ),
+				'trackButton'      => __( 'Usar este audio', 'goodsleep-elementor' ),
+				'addTrackLabel'    => __( 'Añadir track', 'goodsleep-elementor' ),
+				'removeTrackLabel' => __( 'Eliminar', 'goodsleep-elementor' ),
 			)
 		);
 	}
