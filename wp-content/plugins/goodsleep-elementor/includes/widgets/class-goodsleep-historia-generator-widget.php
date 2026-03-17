@@ -66,9 +66,9 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 		$this->add_control(
 			'phrase_template',
 			array(
-				'label'       => __( 'Frase dinamica', 'goodsleep-elementor' ),
+				'label'       => __( 'Frase dinámica', 'goodsleep-elementor' ),
 				'type'        => \Elementor\Controls_Manager::TEXTAREA,
-				'default'     => __( 'Nada le quita el sueno a %s porque toma Goodsleep.', 'goodsleep-elementor' ),
+				'default'     => __( 'Nada le quita el sueño a %s porque toma Goodsleep.', 'goodsleep-elementor' ),
 				'description' => __( 'Usa %s para insertar el nombre ingresado.', 'goodsleep-elementor' ),
 			)
 		);
@@ -76,16 +76,16 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 		$this->add_control(
 			'terms_text',
 			array(
-				'label'   => __( 'Texto de terminos', 'goodsleep-elementor' ),
+				'label'   => __( 'Texto de términos', 'goodsleep-elementor' ),
 				'type'    => \Elementor\Controls_Manager::TEXT,
-				'default' => goodsleep_get_setting( 'terms_text', __( 'Acepto terminos y condiciones', 'goodsleep-elementor' ) ),
+				'default' => goodsleep_get_setting( 'terms_text', __( 'Acepto términos y condiciones', 'goodsleep-elementor' ) ),
 			)
 		);
 
 		$this->add_control(
 			'terms_url',
 			array(
-				'label'   => __( 'URL de terminos', 'goodsleep-elementor' ),
+				'label'   => __( 'URL de términos', 'goodsleep-elementor' ),
 				'type'    => \Elementor\Controls_Manager::URL,
 				'default' => array(
 					'url'         => goodsleep_get_setting( 'terms_url', '' ),
@@ -97,7 +97,7 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 		$this->add_control(
 			'submit_label',
 			array(
-				'label'   => __( 'Texto del boton', 'goodsleep-elementor' ),
+				'label'   => __( 'Texto del botón', 'goodsleep-elementor' ),
 				'type'    => \Elementor\Controls_Manager::TEXT,
 				'default' => __( 'Hazlo audio', 'goodsleep-elementor' ),
 			)
@@ -148,7 +148,7 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 							<?php endforeach; ?>
 						</select>
 						<select name="track_id">
-							<option value=""><?php esc_html_e( 'Musica', 'goodsleep-elementor' ); ?></option>
+							<option value=""><?php esc_html_e( 'Música', 'goodsleep-elementor' ); ?></option>
 							<?php foreach ( goodsleep_get_allowed_tracks() as $track ) : ?>
 								<option value="<?php echo esc_attr( $track['id'] ); ?>" data-label="<?php echo esc_attr( $track['label'] ); ?>"><?php echo esc_html( $track['label'] ); ?></option>
 							<?php endforeach; ?>
@@ -175,7 +175,7 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 			</div>
 			<div class="goodsleep-generator__surface goodsleep-generator__surface--result" hidden>
 				<div class="goodsleep-generator__result-card">
-					<p class="goodsleep-generator__result-copy"><?php esc_html_e( 'Gracias por tu historia, aqui esta lista para compartir.', 'goodsleep-elementor' ); ?></p>
+					<p class="goodsleep-generator__result-copy"><?php esc_html_e( 'Gracias por tu historia, aquí está lista para compartir.', 'goodsleep-elementor' ); ?></p>
 					<audio controls preload="metadata" data-result-audio></audio>
 					<div class="goodsleep-generator__result-actions">
 						<a class="goodsleep-generator__action goodsleep-generator__action--download" href="#" download data-download-link><?php esc_html_e( 'Descargar', 'goodsleep-elementor' ); ?></a>
