@@ -107,6 +107,10 @@
 				return 'Selecciona una voz.';
 			}
 
+			if ( 'track_id' === field.name && ! field.value ) {
+				return 'Selecciona una música.';
+			}
+
 			if ( 'accepted_terms' === field.name && ! field.checked ) {
 				return 'Debes aceptar los términos y condiciones.';
 			}

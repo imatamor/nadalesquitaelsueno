@@ -149,7 +149,7 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 								<option value="<?php echo esc_attr( $voice['id'] ); ?>" data-label="<?php echo esc_attr( $voice['label'] ); ?>"><?php echo esc_html( $voice['label'] ); ?></option>
 							<?php endforeach; ?>
 						</select>
-						<select name="track_id">
+						<select name="track_id" required>
 							<option value=""><?php esc_html_e( 'Música', 'goodsleep-elementor' ); ?></option>
 							<?php foreach ( goodsleep_get_allowed_tracks() as $track ) : ?>
 								<option value="<?php echo esc_attr( $track['id'] ); ?>" data-label="<?php echo esc_attr( $track['label'] ); ?>"><?php echo esc_html( $track['label'] ); ?></option>

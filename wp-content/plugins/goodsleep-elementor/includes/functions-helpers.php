@@ -192,6 +192,28 @@ function goodsleep_get_cached_tracks() {
 }
 
 /**
+ * Devuelve un track cacheado por ID.
+ *
+ * @param string $track_id ID del track.
+ * @return array<string,mixed>|null
+ */
+function goodsleep_get_track_by_id( $track_id ) {
+	$track_id = sanitize_text_field( (string) $track_id );
+
+	if ( '' === $track_id ) {
+		return null;
+	}
+
+	foreach ( goodsleep_get_cached_tracks() as $track ) {
+		if ( isset( $track['id'] ) && $track_id === $track['id'] ) {
+			return $track;
+		}
+	}
+
+	return null;
+}
+
+/**
  * Devuelve las voces habilitadas por whitelist.
  *
  * @return array<int,array<string,mixed>>

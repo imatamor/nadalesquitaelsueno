@@ -110,12 +110,22 @@ class Goodsleep_Elementor_REST_Controller {
 		$track_label = isset( $params['track_label'] ) ? sanitize_text_field( $params['track_label'] ) : '';
 		$accepted    = ! empty( $params['accepted_terms'] );
 
-		if ( ! $accepted || '' === $name || '' === $email || ! is_email( $email ) || '' === $voice_id || '' === $text ) {
+		if ( ! $accepted || '' === $name || '' === $email || ! is_email( $email ) || '' === $voice_id || '' === $track_id || '' === $text ) {
 			return new WP_Error( 'goodsleep_invalid_submission', __( 'Faltan campos obligatorios del formulario.', 'goodsleep-elementor' ), array( 'status' => 400 ) );
 		}
 
 		if ( strlen( $text ) > 500 ) {
 			return new WP_Error( 'goodsleep_invalid_story_text', __( 'La historia supera el maximo de 500 caracteres.', 'goodsleep-elementor' ), array( 'status' => 400 ) );
+		}
+
+		$track = goodsleep_get_track_by_id( $track_id );
+
+		if ( ! $track || empty( $track['url'] ) ) {
+			return new WP_Error( 'goodsleep_invalid_track', __( 'Selecciona un track de musica valido.', 'goodsleep-elementor' ), array( 'status' => 400 ) );
+		}
+
+		if ( '' === $track_label && ! empty( $track['label'] ) ) {
+			$track_label = sanitize_text_field( $track['label'] );
 		}
 
 		$rate_limit = goodsleep_assert_generation_rate_limit();
@@ -128,9 +138,10 @@ class Goodsleep_Elementor_REST_Controller {
 
 		$audio_response = $this->speechify->generate_audio(
 			array(
-				'text'     => $combined_text,
-				'voice_id' => $voice_id,
-				'track_id' => $track_id,
+				'text'      => $combined_text,
+				'voice_id'  => $voice_id,
+				'track_id'  => $track_id,
+				'track_url' => esc_url_raw( $track['url'] ),
 			)
 		);
 
