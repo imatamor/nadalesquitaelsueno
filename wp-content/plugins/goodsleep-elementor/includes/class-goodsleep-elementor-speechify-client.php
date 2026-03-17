@@ -49,9 +49,14 @@ class Goodsleep_Elementor_Speechify_Client {
 				continue;
 			}
 
+			$language = $this->extract_language_data( $item );
+
 			$voices[] = array(
-				'id'    => sanitize_text_field( $item['id'] ),
-				'label' => sanitize_text_field( ! empty( $item['display_name'] ) ? $item['display_name'] : $item['id'] ),
+				'id'             => sanitize_text_field( $item['id'] ),
+				'label'          => sanitize_text_field( ! empty( $item['display_name'] ) ? $item['display_name'] : $item['id'] ),
+				'language'       => $language['language'],
+				'language_label' => $language['language_label'],
+				'locale'         => $language['locale'],
 			);
 		}
 
@@ -107,5 +112,93 @@ class Goodsleep_Elementor_Speechify_Client {
 		}
 
 		return $decoded;
+	}
+
+	/**
+	 * Extrae idioma y locale de una voz de Speechify.
+	 *
+	 * @param array<string,mixed> $item Datos crudos de la voz.
+	 * @return array<string,string>
+	 */
+	protected function extract_language_data( $item ) {
+		$language       = '';
+		$language_label = '';
+		$locale         = '';
+
+		$candidates = array(
+			'language',
+			'language_code',
+			'languageCode',
+			'lang',
+			'locale',
+			'locale_code',
+			'localeCode',
+		);
+
+		foreach ( $candidates as $candidate ) {
+			if ( empty( $item[ $candidate ] ) ) {
+				continue;
+			}
+
+			if ( is_string( $item[ $candidate ] ) ) {
+				if ( '' === $locale ) {
+					$locale = sanitize_text_field( $item[ $candidate ] );
+				}
+
+				if ( '' === $language ) {
+					$language = sanitize_text_field( $item[ $candidate ] );
+				}
+			}
+
+			if ( is_array( $item[ $candidate ] ) ) {
+				$nested_value = $this->extract_language_data( $item[ $candidate ] );
+
+				if ( '' === $language && '' !== $nested_value['language'] ) {
+					$language = $nested_value['language'];
+				}
+
+				if ( '' === $language_label && '' !== $nested_value['language_label'] ) {
+					$language_label = $nested_value['language_label'];
+				}
+
+				if ( '' === $locale && '' !== $nested_value['locale'] ) {
+					$locale = $nested_value['locale'];
+				}
+			}
+		}
+
+		if ( isset( $item['language_name'] ) && is_string( $item['language_name'] ) ) {
+			$language_label = sanitize_text_field( $item['language_name'] );
+		} elseif ( isset( $item['languageName'] ) && is_string( $item['languageName'] ) ) {
+			$language_label = sanitize_text_field( $item['languageName'] );
+		} elseif ( isset( $item['name'] ) && is_string( $item['name'] ) && '' === $language_label ) {
+			$language_label = sanitize_text_field( $item['name'] );
+		}
+
+		if ( '' !== $locale && preg_match( '/^[a-z]{2,3}[-_][A-Z]{2}$/', $locale ) ) {
+			$language = strtolower( strtok( $locale, '-_' ) );
+		}
+
+		if ( '' !== $language && preg_match( '/^[a-z]{2,3}$/i', $language ) ) {
+			$language = strtolower( $language );
+		}
+
+		if ( '' === $language_label ) {
+			if ( '' !== $locale && ! preg_match( '/^[a-z]{2,3}$/i', $locale ) ) {
+				$language_label = $locale;
+			} elseif ( '' !== $language ) {
+				$language_label = strtoupper( $language );
+			}
+		}
+
+		if ( '' === $locale ) {
+			$locale = $language;
+		}
+
+		return array(
+			'language'       => sanitize_text_field( $language ),
+			'language_label' => sanitize_text_field( $language_label ),
+			'locale'         => sanitize_text_field( $locale ),
+		);
 	}
 }

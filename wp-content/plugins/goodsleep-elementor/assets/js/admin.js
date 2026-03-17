@@ -90,19 +90,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
 	document.querySelectorAll('.goodsleep-admin-picklist').forEach(function(picklist) {
 		var search = picklist.querySelector('.goodsleep-admin-picklist__search');
+		var languageFilter = picklist.querySelector('[data-picklist-languages]');
 		var items = Array.from(picklist.querySelectorAll('.goodsleep-admin-picklist__item'));
 
 		if (!search) {
 			return;
 		}
 
-		search.addEventListener('input', function() {
-			var query = search.value.trim().toLowerCase();
+		function filterItems() {
+			var query = search.value.trim().toLocaleLowerCase();
+			var selectedLanguages = languageFilter ? Array.from(languageFilter.selectedOptions).map(function(option) {
+				return option.value.toLocaleLowerCase();
+			}) : [];
 
 			items.forEach(function(item) {
-				item.style.display = !query || item.textContent.toLowerCase().indexOf(query) !== -1 ? '' : 'none';
+				var searchText = (item.getAttribute('data-search-text') || item.textContent || '').toLocaleLowerCase();
+				var itemLanguage = (item.getAttribute('data-language') || '').toLocaleLowerCase();
+				var matchesQuery = !query || searchText.indexOf(query) !== -1;
+				var matchesLanguage = !selectedLanguages.length || selectedLanguages.indexOf(itemLanguage) !== -1;
+
+				item.style.display = matchesQuery && matchesLanguage ? '' : 'none';
 			});
-		});
+		}
+
+		search.addEventListener('input', filterItems);
+
+		if (languageFilter) {
+			languageFilter.addEventListener('change', filterItems);
+		}
 	});
 
 	var syncButton = document.querySelector('[data-goodsleep-sync-voices]');

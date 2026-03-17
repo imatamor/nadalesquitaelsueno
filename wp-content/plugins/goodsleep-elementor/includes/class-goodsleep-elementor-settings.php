@@ -199,7 +199,10 @@ class Goodsleep_Elementor_Settings {
 			'voice_whitelist',
 			goodsleep_get_cached_voices(),
 			(array) goodsleep_get_setting( 'voice_whitelist', array() ),
-			__( 'No hay voces cacheadas todavía. Configura Speechify y sincronízalas por API.', 'goodsleep-elementor' )
+			__( 'No hay voces cacheadas todavía. Configura Speechify y sincronízalas por API.', 'goodsleep-elementor' ),
+			array(
+				'show_language_filter' => true,
+			)
 		);
 	}
 
@@ -263,37 +266,108 @@ class Goodsleep_Elementor_Settings {
 	/**
 	 * Renderiza una picklist con filtro.
 	 *
-	 * @param string            $field_name Nombre del campo.
-	 * @param array<int,array>  $items      Items.
-	 * @param array<int,string> $selected   Seleccionados.
-	 * @param string            $empty_text Texto vacio.
+	 * @param string              $field_name Nombre del campo.
+	 * @param array<int,array>    $items      Items.
+	 * @param array<int,string>   $selected   Seleccionados.
+	 * @param string              $empty_text Texto vacio.
+	 * @param array<string,mixed> $args       Configuracion de UI.
 	 * @return void
 	 */
-	protected function render_multicheck_list( $field_name, $items, $selected, $empty_text ) {
+	protected function render_multicheck_list( $field_name, $items, $selected, $empty_text, $args = array() ) {
 		if ( empty( $items ) ) {
 			echo '<p class="description">' . esc_html( $empty_text ) . '</p>';
 			return;
 		}
 
+		$show_language_filter = ! empty( $args['show_language_filter'] );
+		$languages            = $show_language_filter ? $this->get_picklist_languages( $items ) : array();
+
 		echo '<div class="goodsleep-admin-picklist">';
 		echo '<input type="search" class="goodsleep-admin-picklist__search" placeholder="' . esc_attr__( 'Buscar...', 'goodsleep-elementor' ) . '">';
+
+		if ( $show_language_filter && ! empty( $languages ) ) {
+			echo '<div class="goodsleep-admin-picklist__filters">';
+			echo '<label class="goodsleep-admin-picklist__filter-label" for="goodsleep-language-filter-' . esc_attr( $field_name ) . '">' . esc_html__( 'Idiomas disponibles', 'goodsleep-elementor' ) . '</label>';
+			echo '<select id="goodsleep-language-filter-' . esc_attr( $field_name ) . '" class="goodsleep-admin-picklist__languages" data-picklist-languages multiple size="' . esc_attr( min( count( $languages ), 8 ) ) . '">';
+
+			foreach ( $languages as $language ) {
+				echo '<option value="' . esc_attr( $language['value'] ) . '">' . esc_html( $language['label'] ) . '</option>';
+			}
+
+			echo '</select>';
+			echo '<p class="description">' . esc_html__( 'Selecciona uno o varios idiomas para reducir la lista antes de marcar las voces habilitadas.', 'goodsleep-elementor' ) . '</p>';
+			echo '</div>';
+		}
+
 		echo '<div class="goodsleep-admin-picklist__items">';
 
 		foreach ( $items as $item ) {
-			$id    = isset( $item['id'] ) ? $item['id'] : '';
-			$label = isset( $item['label'] ) ? $item['label'] : $id;
+			$id             = isset( $item['id'] ) ? $item['id'] : '';
+			$label          = isset( $item['label'] ) ? $item['label'] : $id;
+			$language_value = isset( $item['language'] ) && '' !== $item['language'] ? (string) $item['language'] : ( isset( $item['locale'] ) ? (string) $item['locale'] : '' );
+			$language_label = isset( $item['language_label'] ) && '' !== $item['language_label'] ? (string) $item['language_label'] : $language_value;
 
 			if ( ! $id ) {
 				continue;
 			}
 
-			echo '<label class="goodsleep-admin-picklist__item">';
+			echo '<label class="goodsleep-admin-picklist__item" data-language="' . esc_attr( strtolower( $language_value ) ) . '" data-search-text="' . esc_attr( trim( $label . ' ' . $language_label . ' ' . $language_value ) ) . '">';
 			echo '<input type="checkbox" name="goodsleep_elementor_settings[' . esc_attr( $field_name ) . '][]" value="' . esc_attr( $id ) . '" ' . checked( in_array( $id, $selected, true ), true, false ) . '>';
 			echo '<span>' . esc_html( $label ) . '</span>';
+
+			if ( $show_language_filter && '' !== $language_label ) {
+				echo '<small class="goodsleep-admin-picklist__meta">' . esc_html( $language_label ) . '</small>';
+			}
+
 			echo '</label>';
 		}
 
 		echo '</div></div>';
+	}
+
+	/**
+	 * Devuelve los idiomas disponibles de una picklist.
+	 *
+	 * @param array<int,array<string,mixed>> $items Items del catalogo.
+	 * @return array<int,array<string,string>>
+	 */
+	protected function get_picklist_languages( $items ) {
+		$languages = array();
+
+		foreach ( $items as $item ) {
+			$value = '';
+			$label = '';
+
+			if ( ! empty( $item['language'] ) && is_string( $item['language'] ) ) {
+				$value = strtolower( sanitize_text_field( $item['language'] ) );
+			} elseif ( ! empty( $item['locale'] ) && is_string( $item['locale'] ) ) {
+				$value = strtolower( sanitize_text_field( $item['locale'] ) );
+			}
+
+			if ( ! empty( $item['language_label'] ) && is_string( $item['language_label'] ) ) {
+				$label = sanitize_text_field( $item['language_label'] );
+			} elseif ( '' !== $value ) {
+				$label = strtoupper( $value );
+			}
+
+			if ( '' === $value || '' === $label ) {
+				continue;
+			}
+
+			$languages[ $value ] = array(
+				'value' => $value,
+				'label' => $label,
+			);
+		}
+
+		uasort(
+			$languages,
+			static function ( $left, $right ) {
+				return strcasecmp( $left['label'], $right['label'] );
+			}
+		);
+
+		return array_values( $languages );
 	}
 
 	/**
