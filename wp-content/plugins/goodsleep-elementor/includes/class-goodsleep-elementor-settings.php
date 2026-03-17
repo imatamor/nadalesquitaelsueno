@@ -116,9 +116,10 @@ class Goodsleep_Elementor_Settings {
 		$sanitized['mailjet_reply_to_name']  = isset( $input['mailjet_reply_to_name'] ) ? sanitize_text_field( $input['mailjet_reply_to_name'] ) : '';
 		$sanitized['terms_url']              = isset( $input['terms_url'] ) ? esc_url_raw( $input['terms_url'] ) : '';
 		$sanitized['terms_text']             = isset( $input['terms_text'] ) ? sanitize_text_field( $input['terms_text'] ) : '';
-		$sanitized['whatsapp_share_text']    = isset( $input['whatsapp_share_text'] ) ? sanitize_textarea_field( $input['whatsapp_share_text'] ) : '';
-		$sanitized['voice_whitelist']        = isset( $input['voice_whitelist'] ) ? array_values( array_filter( array_map( 'sanitize_text_field', (array) $input['voice_whitelist'] ) ) ) : array();
-		$sanitized['track_whitelist']        = isset( $input['track_whitelist'] ) ? array_values( array_filter( array_map( 'sanitize_text_field', (array) $input['track_whitelist'] ) ) ) : array();
+		$sanitized['whatsapp_share_text']      = isset( $input['whatsapp_share_text'] ) ? sanitize_textarea_field( $input['whatsapp_share_text'] ) : '';
+		$sanitized['voice_language_whitelist'] = isset( $input['voice_language_whitelist'] ) ? array_values( array_filter( array_map( 'sanitize_text_field', (array) $input['voice_language_whitelist'] ) ) ) : array();
+		$sanitized['voice_whitelist']          = isset( $input['voice_whitelist'] ) ? array_values( array_filter( array_map( 'sanitize_text_field', (array) $input['voice_whitelist'] ) ) ) : array();
+		$sanitized['track_whitelist']          = isset( $input['track_whitelist'] ) ? array_values( array_filter( array_map( 'sanitize_text_field', (array) $input['track_whitelist'] ) ) ) : array();
 
 		$tracks_catalog = array();
 		if ( ! empty( $input['tracks_catalog'] ) && is_array( $input['tracks_catalog'] ) ) {
@@ -202,6 +203,8 @@ class Goodsleep_Elementor_Settings {
 			__( 'No hay voces cacheadas todavía. Configura Speechify y sincronízalas por API.', 'goodsleep-elementor' ),
 			array(
 				'show_language_filter' => true,
+				'language_field_name'  => 'voice_language_whitelist',
+				'selected_languages'   => (array) goodsleep_get_setting( 'voice_language_whitelist', array() ),
 			)
 		);
 	}
@@ -281,6 +284,8 @@ class Goodsleep_Elementor_Settings {
 
 		$show_language_filter = ! empty( $args['show_language_filter'] );
 		$languages            = $show_language_filter ? $this->get_picklist_languages( $items ) : array();
+		$language_field_name  = ! empty( $args['language_field_name'] ) ? (string) $args['language_field_name'] : '';
+		$selected_languages   = ! empty( $args['selected_languages'] ) ? array_map( 'strtolower', (array) $args['selected_languages'] ) : array();
 
 		echo '<div class="goodsleep-admin-picklist">';
 		echo '<input type="search" class="goodsleep-admin-picklist__search" placeholder="' . esc_attr__( 'Buscar...', 'goodsleep-elementor' ) . '">';
@@ -288,14 +293,24 @@ class Goodsleep_Elementor_Settings {
 		if ( $show_language_filter && ! empty( $languages ) ) {
 			echo '<div class="goodsleep-admin-picklist__filters">';
 			echo '<label class="goodsleep-admin-picklist__filter-label" for="goodsleep-language-filter-' . esc_attr( $field_name ) . '">' . esc_html__( 'Idiomas disponibles', 'goodsleep-elementor' ) . '</label>';
-			echo '<select id="goodsleep-language-filter-' . esc_attr( $field_name ) . '" class="goodsleep-admin-picklist__languages" data-picklist-languages multiple size="' . esc_attr( min( count( $languages ), 8 ) ) . '">';
+			echo '<div class="goodsleep-admin-picklist__actions">';
+			echo '<button type="button" class="button button-secondary" data-picklist-select-all>' . esc_html__( 'Seleccionar todo', 'goodsleep-elementor' ) . '</button>';
+			echo '<button type="button" class="button-link" data-picklist-clear>' . esc_html__( 'Limpiar selección', 'goodsleep-elementor' ) . '</button>';
+			echo '</div>';
+			echo '<select id="goodsleep-language-filter-' . esc_attr( $field_name ) . '" class="goodsleep-admin-picklist__languages" data-picklist-languages multiple size="' . esc_attr( min( count( $languages ), 8 ) ) . '"';
+
+			if ( '' !== $language_field_name ) {
+				echo ' name="goodsleep_elementor_settings[' . esc_attr( $language_field_name ) . '][]"';
+			}
+
+			echo '>';
 
 			foreach ( $languages as $language ) {
-				echo '<option value="' . esc_attr( $language['value'] ) . '">' . esc_html( $language['label'] ) . '</option>';
+				echo '<option value="' . esc_attr( $language['value'] ) . '" ' . selected( in_array( $language['value'], $selected_languages, true ), true, false ) . '>' . esc_html( $language['label'] ) . '</option>';
 			}
 
 			echo '</select>';
-			echo '<p class="description">' . esc_html__( 'Selecciona uno o varios idiomas para reducir la lista antes de marcar las voces habilitadas.', 'goodsleep-elementor' ) . '</p>';
+			echo '<p class="description">' . esc_html__( 'Si no marcas voces específicas, el frontend usará todas las voces de los idiomas seleccionados. Si no seleccionas idiomas ni voces, se mostrarán todas las voces.', 'goodsleep-elementor' ) . '</p>';
 			echo '</div>';
 		}
 

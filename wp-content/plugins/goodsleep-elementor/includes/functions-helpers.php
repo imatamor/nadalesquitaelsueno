@@ -27,6 +27,7 @@ function goodsleep_get_settings() {
 		'whatsapp_share_text'     => 'Nada le quita el sueno a %s. Escucha esta historia: %s',
 		'terms_text'              => 'Acepto terminos y condiciones',
 		'terms_url'               => '',
+		'voice_language_whitelist' => array(),
 		'voice_whitelist'         => array(),
 		'track_whitelist'         => array(),
 		'tracks_catalog'          => array(),
@@ -196,11 +197,31 @@ function goodsleep_get_cached_tracks() {
  * @return array<int,array<string,mixed>>
  */
 function goodsleep_get_allowed_voices() {
-	$catalog   = goodsleep_get_cached_voices();
-	$whitelist = (array) goodsleep_get_setting( 'voice_whitelist', array() );
+	$catalog            = goodsleep_get_cached_voices();
+	$whitelist          = (array) goodsleep_get_setting( 'voice_whitelist', array() );
+	$language_whitelist = array_values( array_filter( array_map( 'strtolower', (array) goodsleep_get_setting( 'voice_language_whitelist', array() ) ) ) );
 
 	if ( empty( $whitelist ) ) {
-		return $catalog;
+		if ( empty( $language_whitelist ) ) {
+			return $catalog;
+		}
+
+		return array_values(
+			array_filter(
+				$catalog,
+				static function ( $voice ) use ( $language_whitelist ) {
+					$voice_language = '';
+
+					if ( ! empty( $voice['language'] ) && is_string( $voice['language'] ) ) {
+						$voice_language = strtolower( $voice['language'] );
+					} elseif ( ! empty( $voice['locale'] ) && is_string( $voice['locale'] ) ) {
+						$voice_language = strtolower( $voice['locale'] );
+					}
+
+					return '' !== $voice_language && in_array( $voice_language, $language_whitelist, true );
+				}
+			)
+		);
 	}
 
 	return array_values(
@@ -211,6 +232,17 @@ function goodsleep_get_allowed_voices() {
 			}
 		)
 	);
+}
+
+/**
+ * Devuelve los idiomas habilitados por filtro de voces.
+ *
+ * @return array<int,string>
+ */
+function goodsleep_get_allowed_voice_languages() {
+	$languages = (array) goodsleep_get_setting( 'voice_language_whitelist', array() );
+
+	return array_values( array_filter( array_map( 'sanitize_text_field', $languages ) ) );
 }
 
 /**

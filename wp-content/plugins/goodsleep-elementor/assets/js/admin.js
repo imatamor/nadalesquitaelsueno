@@ -1,6 +1,4 @@
 document.addEventListener('DOMContentLoaded', function() {
-	var languageFilterStorageKey = 'goodsleepVoiceLanguageFilter';
-
 	function createTrackRow(track) {
 		var wrapper = document.createElement('div');
 		wrapper.className = 'goodsleep-admin-track-row';
@@ -93,42 +91,12 @@ document.addEventListener('DOMContentLoaded', function() {
 	document.querySelectorAll('.goodsleep-admin-picklist').forEach(function(picklist) {
 		var search = picklist.querySelector('.goodsleep-admin-picklist__search');
 		var languageFilter = picklist.querySelector('[data-picklist-languages]');
+		var selectAllButton = picklist.querySelector('[data-picklist-select-all]');
+		var clearButton = picklist.querySelector('[data-picklist-clear]');
 		var items = Array.from(picklist.querySelectorAll('.goodsleep-admin-picklist__item'));
 
 		if (!search) {
 			return;
-		}
-
-		function getStoredLanguages() {
-			if (!languageFilter) {
-				return [];
-			}
-
-			try {
-				return JSON.parse(window.localStorage.getItem(languageFilterStorageKey) || '[]');
-			} catch (error) {
-				return [];
-			}
-		}
-
-		function storeLanguages(values) {
-			if (!languageFilter) {
-				return;
-			}
-
-			window.localStorage.setItem(languageFilterStorageKey, JSON.stringify(values));
-		}
-
-		function applyStoredLanguages() {
-			var storedValues = getStoredLanguages();
-
-			if (!languageFilter || !storedValues.length) {
-				return;
-			}
-
-			Array.from(languageFilter.options).forEach(function(option) {
-				option.selected = storedValues.indexOf(option.value) !== -1;
-			});
 		}
 
 		function filterItems() {
@@ -159,26 +127,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
 				event.preventDefault();
 				option.selected = !option.selected;
-
-				var selectedValues = Array.from(languageFilter.selectedOptions).map(function(selectedOption) {
-					return selectedOption.value;
-				});
-
-				storeLanguages(selectedValues);
 				filterItems();
 			});
 
-			languageFilter.addEventListener('change', function() {
-				var selectedValues = Array.from(languageFilter.selectedOptions).map(function(option) {
-					return option.value;
+			languageFilter.addEventListener('change', filterItems);
+		}
+
+		if (selectAllButton && languageFilter) {
+			selectAllButton.addEventListener('click', function() {
+				Array.from(languageFilter.options).forEach(function(option) {
+					option.selected = true;
 				});
 
-				storeLanguages(selectedValues);
 				filterItems();
 			});
 		}
 
-		applyStoredLanguages();
+		if (clearButton && languageFilter) {
+			clearButton.addEventListener('click', function() {
+				Array.from(languageFilter.options).forEach(function(option) {
+					option.selected = false;
+				});
+
+				filterItems();
+			});
+		}
+
 		filterItems();
 	});
 
