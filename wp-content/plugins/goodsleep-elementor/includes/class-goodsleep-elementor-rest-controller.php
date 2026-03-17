@@ -14,6 +14,11 @@ class Goodsleep_Elementor_REST_Controller {
 	protected $speechify;
 
 	/**
+	 * @var Goodsleep_Elementor_Audio_Mixer
+	 */
+	protected $audio_mixer;
+
+	/**
 	 * @var Goodsleep_Elementor_Mailjet_Client
 	 */
 	protected $mailjet;
@@ -22,11 +27,13 @@ class Goodsleep_Elementor_REST_Controller {
 	 * Constructor.
 	 *
 	 * @param Goodsleep_Elementor_Speechify_Client $speechify Cliente Speechify.
+	 * @param Goodsleep_Elementor_Audio_Mixer      $audio_mixer Mezclador de audio.
 	 * @param Goodsleep_Elementor_Mailjet_Client   $mailjet   Cliente Mailjet.
 	 */
-	public function __construct( Goodsleep_Elementor_Speechify_Client $speechify, Goodsleep_Elementor_Mailjet_Client $mailjet ) {
-		$this->speechify = $speechify;
-		$this->mailjet   = $mailjet;
+	public function __construct( Goodsleep_Elementor_Speechify_Client $speechify, Goodsleep_Elementor_Audio_Mixer $audio_mixer, Goodsleep_Elementor_Mailjet_Client $mailjet ) {
+		$this->speechify   = $speechify;
+		$this->audio_mixer = $audio_mixer;
+		$this->mailjet     = $mailjet;
 
 		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
 	}
@@ -104,6 +111,7 @@ class Goodsleep_Elementor_REST_Controller {
 		$email       = isset( $params['email'] ) ? sanitize_email( $params['email'] ) : '';
 		$text        = isset( $params['story_text'] ) ? sanitize_textarea_field( $params['story_text'] ) : '';
 		$phrase      = isset( $params['phrase_template'] ) ? sanitize_text_field( $params['phrase_template'] ) : '';
+		$emotion     = isset( $params['phrase_emotion'] ) ? goodsleep_sanitize_speechify_emotion( $params['phrase_emotion'] ) : 'cheerful';
 		$voice_id    = isset( $params['voice_id'] ) ? sanitize_text_field( $params['voice_id'] ) : '';
 		$voice_label = isset( $params['voice_label'] ) ? sanitize_text_field( $params['voice_label'] ) : '';
 		$track_id    = isset( $params['track_id'] ) ? sanitize_text_field( $params['track_id'] ) : '';
@@ -135,13 +143,13 @@ class Goodsleep_Elementor_REST_Controller {
 
 		$rendered_phrase = $phrase ? sprintf( $phrase, $name ) : '';
 		$combined_text   = trim( $text . "\n" . $rendered_phrase );
+		$speech_input    = $this->build_speechify_input( $text, $rendered_phrase, $emotion );
 
 		$audio_response = $this->speechify->generate_audio(
 			array(
-				'text'      => $combined_text,
-				'voice_id'  => $voice_id,
-				'track_id'  => $track_id,
-				'track_url' => esc_url_raw( $track['url'] ),
+				'text'     => $combined_text,
+				'ssml'     => $speech_input,
+				'voice_id' => $voice_id,
 			)
 		);
 
@@ -155,6 +163,20 @@ class Goodsleep_Elementor_REST_Controller {
 
 		if ( '' === $audio_url && '' === $audio_data ) {
 			return new WP_Error( 'goodsleep_audio_missing', __( 'Speechify no devolvio un audio utilizable.', 'goodsleep-elementor' ), array( 'status' => 502 ) );
+		}
+
+		$mixed_audio = $this->audio_mixer->mix_generated_audio(
+			array(
+				'audio_url'    => $audio_url,
+				'audio_data'   => $audio_data,
+				'audio_format' => $audio_format,
+			),
+			$track,
+			goodsleep_normalize_slug( $name ) . '-' . time()
+		);
+
+		if ( is_wp_error( $mixed_audio ) ) {
+			return $mixed_audio;
 		}
 
 		$post_id = wp_insert_post(
@@ -172,10 +194,18 @@ class Goodsleep_Elementor_REST_Controller {
 			return $post_id;
 		}
 
-		$audio_id = $this->store_audio_attachment( $post_id, $name, $audio_url, $audio_data, $audio_format );
+		$audio_id = $this->store_audio_attachment( $post_id, $name, '', '', $mixed_audio['format'], $mixed_audio['path'] );
 
 		if ( is_wp_error( $audio_id ) ) {
+			if ( ! empty( $mixed_audio['path'] ) && file_exists( $mixed_audio['path'] ) ) {
+				@unlink( $mixed_audio['path'] );
+			}
+
 			return $audio_id;
+		}
+
+		if ( ! empty( $mixed_audio['path'] ) && file_exists( $mixed_audio['path'] ) ) {
+			@unlink( $mixed_audio['path'] );
 		}
 
 		$short_slug = goodsleep_normalize_slug( $name ) . '-' . $post_id;
@@ -183,6 +213,7 @@ class Goodsleep_Elementor_REST_Controller {
 		update_post_meta( $post_id, '_goodsleep_story_name', $name );
 		update_post_meta( $post_id, '_goodsleep_story_email', $email );
 		update_post_meta( $post_id, '_goodsleep_story_phrase', $rendered_phrase );
+		update_post_meta( $post_id, '_goodsleep_story_phrase_emotion', $emotion );
 		update_post_meta( $post_id, '_goodsleep_story_text', $text );
 		update_post_meta( $post_id, '_goodsleep_story_combined', $combined_text );
 		update_post_meta( $post_id, '_goodsleep_story_voice_id', $voice_id );
@@ -364,9 +395,10 @@ class Goodsleep_Elementor_REST_Controller {
 	 * @param string $audio_url  URL remota.
 	 * @param string $audio_data Base64 o contenido plano.
 	 * @param string $audio_format Formato de audio.
+	 * @param string $local_file   Archivo local preprocesado.
 	 * @return int|WP_Error
 	 */
-	protected function store_audio_attachment( $post_id, $name, $audio_url, $audio_data, $audio_format = 'mp3' ) {
+	protected function store_audio_attachment( $post_id, $name, $audio_url, $audio_data, $audio_format = 'mp3', $local_file = '' ) {
 		$upload = wp_upload_dir();
 
 		if ( ! empty( $upload['error'] ) ) {
@@ -387,7 +419,9 @@ class Goodsleep_Elementor_REST_Controller {
 		$filename = goodsleep_normalize_slug( $name ) . '-' . $post_id . '.' . $extension;
 		$content  = '';
 
-		if ( $audio_url ) {
+		if ( $local_file && file_exists( $local_file ) ) {
+			$content = file_get_contents( $local_file );
+		} elseif ( $audio_url ) {
 			$response = wp_remote_get( $audio_url, array( 'timeout' => 45 ) );
 
 			if ( is_wp_error( $response ) ) {
@@ -424,10 +458,36 @@ class Goodsleep_Elementor_REST_Controller {
 			return $attachment_id;
 		}
 
+		require_once ABSPATH . 'wp-admin/includes/media.php';
 		require_once ABSPATH . 'wp-admin/includes/image.php';
 		$metadata = wp_generate_attachment_metadata( $attachment_id, $filepath );
 		wp_update_attachment_metadata( $attachment_id, $metadata );
 
 		return $attachment_id;
+	}
+
+	/**
+	 * Construye el input SSML para Speechify.
+	 *
+	 * @param string $story_text Texto principal de la historia.
+	 * @param string $phrase_text Frase final dinamica.
+	 * @param string $emotion Emocion aplicada a la frase final.
+	 * @return string
+	 */
+	protected function build_speechify_input( $story_text, $phrase_text, $emotion = 'cheerful' ) {
+		$story_text  = trim( wp_strip_all_tags( (string) $story_text ) );
+		$phrase_text = trim( wp_strip_all_tags( (string) $phrase_text ) );
+		$emotion     = goodsleep_sanitize_speechify_emotion( $emotion );
+
+		if ( '' === $phrase_text ) {
+			return $story_text;
+		}
+
+		return sprintf(
+			'<speak>%1$s<break time="400ms" /><speechify:style emotion="%3$s">%2$s</speechify:style></speak>',
+			htmlspecialchars( $story_text, ENT_XML1 | ENT_COMPAT, 'UTF-8' ),
+			htmlspecialchars( $phrase_text, ENT_XML1 | ENT_COMPAT, 'UTF-8' ),
+			htmlspecialchars( $emotion, ENT_XML1 | ENT_COMPAT, 'UTF-8' )
+		);
 	}
 }

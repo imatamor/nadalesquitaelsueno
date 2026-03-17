@@ -55,6 +55,13 @@
 		return payload;
 	}
 
+	function sanitizeFeedbackMessage( message ) {
+		const wrapper = document.createElement( 'div' );
+		wrapper.innerHTML = message || '';
+
+		return ( wrapper.textContent || wrapper.innerText || '' ).replace( /\s+/g, ' ' ).trim();
+	}
+
 	function initGenerator( container ) {
 		const formSurface = container.querySelector( '.goodsleep-generator__surface--form' );
 		const loadingSurface = container.querySelector( '.goodsleep-generator__surface--loading' );
@@ -69,6 +76,7 @@
 		const shareLink = container.querySelector( '[data-share-link]' );
 		const phraseTemplate = container.dataset.phraseTemplate || '';
 		const loaderTemplate = container.dataset.loaderTemplate || '';
+		const phraseEmotion = container.dataset.phraseEmotion || 'cheerful';
 
 		if ( ! form ) {
 			return;
@@ -180,6 +188,7 @@
 						email: ( formData.get( 'email' ) || '' ).toString(),
 						story_text: ( formData.get( 'story_text' ) || '' ).toString(),
 						phrase_template: phraseTemplate,
+						phrase_emotion: phraseEmotion,
 						voice_id: ( formData.get( 'voice_id' ) || '' ).toString(),
 						voice_label: voiceLabel,
 						track_id: ( formData.get( 'track_id' ) || '' ).toString(),
@@ -197,7 +206,7 @@
 			} catch ( error ) {
 				loadingSurface.hidden = true;
 				formSurface.hidden = false;
-				feedback.textContent = error.message;
+				feedback.textContent = sanitizeFeedbackMessage( error.message ) || 'Ocurrio un error al generar el audio.';
 			}
 		} );
 	}

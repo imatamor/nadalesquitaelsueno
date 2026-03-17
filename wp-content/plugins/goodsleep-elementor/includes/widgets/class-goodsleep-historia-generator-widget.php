@@ -95,6 +95,16 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 		);
 
 		$this->add_control(
+			'phrase_emotion',
+			array(
+				'label'   => __( 'EmociÃ³n de la frase final', 'goodsleep-elementor' ),
+				'type'    => \Elementor\Controls_Manager::SELECT,
+				'options' => goodsleep_get_speechify_emotions(),
+				'default' => 'cheerful',
+			)
+		);
+
+		$this->add_control(
 			'submit_label',
 			array(
 				'label'   => __( 'Texto del botón', 'goodsleep-elementor' ),
@@ -124,8 +134,9 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 		$settings  = $this->get_settings_for_display();
 		$terms_url = ! empty( $settings['terms_url']['url'] ) ? $settings['terms_url']['url'] : '';
 		$widget_id = 'goodsleep-historia-generator-' . $this->get_id();
+		$emotion   = ! empty( $settings['phrase_emotion'] ) ? goodsleep_sanitize_speechify_emotion( $settings['phrase_emotion'] ) : 'cheerful';
 		?>
-		<div id="<?php echo esc_attr( $widget_id ); ?>" class="goodsleep-generator" data-phrase-template="<?php echo esc_attr( $settings['phrase_template'] ); ?>" data-loader-template="<?php echo esc_attr( $settings['loader_label'] ); ?>">
+		<div id="<?php echo esc_attr( $widget_id ); ?>" class="goodsleep-generator" data-phrase-template="<?php echo esc_attr( $settings['phrase_template'] ); ?>" data-loader-template="<?php echo esc_attr( $settings['loader_label'] ); ?>" data-phrase-emotion="<?php echo esc_attr( $emotion ); ?>">
 			<div class="goodsleep-generator__surface goodsleep-generator__surface--form" data-state="form">
 				<form class="goodsleep-generator__form">
 					<div class="goodsleep-generator__field">

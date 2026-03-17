@@ -56,6 +56,10 @@ document.addEventListener('DOMContentLoaded', function() {
 			var row = event.target.closest('.goodsleep-admin-track-row');
 
 			if (removeButton && row) {
+				if (!window.confirm(goodsleepAdmin.confirmRemoveTrack || '¿Realmente deseas eliminar este track?')) {
+					return;
+				}
+
 				row.remove();
 				reindexRows();
 				return;

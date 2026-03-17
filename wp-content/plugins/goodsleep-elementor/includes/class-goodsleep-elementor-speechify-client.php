@@ -80,16 +80,10 @@ class Goodsleep_Elementor_Speechify_Client {
 		}
 
 		$request_body = array(
-			'input'        => $payload['text'],
+			'input'        => ! empty( $payload['ssml'] ) ? $payload['ssml'] : $payload['text'],
 			'voice_id'     => $payload['voice_id'],
 			'audio_format' => 'mp3',
 		);
-
-		if ( ! empty( $payload['track_url'] ) ) {
-			$request_body['background_track'] = esc_url_raw( $payload['track_url'] );
-		} elseif ( ! empty( $payload['track_id'] ) ) {
-			$request_body['background_track'] = $payload['track_id'];
-		}
 
 		$response = wp_remote_post(
 			$url,

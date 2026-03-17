@@ -291,6 +291,47 @@ function goodsleep_get_allowed_tracks() {
 }
 
 /**
+ * Devuelve las emociones soportadas por Speechify para SSML.
+ *
+ * @return array<string,string>
+ */
+function goodsleep_get_speechify_emotions() {
+	return array(
+		'angry'     => 'Angry',
+		'assertive' => 'Assertive',
+		'bright'    => 'Bright',
+		'calm'      => 'Calm',
+		'cheerful'  => 'Cheerful',
+		'direct'    => 'Direct',
+		'energetic' => 'Energetic',
+		'fearful'   => 'Fearful',
+		'relaxed'   => 'Relaxed',
+		'sad'       => 'Sad',
+		'surprised' => 'Surprised',
+		'terrified' => 'Terrified',
+		'warm'      => 'Warm',
+	);
+}
+
+/**
+ * Sanitiza una emocion soportada por Speechify.
+ *
+ * @param string $emotion Emocion solicitada.
+ * @param string $default Emocion por defecto.
+ * @return string
+ */
+function goodsleep_sanitize_speechify_emotion( $emotion, $default = 'cheerful' ) {
+	$emotion  = sanitize_key( (string) $emotion );
+	$emotions = goodsleep_get_speechify_emotions();
+
+	if ( isset( $emotions[ $emotion ] ) ) {
+		return $emotion;
+	}
+
+	return isset( $emotions[ $default ] ) ? $default : 'cheerful';
+}
+
+/**
  * Limita la generacion de historias por visitante.
  *
  * @return true|WP_Error

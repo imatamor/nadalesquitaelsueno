@@ -80,18 +80,30 @@
   font-weight: 600;
 }
 
+.goodsleep-admin-track-row__field .regular-text {
+  width: 100%;
+  max-width: none;
+}
+
 .goodsleep-admin-track-row__audio {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
 }
 
 .goodsleep-admin-track-row__audio-url {
-  flex: 1;
+  min-width: 0;
 }
 
 .goodsleep-admin-track-row__remove {
-  align-self: center;
+  display: flex;
+  align-items: flex-end;
+  min-height: 100%;
+}
+
+.goodsleep-admin-track-row__remove .button-link-delete {
+  white-space: nowrap;
 }
 
 @media (max-width: 782px) {
