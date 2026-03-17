@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
+	var languageFilterStorageKey = 'goodsleepVoiceLanguageFilter';
+
 	function createTrackRow(track) {
 		var wrapper = document.createElement('div');
 		wrapper.className = 'goodsleep-admin-track-row';
@@ -97,6 +99,38 @@ document.addEventListener('DOMContentLoaded', function() {
 			return;
 		}
 
+		function getStoredLanguages() {
+			if (!languageFilter) {
+				return [];
+			}
+
+			try {
+				return JSON.parse(window.localStorage.getItem(languageFilterStorageKey) || '[]');
+			} catch (error) {
+				return [];
+			}
+		}
+
+		function storeLanguages(values) {
+			if (!languageFilter) {
+				return;
+			}
+
+			window.localStorage.setItem(languageFilterStorageKey, JSON.stringify(values));
+		}
+
+		function applyStoredLanguages() {
+			var storedValues = getStoredLanguages();
+
+			if (!languageFilter || !storedValues.length) {
+				return;
+			}
+
+			Array.from(languageFilter.options).forEach(function(option) {
+				option.selected = storedValues.indexOf(option.value) !== -1;
+			});
+		}
+
 		function filterItems() {
 			var query = search.value.trim().toLocaleLowerCase();
 			var selectedLanguages = languageFilter ? Array.from(languageFilter.selectedOptions).map(function(option) {
@@ -116,8 +150,36 @@ document.addEventListener('DOMContentLoaded', function() {
 		search.addEventListener('input', filterItems);
 
 		if (languageFilter) {
-			languageFilter.addEventListener('change', filterItems);
+			languageFilter.addEventListener('mousedown', function(event) {
+				var option = event.target;
+
+				if (option.tagName !== 'OPTION') {
+					return;
+				}
+
+				event.preventDefault();
+				option.selected = !option.selected;
+
+				var selectedValues = Array.from(languageFilter.selectedOptions).map(function(selectedOption) {
+					return selectedOption.value;
+				});
+
+				storeLanguages(selectedValues);
+				filterItems();
+			});
+
+			languageFilter.addEventListener('change', function() {
+				var selectedValues = Array.from(languageFilter.selectedOptions).map(function(option) {
+					return option.value;
+				});
+
+				storeLanguages(selectedValues);
+				filterItems();
+			});
 		}
+
+		applyStoredLanguages();
+		filterItems();
 	});
 
 	var syncButton = document.querySelector('[data-goodsleep-sync-voices]');
