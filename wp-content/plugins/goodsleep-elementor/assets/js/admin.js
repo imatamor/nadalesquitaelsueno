@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		function reindexRows() {
 			Array.from(list.querySelectorAll('.goodsleep-admin-track-row')).forEach(function(row, index) {
 				row.querySelectorAll('input').forEach(function(input) {
-					input.name = input.name.replace(/\[tracks_catalog]\[\d+]/, '[tracks_catalog][' + index + ']');
+					input.name = input.name.replace(/\[tracks_catalog]\[(?:\d+|__INDEX__)]/, '[tracks_catalog][' + index + ']');
 				});
 			});
 		}
