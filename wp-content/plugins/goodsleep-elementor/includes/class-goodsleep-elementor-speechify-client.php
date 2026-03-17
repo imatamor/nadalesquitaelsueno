@@ -80,8 +80,9 @@ class Goodsleep_Elementor_Speechify_Client {
 		}
 
 		$request_body = array(
-			'input'    => $payload['text'],
-			'voice_id' => $payload['voice_id'],
+			'input'        => $payload['text'],
+			'voice_id'     => $payload['voice_id'],
+			'audio_format' => 'mp3',
 		);
 
 		if ( ! empty( $payload['track_url'] ) ) {
@@ -125,7 +126,7 @@ class Goodsleep_Elementor_Speechify_Client {
 			return new WP_Error( 'goodsleep_invalid_speechify_response', __( 'Speechify devolvio una respuesta invalida.', 'goodsleep-elementor' ) );
 		}
 
-		if ( empty( $decoded['audio_url'] ) && empty( $decoded['audio_content'] ) && ( ! empty( $decoded['message'] ) || ! empty( $decoded['error'] ) ) ) {
+		if ( empty( $decoded['audio_url'] ) && empty( $decoded['audio_data'] ) && empty( $decoded['audio_content'] ) && ( ! empty( $decoded['message'] ) || ! empty( $decoded['error'] ) ) ) {
 			return new WP_Error( 'goodsleep_speechify_missing_audio', $this->extract_error_message( $decoded ), array( 'status' => 502 ) );
 		}
 

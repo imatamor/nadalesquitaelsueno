@@ -149,8 +149,9 @@ class Goodsleep_Elementor_REST_Controller {
 			return $audio_response;
 		}
 
-		$audio_url  = ! empty( $audio_response['audio_url'] ) ? esc_url_raw( $audio_response['audio_url'] ) : '';
-		$audio_data = ! empty( $audio_response['audio_content'] ) ? $audio_response['audio_content'] : '';
+		$audio_url    = ! empty( $audio_response['audio_url'] ) ? esc_url_raw( $audio_response['audio_url'] ) : '';
+		$audio_data   = ! empty( $audio_response['audio_data'] ) ? $audio_response['audio_data'] : '';
+		$audio_format = ! empty( $audio_response['audio_format'] ) ? sanitize_key( $audio_response['audio_format'] ) : 'mp3';
 
 		if ( '' === $audio_url && '' === $audio_data ) {
 			return new WP_Error( 'goodsleep_audio_missing', __( 'Speechify no devolvio un audio utilizable.', 'goodsleep-elementor' ), array( 'status' => 502 ) );
@@ -171,7 +172,7 @@ class Goodsleep_Elementor_REST_Controller {
 			return $post_id;
 		}
 
-		$audio_id = $this->store_audio_attachment( $post_id, $name, $audio_url, $audio_data );
+		$audio_id = $this->store_audio_attachment( $post_id, $name, $audio_url, $audio_data, $audio_format );
 
 		if ( is_wp_error( $audio_id ) ) {
 			return $audio_id;
@@ -362,16 +363,28 @@ class Goodsleep_Elementor_REST_Controller {
 	 * @param string $name       Nombre base.
 	 * @param string $audio_url  URL remota.
 	 * @param string $audio_data Base64 o contenido plano.
+	 * @param string $audio_format Formato de audio.
 	 * @return int|WP_Error
 	 */
-	protected function store_audio_attachment( $post_id, $name, $audio_url, $audio_data ) {
+	protected function store_audio_attachment( $post_id, $name, $audio_url, $audio_data, $audio_format = 'mp3' ) {
 		$upload = wp_upload_dir();
 
 		if ( ! empty( $upload['error'] ) ) {
 			return new WP_Error( 'goodsleep_upload_error', $upload['error'] );
 		}
 
-		$filename = goodsleep_normalize_slug( $name ) . '-' . $post_id . '.mp3';
+		$extension = in_array( $audio_format, array( 'mp3', 'wav', 'ogg', 'aac', 'pcm' ), true ) ? $audio_format : 'mp3';
+		$mime_type = 'audio/mpeg';
+
+		if ( 'wav' === $extension ) {
+			$mime_type = 'audio/wav';
+		} elseif ( 'ogg' === $extension ) {
+			$mime_type = 'audio/ogg';
+		} elseif ( 'aac' === $extension ) {
+			$mime_type = 'audio/aac';
+		}
+
+		$filename = goodsleep_normalize_slug( $name ) . '-' . $post_id . '.' . $extension;
 		$content  = '';
 
 		if ( $audio_url ) {
@@ -399,7 +412,7 @@ class Goodsleep_Elementor_REST_Controller {
 
 		$attachment_id = wp_insert_attachment(
 			array(
-				'post_mime_type' => 'audio/mpeg',
+				'post_mime_type' => $mime_type,
 				'post_title'     => $name,
 				'post_status'    => 'inherit',
 			),

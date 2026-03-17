@@ -8,6 +8,7 @@
   position: relative;
   min-height: 100svh;
   display: flex;
+  flex-direction: column;
   padding: 1rem;
   color: #fff;
   align-items: center;
@@ -210,9 +211,11 @@
 }
 
 .goodsleep-generator__feedback {
+  width: min(100%, 980px);
   margin-top: 1rem;
   text-align: center;
-  color: #fff;
+  color: #ffe1ec;
+  min-height: 1.5rem;
 }
 
 .goodsleep-stories {
