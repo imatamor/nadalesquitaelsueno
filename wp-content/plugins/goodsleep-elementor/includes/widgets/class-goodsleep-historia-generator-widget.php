@@ -131,9 +131,9 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 					<div class="goodsleep-generator__field"><input type="text" name="name" maxlength="15" placeholder="<?php esc_attr_e( 'Nombre', 'goodsleep-elementor' ); ?>" required pattern="^\S+$"></div>
 					<div class="goodsleep-generator__field-row goodsleep-generator__field-row--email">
 						<div class="goodsleep-generator__field goodsleep-generator__field--email">
-							<input type="email" name="email" placeholder="<?php esc_attr_e( 'e-mail', 'goodsleep-elementor' ); ?>" required>
+							<input type="email" name="email" placeholder="<?php esc_attr_e( 'Correo electrónico', 'goodsleep-elementor' ); ?>" required>
 						</div>
-						<p class="goodsleep-generator__email-note"><?php esc_html_e( 'te llegará el link del audio también por e-mail', 'goodsleep-elementor' ); ?></p>
+						<p class="goodsleep-generator__email-note"><?php esc_html_e( 'te llegará el link del audio también por correo electrónico', 'goodsleep-elementor' ); ?></p>
 					</div>
 					<div class="goodsleep-generator__bubble">
 						<textarea name="story_text" maxlength="500" placeholder="<?php esc_attr_e( 'Escribe tu historia', 'goodsleep-elementor' ); ?>"></textarea>
