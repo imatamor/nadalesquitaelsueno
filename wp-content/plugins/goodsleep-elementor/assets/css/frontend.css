@@ -9,19 +9,24 @@
   min-height: 100svh;
   display: grid;
   place-items: center;
-  padding: 2rem;
+  padding: 1rem;
   color: #fff;
 }
 
 .goodsleep-generator__surface {
-  width: min(100%, 820px);
+  width: min(100%, 980px);
 }
 
-.goodsleep-generator__form,
 .goodsleep-generator__result-card {
-  background: rgba(255, 255, 255, 0.92);
   border-radius: 20px;
   padding: 1.25rem;
+  color: #141414;
+}
+
+.goodsleep-generator__form {
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
   color: #141414;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
 }
@@ -32,55 +37,101 @@
   width: 100%;
   border: 0;
   border-radius: 999px;
-  padding: 0.85rem 1rem;
+  padding: 1.05rem 1.25rem;
   font: inherit;
 }
 
 .goodsleep-generator__field + .goodsleep-generator__field,
+.goodsleep-generator__field-row,
 .goodsleep-generator__bubble,
 .goodsleep-generator__controls,
 .goodsleep-generator__footer {
-  margin-top: 0.85rem;
+  margin-top: 0.95rem;
+}
+
+.goodsleep-generator__field-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.goodsleep-generator__field input {
+  background: #fff;
+  color: #7f7f7f;
+  font-size: 1.05rem;
+}
+
+.goodsleep-generator__field--email {
+  flex: 0 1 43%;
+}
+
+.goodsleep-generator__email-note {
+  margin: 0;
+  color: #f6f1ee;
+  font-size: 0.9rem;
+  line-height: 1.35;
 }
 
 .goodsleep-generator__bubble {
   position: relative;
   background: #fff;
-  border-radius: 24px;
-  padding: 1rem;
+  border-radius: 14px;
+  padding: 1.15rem 1.25rem 3.4rem;
 }
 
 .goodsleep-generator__bubble textarea {
-  min-height: 160px;
-  resize: vertical;
-  border-radius: 18px;
+  height: 210px;
+  resize: none;
+  overflow-y: auto;
+  border-radius: 0;
   background: transparent;
   padding: 0;
+  color: #171717;
+  font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  font-size: clamp(1rem, 1.7vw, 1.18rem);
+  font-weight: 500;
+  line-height: 1.45;
 }
 
 .goodsleep-generator__phrase {
-  margin: 0.5rem 0 0;
-  color: #6a6678;
-  font-size: 0.875rem;
+  margin: 0.9rem 0 0;
+  max-width: calc(100% - 120px);
+  color: #8f8f96;
+  font-family: "Courier Prime", monospace;
+  font-size: 0.9rem;
+  font-style: italic;
+  line-height: 1.45;
 }
 
 .goodsleep-generator__counter {
   position: absolute;
-  right: 1rem;
+  right: 1.25rem;
   bottom: 0.75rem;
-  font-size: 0.75rem;
-  color: #6a6678;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #8f8f96;
 }
 
 .goodsleep-generator__controls {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
+}
+
+.goodsleep-generator__controls select {
+  width: 172px;
+  padding: 0.8rem 1.35rem;
+  background: #a3a3a3;
+  color: #ffffff;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-transform: none;
+  appearance: none;
 }
 
 .goodsleep-generator__footer {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 1rem;
 }
@@ -88,12 +139,21 @@
 .goodsleep-generator__terms {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
+  gap: 0.7rem;
+  font-size: 0.9rem;
+  color: #ffffff;
 }
 
 .goodsleep-generator__terms a {
   color: inherit;
+  text-decoration: none;
+}
+
+.goodsleep-generator__terms input {
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  border-radius: 8px;
 }
 
 .goodsleep-generator__submit,
@@ -103,8 +163,8 @@
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: 999px;
-  padding: 0.85rem 1.25rem;
+  border-radius: 8px;
+  padding: 0.95rem 2.4rem;
   background: #ff1798;
   color: #fff;
   text-decoration: none;
@@ -268,10 +328,40 @@
 }
 
 @media (max-width: 767px) {
+  .goodsleep-generator {
+    padding: 1rem 0.75rem 2rem;
+  }
+
+  .goodsleep-generator__field-row {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .goodsleep-generator__field--email {
+    flex: auto;
+  }
+
+  .goodsleep-generator__email-note {
+    font-size: 0.82rem;
+  }
+
   .goodsleep-generator__controls,
   .goodsleep-generator__footer,
   .goodsleep-generator__result-actions {
     grid-template-columns: 1fr;
     display: grid;
+  }
+
+  .goodsleep-generator__controls select,
+  .goodsleep-generator__submit {
+    width: 100%;
+  }
+
+  .goodsleep-generator__bubble textarea {
+    height: 180px;
+  }
+
+  .goodsleep-generator__phrase {
+    max-width: calc(100% - 84px);
   }
 }

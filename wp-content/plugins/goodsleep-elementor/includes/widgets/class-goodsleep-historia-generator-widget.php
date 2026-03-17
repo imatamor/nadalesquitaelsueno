@@ -125,11 +125,16 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 		$terms_url = ! empty( $settings['terms_url']['url'] ) ? $settings['terms_url']['url'] : '';
 		$widget_id = 'goodsleep-historia-generator-' . $this->get_id();
 		?>
-		<div id="<?php echo esc_attr( $widget_id ); ?>" class="goodsleep-generator" data-phrase-template="<?php echo esc_attr( $settings['phrase_template'] ); ?>" data-loader-template="<?php echo esc_attr( $settings['loader_label'] ); ?>">
+			<div id="<?php echo esc_attr( $widget_id ); ?>" class="goodsleep-generator" data-phrase-template="<?php echo esc_attr( $settings['phrase_template'] ); ?>" data-loader-template="<?php echo esc_attr( $settings['loader_label'] ); ?>">
 			<div class="goodsleep-generator__surface goodsleep-generator__surface--form" data-state="form">
 				<form class="goodsleep-generator__form">
 					<div class="goodsleep-generator__field"><input type="text" name="name" maxlength="15" placeholder="<?php esc_attr_e( 'Nombre', 'goodsleep-elementor' ); ?>" required pattern="^\S+$"></div>
-					<div class="goodsleep-generator__field"><input type="email" name="email" placeholder="<?php esc_attr_e( 'email', 'goodsleep-elementor' ); ?>" required></div>
+					<div class="goodsleep-generator__field-row goodsleep-generator__field-row--email">
+						<div class="goodsleep-generator__field goodsleep-generator__field--email">
+							<input type="email" name="email" placeholder="<?php esc_attr_e( 'e-mail', 'goodsleep-elementor' ); ?>" required>
+						</div>
+						<p class="goodsleep-generator__email-note"><?php esc_html_e( 'te llegará el link del audio también por e-mail', 'goodsleep-elementor' ); ?></p>
+					</div>
 					<div class="goodsleep-generator__bubble">
 						<textarea name="story_text" maxlength="500" placeholder="<?php esc_attr_e( 'Escribe tu historia', 'goodsleep-elementor' ); ?>"></textarea>
 						<p class="goodsleep-generator__phrase" data-dynamic-phrase><?php echo esc_html( sprintf( $settings['phrase_template'], '' ) ); ?></p>
