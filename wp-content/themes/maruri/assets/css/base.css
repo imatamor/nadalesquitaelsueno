@@ -29,7 +29,7 @@ html {
 
 body {
   margin: 0;
-  background: linear-gradient(180deg, #f8f4ec 0%, #f0eadf 100%);
+  background: var(--maruri-color-background);
   color: var(--maruri-color-text);
   font-family: Georgia, "Times New Roman", serif;
   line-height: 1.65;
@@ -64,7 +64,7 @@ img {
 
 .site-header,
 .site-footer {
-  background: rgba(255, 253, 248, 0.8);
+  background: var(--maruri-color-surface);
   backdrop-filter: blur(10px);
 }
 
