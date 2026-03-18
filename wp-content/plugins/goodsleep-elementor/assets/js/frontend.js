@@ -150,6 +150,61 @@
 		}
 	}
 
+	function bindRatingInteractions( root ) {
+		if ( ! root ) {
+			return;
+		}
+
+		root.addEventListener( 'click', async function( event ) {
+			const button = event.target.closest( '[data-action="vote"]' );
+			const card = button ? button.closest( '[data-story-id]' ) : null;
+			const storyId = card ? card.dataset.storyId : '';
+
+			if ( ! button || ! storyId ) {
+				return;
+			}
+
+			try {
+				const rating = Number( button.dataset.rating || 0 );
+				const payload = await requestJson( `stories/${ storyId }/vote`, {
+					method: 'POST',
+					body: JSON.stringify( { rating } )
+				} );
+
+				syncRatingCard( card, payload );
+			} catch ( error ) {
+				window.alert( error.message );
+			}
+		} );
+
+		root.addEventListener( 'mouseover', function( event ) {
+			const button = event.target.closest( '.goodsleep-story-card__moon' );
+			const group = button ? button.closest( '[data-rating-group]' ) : null;
+
+			if ( ! button || ! group || 'true' === group.dataset.readonly ) {
+				return;
+			}
+
+			const rating = Number( button.dataset.rating || 0 );
+
+			group.querySelectorAll( '.goodsleep-story-card__moon' ).forEach( function( item ) {
+				item.classList.toggle( 'is-preview', Number( item.dataset.rating || 0 ) <= rating );
+			} );
+		} );
+
+		root.addEventListener( 'mouseout', function( event ) {
+			const group = event.target.closest( '[data-rating-group]' );
+
+			if ( ! group ) {
+				return;
+			}
+
+			group.querySelectorAll( '.goodsleep-story-card__moon' ).forEach( function( item ) {
+				item.classList.remove( 'is-preview' );
+			} );
+		} );
+	}
+
 	async function requestJson( path, options ) {
 		const response = await fetch( goodsleepElementor.restUrl + path, {
 			headers: {
@@ -484,32 +539,7 @@
 			}
 		} );
 
-		list.addEventListener( 'mouseover', function( event ) {
-			const button = event.target.closest( '.goodsleep-story-card__moon' );
-			const group = button ? button.closest( '[data-rating-group]' ) : null;
-
-			if ( ! button || ! group || 'true' === group.dataset.readonly ) {
-				return;
-			}
-
-			const rating = Number( button.dataset.rating || 0 );
-
-			group.querySelectorAll( '.goodsleep-story-card__moon' ).forEach( function( item ) {
-				item.classList.toggle( 'is-preview', Number( item.dataset.rating || 0 ) <= rating );
-			} );
-		} );
-
-		list.addEventListener( 'mouseout', function( event ) {
-			const group = event.target.closest( '[data-rating-group]' );
-
-			if ( ! group ) {
-				return;
-			}
-
-			group.querySelectorAll( '.goodsleep-story-card__moon' ).forEach( function( item ) {
-				item.classList.remove( 'is-preview' );
-			} );
-		} );
+		bindRatingInteractions( list );
 
 		storiesWidgets.push( {
 			container,
@@ -535,6 +565,7 @@
 	document.addEventListener( 'DOMContentLoaded', function() {
 		document.querySelectorAll( '.goodsleep-generator' ).forEach( initGenerator );
 		document.querySelectorAll( '.goodsleep-stories' ).forEach( initStories );
+		document.querySelectorAll( '[data-story-detail]' ).forEach( bindRatingInteractions );
 	} );
 
 	document.addEventListener( 'goodsleep:story-created', function() {

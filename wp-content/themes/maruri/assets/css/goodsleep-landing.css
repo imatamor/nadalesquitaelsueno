@@ -240,6 +240,16 @@
   text-transform: uppercase;
 }
 
+.goodsleep-story-single__eyebrow a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.goodsleep-story-single__eyebrow a:hover,
+.goodsleep-story-single__eyebrow a:focus-visible {
+  color: #ff47b2;
+}
+
 .goodsleep-story-single__title {
   margin: 0;
   color: #fff;

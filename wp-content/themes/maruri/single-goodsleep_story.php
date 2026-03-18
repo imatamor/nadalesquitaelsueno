@@ -10,8 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 wp_enqueue_style( 'goodsleep-elementor-frontend' );
-
-get_header();
+wp_enqueue_script( 'goodsleep-elementor-frontend' );
 
 while ( have_posts() ) :
 	the_post();
@@ -28,28 +27,39 @@ while ( have_posts() ) :
 	$stored_average  = (float) get_post_meta( $post_id, '_goodsleep_vote_score', true );
 	$vote_average    = $vote_count > 0 ? round( $vote_total / $vote_count, 2 ) : $stored_average;
 	$moon_count      = $vote_average > 0 ? min( 5, max( 0, (int) round( $vote_average ) ) ) : 0;
+	$user_has_voted  = function_exists( 'goodsleep_has_voted_today' ) ? goodsleep_has_voted_today( $post_id ) : false;
 	$whatsapp_text   = function_exists( 'goodsleep_get_setting' ) ? (string) goodsleep_get_setting( 'whatsapp_share_text', '' ) : '';
 	$whatsapp_text   = $whatsapp_text ? $whatsapp_text : 'Nada le quita el sueno a %s. Escucha esta historia: %s';
+
 	try {
 		$whatsapp_message = sprintf( $whatsapp_text, $story_name, $share_url );
 	} catch ( ValueError $error ) {
 		$whatsapp_message = preg_replace( '/%s/', $story_name, $whatsapp_text, 1 );
 		$whatsapp_message = preg_replace( '/%s/', $share_url, (string) $whatsapp_message, 1 );
 	}
-	$whatsapp_url    = 'https://wa.me/?text=' . rawurlencode( (string) $whatsapp_message );
-	$rating_summary  = $vote_average > 0 ? number_format( $vote_average, 1, '.', '' ) . '/5' : __( 'Sin votos', 'maruri' );
+
+	$whatsapp_url   = 'https://wa.me/?text=' . rawurlencode( (string) $whatsapp_message );
+	$rating_summary = $vote_average > 0 ? number_format( $vote_average, 1, '.', '' ) . '/5' : __( 'Sin votos', 'maruri' );
+
+	status_header( 200 );
+	nocache_headers();
+
+	echo '<!doctype html><html ' . get_language_attributes() . '><head><meta charset="' . esc_attr( get_bloginfo( 'charset' ) ) . '"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' . esc_html( $story_name . ' | ' . get_bloginfo( 'name' ) ) . '</title>';
+	wp_head();
+	echo '</head><body class="' . esc_attr( implode( ' ', get_body_class( 'goodsleep-story-share' ) ) ) . '">';
+	wp_body_open();
 	?>
 	<main id="primary" class="site-main goodsleep-story-single">
 		<section class="goodsleep-story-single__hero">
 			<div class="goodsleep-story-single__overlay"></div>
 			<div class="maruri-shell goodsleep-story-single__shell">
 				<div class="goodsleep-story-single__intro">
-					<p class="goodsleep-story-single__eyebrow"><?php esc_html_e( 'Goodsleep', 'maruri' ); ?></p>
+					<p class="goodsleep-story-single__eyebrow"><a href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php esc_html_e( 'Goodsleep', 'maruri' ); ?></a></p>
 					<h1 class="goodsleep-story-single__title"><?php echo esc_html( $story_name ); ?></h1>
-					<p class="goodsleep-story-single__lead"><?php esc_html_e( 'Una historia publicada en la campaña Nada les quita el sueño.', 'maruri' ); ?></p>
+					<p class="goodsleep-story-single__lead"><?php esc_html_e( 'Que nada te quite el sueño', 'maruri' ); ?></p>
 				</div>
 
-				<article class="goodsleep-story-card goodsleep-story-single__card">
+				<article class="goodsleep-story-card goodsleep-story-single__card" data-story-detail data-story-id="<?php echo esc_attr( $post_id ); ?>">
 					<div class="goodsleep-story-card__topline">
 						<span class="goodsleep-story-card__title"><?php echo esc_html( $story_name ); ?></span>
 						<time class="goodsleep-story-card__date" datetime="<?php echo esc_attr( get_the_date( DATE_ATOM ) ); ?>"><?php echo esc_html( $published_label ); ?></time>
@@ -91,9 +101,9 @@ while ( have_posts() ) :
 
 						<div class="goodsleep-story-card__rating-wrap">
 							<span class="goodsleep-story-card__rating-summary"><?php echo esc_html( $rating_summary ); ?></span>
-							<div class="goodsleep-story-card__rating is-readonly" data-rating-group data-readonly="true" aria-label="<?php echo esc_attr( sprintf( __( 'Promedio %1$s de 5 basado en %2$s votos.', 'maruri' ), number_format( $vote_average, 1, '.', '' ), (string) $vote_count ) ); ?>">
+							<div class="goodsleep-story-card__rating<?php echo $user_has_voted ? ' is-readonly' : ''; ?>" data-rating-group data-readonly="<?php echo $user_has_voted ? 'true' : 'false'; ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Promedio %1$s de 5 basado en %2$s votos.', 'maruri' ), number_format( $vote_average, 1, '.', '' ), (string) $vote_count ) ); ?>">
 								<?php for ( $index = 1; $index <= 5; $index++ ) : ?>
-									<button type="button" class="goodsleep-story-card__moon<?php echo $index <= $moon_count ? ' is-active' : ''; ?>" data-tooltip="<?php esc_attr_e( 'Promedio actual de la historia.', 'maruri' ); ?>" disabled>
+									<button type="button" class="goodsleep-story-card__moon<?php echo $index <= $moon_count ? ' is-active' : ''; ?>" data-action="vote" data-rating="<?php echo esc_attr( $index ); ?>" data-tooltip="<?php echo esc_attr( $user_has_voted ? __( 'Ya votaste hoy.', 'maruri' ) : sprintf( __( 'Votar con %d %s.', 'maruri' ), $index, 1 === $index ? __( 'luna', 'maruri' ) : __( 'lunas', 'maruri' ) ) ); ?>"<?php echo $user_has_voted ? ' disabled' : ''; ?>>
 										<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" d="M8.09 14.41c-.36 0-.75-.03-1.12-.09-2.75-.43-4.99-2.55-5.56-5.27C.79 6.13 2.05 3.25 4.62 1.71l.21-.13.87.38-.19.45C4.46 4.73 4.97 7.36 6.79 9.1c1.76 1.69 4.38 2.07 6.67.98l1.29-.61-.65 1.27c-1.19 2.31-3.48 3.67-6.01 3.67"></path></svg>
 									</button>
 								<?php endfor; ?>
@@ -107,4 +117,5 @@ while ( have_posts() ) :
 	<?php
 endwhile;
 
-get_footer();
+wp_footer();
+echo '</body></html>';

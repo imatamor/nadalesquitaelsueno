@@ -33,6 +33,8 @@ class Goodsleep_Elementor_Campaign_404 {
 		status_header( 404 );
 		nocache_headers();
 
+		$this->prepare_elementor_runtime( $page->ID );
+
 		$content = $this->get_page_content( $page->ID );
 		if ( '' === trim( wp_strip_all_tags( $content ) ) ) {
 			return;
@@ -101,5 +103,33 @@ class Goodsleep_Elementor_Campaign_404 {
 		}
 
 		return apply_filters( 'the_content', $post->post_content );
+	}
+
+	/**
+	 * Prepara los assets y el contexto basico que Elementor espera en frontend.
+	 *
+	 * @param int $page_id ID de la pagina fuente.
+	 * @return void
+	 */
+	protected function prepare_elementor_runtime( $page_id ) {
+		$page_id = (int) $page_id;
+
+		if ( ! class_exists( '\Elementor\Plugin' ) ) {
+			return;
+		}
+
+		$plugin = \Elementor\Plugin::$instance;
+
+		if ( isset( $plugin->frontend ) ) {
+			$plugin->frontend->enqueue_styles();
+			$plugin->frontend->enqueue_scripts();
+		}
+
+		if ( isset( $plugin->documents ) ) {
+			$document = $plugin->documents->get( $page_id );
+			if ( $document && method_exists( $document, 'enqueue_styles' ) ) {
+				$document->enqueue_styles();
+			}
+		}
 	}
 }
