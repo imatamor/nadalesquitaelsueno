@@ -1,6 +1,6 @@
 <?php
 /**
- * Renderizado de la pagina 404 de campana desde una pagina editable en Elementor.
+ * Usa una pagina editable en Elementor como fuente del 404 de campana.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -9,18 +9,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Goodsleep_Elementor_Campaign_404 {
 	/**
+	 * Pagina fuente activa para el 404.
+	 *
+	 * @var WP_Post|null
+	 */
+	protected $active_page = null;
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct() {
-		add_action( 'template_redirect', array( $this, 'render_campaign_404' ), 1 );
+		add_action( 'template_redirect', array( $this, 'prime_campaign_404' ), 1 );
+		add_filter( 'template_include', array( $this, 'swap_template' ), 99 );
+		add_filter( 'document_title_parts', array( $this, 'filter_document_title_parts' ) );
 	}
 
 	/**
-	 * Renderiza una pagina 404 de campana si existe una pagina fuente publicada.
+	 * Convierte el request 404 en la pagina fuente, manteniendo el codigo HTTP 404.
 	 *
 	 * @return void
 	 */
-	public function render_campaign_404() {
+	public function prime_campaign_404() {
 		if ( is_admin() || ! is_404() ) {
 			return;
 		}
@@ -30,25 +39,53 @@ class Goodsleep_Elementor_Campaign_404 {
 			return;
 		}
 
+		$this->active_page = $page;
+
 		status_header( 404 );
 		nocache_headers();
 		$this->prime_page_query_context( $page );
+	}
 
-		$content = $this->get_page_content( $page->ID );
-		if ( '' === trim( wp_strip_all_tags( $content ) ) ) {
-			return;
+	/**
+	 * Reemplaza la plantilla 404 por una plantilla normal de pagina.
+	 *
+	 * @param string $template Plantilla original.
+	 * @return string
+	 */
+	public function swap_template( $template ) {
+		if ( ! $this->active_page instanceof WP_Post ) {
+			return $template;
 		}
 
-		$this->prepare_elementor_runtime( $page->ID );
+		$page_template = get_page_template();
+		if ( $page_template ) {
+			return $page_template;
+		}
 
-		echo '<!doctype html><html ' . get_language_attributes() . '><head><meta charset="' . esc_attr( get_bloginfo( 'charset' ) ) . '"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' . esc_html( get_the_title( $page ) ) . '</title>';
-		wp_head();
-		echo '</head><body class="' . esc_attr( implode( ' ', get_body_class( 'goodsleep-campaign-404 elementor-page elementor-page-' . $page->ID ) ) ) . '">';
-		wp_body_open();
-		echo '<main id="primary" class="goodsleep-campaign-404__main">' . $content . '</main>';
-		wp_footer();
-		echo '</body></html>';
-		exit;
+		$singular_template = locate_template(
+			array(
+				'singular.php',
+				'index.php',
+			)
+		);
+
+		return $singular_template ? $singular_template : $template;
+	}
+
+	/**
+	 * Ajusta el titulo del documento para usar el de la pagina fuente.
+	 *
+	 * @param array<string,string> $parts Partes del titulo.
+	 * @return array<string,string>
+	 */
+	public function filter_document_title_parts( $parts ) {
+		if ( ! $this->active_page instanceof WP_Post ) {
+			return $parts;
+		}
+
+		$parts['title'] = get_the_title( $this->active_page );
+
+		return $parts;
 	}
 
 	/**
@@ -83,62 +120,7 @@ class Goodsleep_Elementor_Campaign_404 {
 	}
 
 	/**
-	 * Devuelve el contenido renderizado de la pagina, priorizando Elementor.
-	 *
-	 * @param int $page_id ID de la pagina fuente.
-	 * @return string
-	 */
-	protected function get_page_content( $page_id ) {
-		$page_id = (int) $page_id;
-
-		if ( class_exists( '\Elementor\Plugin' ) ) {
-			$content = \Elementor\Plugin::$instance->frontend->get_builder_content_for_display( $page_id, true );
-			if ( is_string( $content ) && '' !== trim( $content ) ) {
-				return $content;
-			}
-		}
-
-		$post = get_post( $page_id );
-		if ( ! $post instanceof WP_Post ) {
-			return '';
-		}
-
-		return apply_filters( 'the_content', $post->post_content );
-	}
-
-	/**
-	 * Prepara los assets y el contexto basico que Elementor espera en frontend.
-	 *
-	 * @param int $page_id ID de la pagina fuente.
-	 * @return void
-	 */
-	protected function prepare_elementor_runtime( $page_id ) {
-		$page_id = (int) $page_id;
-
-		if ( ! class_exists( '\Elementor\Plugin' ) ) {
-			return;
-		}
-
-		$plugin = \Elementor\Plugin::$instance;
-
-		if ( isset( $plugin->frontend ) ) {
-			$plugin->frontend->enqueue_styles();
-			if ( method_exists( $plugin->frontend, 'enqueue_scripts' ) ) {
-				$plugin->frontend->enqueue_scripts();
-			}
-		}
-
-		if ( isset( $plugin->documents ) ) {
-			$document = $plugin->documents->get( $page_id );
-			if ( $document && method_exists( $document, 'enqueue_styles' ) ) {
-				$document->enqueue_styles();
-			}
-		}
-	}
-
-	/**
-	 * Fuerza un contexto de pagina para que Elementor cargue assets y documentos
-	 * aunque la respuesta HTTP siga siendo 404.
+	 * Fuerza el contexto de una pagina normal para que Elementor la procese nativamente.
 	 *
 	 * @param WP_Post $page Pagina fuente del 404.
 	 * @return void
@@ -157,6 +139,7 @@ class Goodsleep_Elementor_Campaign_404 {
 		$wp_query->posts             = array( $page );
 		$wp_query->post_count        = 1;
 		$wp_query->found_posts       = 1;
+		$wp_query->max_num_pages     = 1;
 		$wp_query->queried_object    = $page;
 		$wp_query->queried_object_id = (int) $page->ID;
 		$wp_query->is_404            = false;
@@ -164,5 +147,7 @@ class Goodsleep_Elementor_Campaign_404 {
 		$wp_query->is_singular       = true;
 		$wp_query->is_home           = false;
 		$wp_query->is_archive        = false;
+		$wp_query->is_posts_page     = false;
+		$wp_query->is_post_type_archive = false;
 	}
 }
