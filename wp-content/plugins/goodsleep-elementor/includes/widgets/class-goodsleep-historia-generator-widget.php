@@ -101,7 +101,6 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 				'type'    => \Elementor\Controls_Manager::SELECT,
 				'options' => goodsleep_get_speechify_emotions(),
 				'default' => 'cheerful',
-				// Hidden for now while we prioritize voice continuity over expressive style changes.
 				'render_type' => 'none',
 				'condition' => array(
 					'_goodsleep_show_phrase_emotion' => 'yes',
@@ -127,6 +126,27 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 			)
 		);
 
+		$this->add_control(
+			'result_cta_label',
+			array(
+				'label'   => __( 'Texto del CTA final', 'goodsleep-elementor' ),
+				'type'    => \Elementor\Controls_Manager::TEXT,
+				'default' => __( 'VER HISTORIAS', 'goodsleep-elementor' ),
+			)
+		);
+
+		$this->add_control(
+			'result_cta_url',
+			array(
+				'label'   => __( 'Link del CTA final', 'goodsleep-elementor' ),
+				'type'    => \Elementor\Controls_Manager::URL,
+				'default' => array(
+					'url'         => home_url( '/#historias' ),
+					'is_external' => false,
+				),
+			)
+		);
+
 		$this->end_controls_section();
 	}
 
@@ -136,10 +156,11 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 	 * @return void
 	 */
 	protected function render() {
-		$settings  = $this->get_settings_for_display();
-		$terms_url = ! empty( $settings['terms_url']['url'] ) ? $settings['terms_url']['url'] : '';
-		$widget_id = 'goodsleep-historia-generator-' . $this->get_id();
-		$emotion   = ! empty( $settings['phrase_emotion'] ) ? goodsleep_sanitize_speechify_emotion( $settings['phrase_emotion'] ) : 'cheerful';
+		$settings       = $this->get_settings_for_display();
+		$terms_url      = ! empty( $settings['terms_url']['url'] ) ? $settings['terms_url']['url'] : '';
+		$result_cta_url = ! empty( $settings['result_cta_url']['url'] ) ? $settings['result_cta_url']['url'] : home_url( '/#historias' );
+		$widget_id      = 'goodsleep-historia-generator-' . $this->get_id();
+		$emotion        = ! empty( $settings['phrase_emotion'] ) ? goodsleep_sanitize_speechify_emotion( $settings['phrase_emotion'] ) : 'cheerful';
 		?>
 		<div id="<?php echo esc_attr( $widget_id ); ?>" class="goodsleep-generator" data-phrase-template="<?php echo esc_attr( $settings['phrase_template'] ); ?>" data-loader-template="<?php echo esc_attr( $settings['loader_label'] ); ?>" data-phrase-emotion="<?php echo esc_attr( $emotion ); ?>">
 			<div class="goodsleep-generator__surface goodsleep-generator__surface--form" data-state="form">
@@ -192,12 +213,27 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 				<p class="goodsleep-generator__loader-text" data-loader-text></p>
 			</div>
 			<div class="goodsleep-generator__surface goodsleep-generator__surface--result" hidden>
-				<div class="goodsleep-generator__result-card">
-					<p class="goodsleep-generator__result-copy"><?php esc_html_e( 'Gracias por tu historia, se ha publicado correctamente y aquí la tienes para compartir.', 'goodsleep-elementor' ); ?></p>
+				<div class="goodsleep-generator__result-card goodsleep-story-card goodsleep-generator__result-story-card">
+					<p class="goodsleep-story-card__text goodsleep-generator__result-copy"><?php esc_html_e( 'Gracias por tu historia, se ha publicado correctamente y aquí la tienes para compartir.', 'goodsleep-elementor' ); ?></p>
 					<audio controls preload="metadata" data-result-audio></audio>
-					<div class="goodsleep-generator__result-actions">
-						<a class="goodsleep-generator__action goodsleep-generator__action--download" href="#" download data-download-link><?php esc_html_e( 'Descargar', 'goodsleep-elementor' ); ?></a>
-						<a class="goodsleep-generator__action goodsleep-generator__action--share" href="#" target="_blank" rel="noopener noreferrer" data-share-link><?php esc_html_e( 'Compartir', 'goodsleep-elementor' ); ?></a>
+					<div class="goodsleep-story-card__actions goodsleep-generator__result-actions">
+						<div class="goodsleep-story-card__action-group">
+							<a class="goodsleep-story-card__action-button goodsleep-generator__icon-action" href="#" download data-download-link data-tooltip="<?php esc_attr_e( 'Descargar audio', 'goodsleep-elementor' ); ?>" aria-label="<?php esc_attr_e( 'Descargar audio', 'goodsleep-elementor' ); ?>">
+								<span class="goodsleep-story-card__action-icon" aria-hidden="true">
+									<svg viewBox="0 0 16 16"><g fill="currentColor"><path d="M13.02 6 10.2 5.99c-.25 0-.48-.17-.5-.38C9.67 5.37 9.86 5.1 10.13 5.1l2.85.01c.67 0 1.39.55 1.39 1.28v8.23c0 .72-.7 1.28-1.39 1.28H3.04c-.7 0-1.4-.55-1.4-1.28V6.38c0-.73.71-1.28 1.39-1.28l2.63-.01c.25 0 .46.21.47.43 0 .22-.21.46-.47.46H3.12c-.33 0-.63.2-.63.58v7.86c0 .37.28.59.64.59h9.84c.32 0 .54-.27.54-.57v-7.9c0-.25-.18-.54-.47-.54"></path><path d="M7.66.55c0-.28.23-.45.44-.46.18-.01.44.16.44.4v8.49l2.2-2.12c.16-.16.49-.11.62.05.12.14.13.45-.03.6l-2.89 2.83c-.18.18-.5.3-.71.09L4.84 7.54c-.16-.16-.19-.41-.08-.6.08-.16.45-.26.61-.1L7.66 9.1V.55Z"></path></g></svg>
+								</span>
+								<span class="goodsleep-story-card__action-label"><?php esc_html_e( 'Descargar', 'goodsleep-elementor' ); ?></span>
+							</a>
+							<a class="goodsleep-story-card__action-button goodsleep-generator__icon-action" href="#" target="_blank" rel="noopener noreferrer" data-share-link data-tooltip="<?php esc_attr_e( 'Compartir historia', 'goodsleep-elementor' ); ?>" aria-label="<?php esc_attr_e( 'Compartir historia', 'goodsleep-elementor' ); ?>">
+								<span class="goodsleep-story-card__action-icon" aria-hidden="true">
+									<svg viewBox="0 0 16 16"><g fill="currentColor"><path d="M13.02 6 10.2 5.99c-.25 0-.48-.17-.5-.38-.03-.24.16-.51.43-.51l2.85.01c.67 0 1.39.55 1.39 1.28v8.23c0 .72-.7 1.28-1.39 1.28H3.04c-.7 0-1.4-.55-1.4-1.28V6.38c0-.73.71-1.28 1.39-1.28l2.63-.01c.25 0 .46.21.47.43 0 .22-.21.46-.47.46H3.12c-.33 0-.63.2-.63.58v7.86c0 .37.28.59.64.59h9.84c.32 0 .54-.27.54-.57v-7.9c0-.25-.18-.54-.47-.54"></path><path d="M8.48 10.08c0 .28-.23.45-.44.46-.18.01-.44-.16-.44-.4V1.65L5.4 3.77c-.16.16-.49.11-.62-.05-.12-.14-.13-.45.03-.6L7.7.29c.18-.18.5-.3.71-.09l2.89 2.89c.16.16.19.41.08.6-.08.16-.45.26-.61.1L8.48 1.53v8.55Z"></path></g></svg>
+								</span>
+								<span class="goodsleep-story-card__action-label"><?php esc_html_e( 'Compartir', 'goodsleep-elementor' ); ?></span>
+							</a>
+						</div>
+					</div>
+					<div class="goodsleep-generator__result-cta-wrap">
+						<a class="goodsleep-generator__action goodsleep-generator__action--result-cta" href="<?php echo esc_url( $result_cta_url ); ?>"<?php echo ! empty( $settings['result_cta_url']['is_external'] ) ? ' target="_blank" rel="noopener noreferrer"' : ''; ?> data-result-cta><?php echo esc_html( $settings['result_cta_label'] ); ?></a>
 					</div>
 				</div>
 			</div>
