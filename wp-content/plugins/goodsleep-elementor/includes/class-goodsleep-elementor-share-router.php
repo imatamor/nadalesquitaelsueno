@@ -75,6 +75,10 @@ class Goodsleep_Elementor_Share_Router {
 		$story_name = (string) get_post_meta( $story->ID, '_goodsleep_story_name', true );
 		$story_name = $story_name ? $story_name : get_the_title( $story );
 		$published_label = get_the_date( 'd/m/Y', $story );
+		$whatsapp_template = (string) goodsleep_get_setting( 'whatsapp_share_text', '' );
+		$whatsapp_template = $whatsapp_template ? $whatsapp_template : 'Nada le quita el sueno a %s. Escucha esta historia: %s';
+		$whatsapp_message  = $this->render_share_message( $whatsapp_template, $story_name, $share_url );
+		$whatsapp_url      = 'https://wa.me/?text=' . rawurlencode( $whatsapp_message );
 		$page_title = sprintf(
 			/* translators: 1: story title, 2: site name */
 			__( '%1$s | %2$s', 'goodsleep-elementor' ),
@@ -101,12 +105,31 @@ class Goodsleep_Elementor_Share_Router {
 			echo '<div class="goodsleep-story-share__player"><audio controls preload="metadata" src="' . esc_url( $audio_url ) . '"></audio></div>';
 			echo '<div class="goodsleep-story-share__actions">';
 			echo '<a class="goodsleep-story-share__button" href="' . esc_url( $audio_url ) . '" download>' . esc_html__( 'Descargar', 'goodsleep-elementor' ) . '</a>';
-			echo '<a class="goodsleep-story-share__button goodsleep-story-share__button--ghost" href="' . esc_url( $share_url ) . '">' . esc_html__( 'Escuchar', 'goodsleep-elementor' ) . '</a>';
+			echo '<a class="goodsleep-story-share__button goodsleep-story-share__button--ghost" href="' . esc_url( $whatsapp_url ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Compartir', 'goodsleep-elementor' ) . '</a>';
 			echo '</div>';
 		}
 		echo '</article></main>';
 		wp_footer();
 		echo '</body></html>';
 		exit;
+	}
+
+	/**
+	 * Renderiza el texto a compartir sin romper plantillas invalidas.
+	 *
+	 * @param string $template Plantilla configurable.
+	 * @param string $name     Nombre visible.
+	 * @param string $share_url URL corta publica.
+	 * @return string
+	 */
+	protected function render_share_message( $template, $name, $share_url ) {
+		try {
+			return sprintf( (string) $template, (string) $name, (string) $share_url );
+		} catch ( ValueError $error ) {
+			$message = preg_replace( '/%s/', $name, (string) $template, 1 );
+			$message = preg_replace( '/%s/', $share_url, (string) $message, 1 );
+
+			return (string) $message;
+		}
 	}
 }

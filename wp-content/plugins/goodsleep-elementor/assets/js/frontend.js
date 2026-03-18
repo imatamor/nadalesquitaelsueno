@@ -82,6 +82,23 @@
 			return;
 		}
 
+		function resetGeneratorState() {
+			form.reset();
+			formSurface.hidden = false;
+			loadingSurface.hidden = true;
+			resultSurface.hidden = true;
+			feedback.textContent = '';
+			loaderText.textContent = '';
+			audioNode.removeAttribute( 'src' );
+			audioNode.load();
+			downloadLink.href = '#';
+			shareLink.href = '#';
+			charNode.textContent = '0';
+			phraseNode.textContent = phraseTemplate ? phraseTemplate.replace( '%s', '' ) : '';
+		}
+
+		resetGeneratorState();
+
 		function getValidationMessage( field ) {
 			if ( ! field ) {
 				return '';
