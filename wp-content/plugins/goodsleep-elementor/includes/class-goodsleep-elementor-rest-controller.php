@@ -183,7 +183,7 @@ class Goodsleep_Elementor_REST_Controller {
 			array(
 				'post_type'    => 'goodsleep_story',
 				'post_status'  => 'publish',
-				'post_title'   => $name,
+				'post_title'   => $this->build_story_post_title( $name, $email ),
 				'post_content' => $text,
 				'post_excerpt' => wp_trim_words( $text, 30 ),
 			),
@@ -279,10 +279,11 @@ class Goodsleep_Elementor_REST_Controller {
 			$audio_id   = (int) get_post_meta( $post->ID, '_goodsleep_story_audio_id', true );
 			$audio_url  = wp_get_attachment_url( $audio_id );
 			$vote_score = (int) get_post_meta( $post->ID, '_goodsleep_vote_score', true );
+			$story_name = (string) get_post_meta( $post->ID, '_goodsleep_story_name', true );
 
 			$stories[] = array(
 				'id'          => $post->ID,
-				'title'       => get_the_title( $post ),
+				'title'       => $story_name ? $story_name : get_the_title( $post ),
 				'text'        => $post->post_content,
 				'audioUrl'    => $audio_url,
 				'downloadUrl' => $audio_url,
@@ -511,5 +512,28 @@ class Goodsleep_Elementor_REST_Controller {
 		} catch ( ValueError $error ) {
 			return str_replace( '%s', $name, $template );
 		}
+	}
+
+	/**
+	 * Construye un titulo administrativo mas distintivo para el CPT.
+	 *
+	 * @param string $name  Nombre enviado en el formulario.
+	 * @param string $email Correo enviado en el formulario.
+	 * @return string
+	 */
+	protected function build_story_post_title( $name, $email ) {
+		$name          = trim( (string) $name );
+		$email         = sanitize_email( (string) $email );
+		$email_user    = $email ? sanitize_text_field( (string) current( explode( '@', $email ) ) ) : '';
+		$generated_at  = current_time( 'Y-m-d H:i' );
+		$title_segments = array_filter(
+			array(
+				$name,
+				$email_user ? '@' . $email_user : '',
+				$generated_at,
+			)
+		);
+
+		return implode( ' | ', $title_segments );
 	}
 }

@@ -162,11 +162,65 @@ function goodsleep_get_story_share_url( $story_id ) {
 	$slug = get_post_meta( $story_id, '_goodsleep_short_slug', true );
 
 	if ( ! $slug ) {
-		$slug = goodsleep_normalize_slug( get_the_title( $story_id ) ) . '-' . $story_id;
+		$story_name = (string) get_post_meta( $story_id, '_goodsleep_story_name', true );
+		$slug       = goodsleep_normalize_slug( $story_name ? $story_name : get_the_title( $story_id ) ) . '-' . $story_id;
 		update_post_meta( $story_id, '_goodsleep_short_slug', $slug );
 	}
 
-	return home_url( '/h/' . rawurlencode( $slug ) . '/' );
+	return goodsleep_humanize_share_url( home_url( '/h/' . rawurlencode( $slug ) . '/' ) );
+}
+
+/**
+ * Devuelve una URL con host legible para compartir cuando el dominio es IDN.
+ *
+ * @param string $url URL base.
+ * @return string
+ */
+function goodsleep_humanize_share_url( $url ) {
+	$parts = wp_parse_url( (string) $url );
+
+	if ( empty( $parts['host'] ) ) {
+		return (string) $url;
+	}
+
+	$host = (string) $parts['host'];
+	if ( function_exists( 'idn_to_utf8' ) && false !== strpos( $host, 'xn--' ) ) {
+		$decoded = idn_to_utf8( $host, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46 );
+		if ( $decoded ) {
+			$host = $decoded;
+		}
+	}
+
+	$rebuilt = '';
+	if ( ! empty( $parts['scheme'] ) ) {
+		$rebuilt .= $parts['scheme'] . '://';
+	}
+
+	if ( ! empty( $parts['user'] ) ) {
+		$rebuilt .= $parts['user'];
+		if ( ! empty( $parts['pass'] ) ) {
+			$rebuilt .= ':' . $parts['pass'];
+		}
+		$rebuilt .= '@';
+	}
+
+	$rebuilt .= $host;
+
+	if ( ! empty( $parts['port'] ) ) {
+		$rebuilt .= ':' . $parts['port'];
+	}
+
+	$rebuilt .= isset( $parts['path'] ) ? $parts['path'] : '';
+
+	if ( isset( $parts['query'] ) ) {
+		$rebuilt .= '?' . $parts['query'];
+	}
+
+	if ( isset( $parts['fragment'] ) ) {
+		$rebuilt .= '#' . $parts['fragment'];
+	}
+
+	return $rebuilt ? $rebuilt : (string) $url;
 }
 
 /**

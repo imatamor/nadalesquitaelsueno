@@ -188,7 +188,7 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 			</div>
 			<div class="goodsleep-generator__surface goodsleep-generator__surface--result" hidden>
 				<div class="goodsleep-generator__result-card">
-					<p class="goodsleep-generator__result-copy"><?php esc_html_e( 'Gracias por tu historia, aquí está lista para compartir.', 'goodsleep-elementor' ); ?></p>
+					<p class="goodsleep-generator__result-copy"><?php esc_html_e( 'Gracias por tu historia, se ha publicado correctamente y aquí la tienes para compartir.', 'goodsleep-elementor' ); ?></p>
 					<audio controls preload="metadata" data-result-audio></audio>
 					<div class="goodsleep-generator__result-actions">
 						<a class="goodsleep-generator__action goodsleep-generator__action--download" href="#" download data-download-link><?php esc_html_e( 'Descargar', 'goodsleep-elementor' ); ?></a>

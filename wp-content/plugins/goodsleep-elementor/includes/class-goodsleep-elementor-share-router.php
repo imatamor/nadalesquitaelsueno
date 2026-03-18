@@ -71,19 +71,36 @@ class Goodsleep_Elementor_Share_Router {
 		$story     = $stories[0];
 		$audio_id  = (int) get_post_meta( $story->ID, '_goodsleep_story_audio_id', true );
 		$audio_url = wp_get_attachment_url( $audio_id );
+		$share_url = goodsleep_get_story_share_url( $story->ID );
+		$story_name = (string) get_post_meta( $story->ID, '_goodsleep_story_name', true );
+		$story_name = $story_name ? $story_name : get_the_title( $story );
+		$page_title = sprintf(
+			/* translators: 1: story title, 2: site name */
+			__( '%1$s | %2$s', 'goodsleep-elementor' ),
+			$story_name,
+			get_bloginfo( 'name' )
+		);
 
 		status_header( 200 );
 		nocache_headers();
 
-		echo '<!doctype html><html ' . get_language_attributes() . '><head><meta charset="' . esc_attr( get_bloginfo( 'charset' ) ) . '"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' . esc_html( get_the_title( $story ) ) . '</title>';
+		echo '<!doctype html><html ' . get_language_attributes() . '><head><meta charset="' . esc_attr( get_bloginfo( 'charset' ) ) . '"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' . esc_html( $page_title ) . '</title>';
+		echo '<meta property="og:title" content="' . esc_attr( $page_title ) . '">';
+		echo '<meta property="og:site_name" content="' . esc_attr( get_bloginfo( 'name' ) ) . '">';
+		echo '<meta property="og:type" content="article">';
+		echo '<meta property="og:url" content="' . esc_url( $share_url ) . '">';
+		echo '<meta property="og:description" content="' . esc_attr( wp_trim_words( wp_strip_all_tags( $story->post_content ), 28 ) ) . '">';
 		wp_head();
 		echo '</head><body class="goodsleep-story-share"><main class="goodsleep-story-share__main"><article class="goodsleep-story-share__card">';
 		echo '<p class="goodsleep-story-share__eyebrow">Goodsleep</p>';
-		echo '<h1>' . esc_html( get_the_title( $story ) ) . '</h1>';
+		echo '<h1>' . esc_html( $story_name ) . '</h1>';
 		echo '<div class="goodsleep-story-share__content">' . wp_kses_post( wpautop( $story->post_content ) ) . '</div>';
 		if ( $audio_url ) {
-			echo '<audio controls preload="metadata" src="' . esc_url( $audio_url ) . '"></audio>';
-			echo '<p><a class="goodsleep-story-share__button" href="' . esc_url( $audio_url ) . '" download>' . esc_html__( 'Descargar audio', 'goodsleep-elementor' ) . '</a></p>';
+			echo '<div class="goodsleep-story-share__player"><audio controls preload="metadata" src="' . esc_url( $audio_url ) . '"></audio></div>';
+			echo '<div class="goodsleep-story-share__actions">';
+			echo '<a class="goodsleep-story-share__button" href="' . esc_url( $audio_url ) . '" download>' . esc_html__( 'Descargar', 'goodsleep-elementor' ) . '</a>';
+			echo '<a class="goodsleep-story-share__button goodsleep-story-share__button--ghost" href="' . esc_url( $share_url ) . '">' . esc_html__( 'Escuchar', 'goodsleep-elementor' ) . '</a>';
+			echo '</div>';
 		}
 		echo '</article></main>';
 		wp_footer();
