@@ -17,6 +17,12 @@ class Goodsleep_Elementor_Audio_Mixer {
 	 * @return array<string,string>|WP_Error
 	 */
 	public function mix_generated_audio( $voice_source, $track, $base_name ) {
+		$this->ensure_wp_file_functions();
+
+		if ( ! $this->can_run_shell_commands() ) {
+			return new WP_Error( 'goodsleep_exec_missing', __( 'La ejecucion de comandos no esta disponible en el servidor.', 'goodsleep-elementor' ) );
+		}
+
 		if ( ! $this->is_available() ) {
 			return new WP_Error( 'goodsleep_ffmpeg_missing', __( 'ffmpeg no esta disponible para mezclar el audio.', 'goodsleep-elementor' ) );
 		}
@@ -112,12 +118,34 @@ class Goodsleep_Elementor_Audio_Mixer {
 	}
 
 	/**
+	 * Determina si el servidor permite ejecutar comandos de shell.
+	 *
+	 * @return bool
+	 */
+	protected function can_run_shell_commands() {
+		if ( ! function_exists( 'exec' ) ) {
+			return false;
+		}
+
+		$disabled = (string) ini_get( 'disable_functions' );
+		if ( '' === $disabled ) {
+			return true;
+		}
+
+		$disabled_functions = array_map( 'trim', explode( ',', $disabled ) );
+
+		return ! in_array( 'exec', $disabled_functions, true );
+	}
+
+	/**
 	 * Resuelve el archivo local del track.
 	 *
 	 * @param array<string,mixed> $track Track seleccionado.
 	 * @return array<string,mixed>|WP_Error
 	 */
 	protected function resolve_track_file( $track ) {
+		$this->ensure_wp_file_functions();
+
 		$attachment_id = ! empty( $track['attachment_id'] ) ? absint( $track['attachment_id'] ) : 0;
 
 		if ( $attachment_id ) {
@@ -179,6 +207,8 @@ class Goodsleep_Elementor_Audio_Mixer {
 	 * @return string|WP_Error
 	 */
 	protected function create_voice_source_file( $voice_source, $base_name, $format ) {
+		$this->ensure_wp_file_functions();
+
 		$extension = in_array( $format, array( 'mp3', 'wav', 'ogg', 'aac', 'pcm' ), true ) ? $format : 'mp3';
 		$temp_path = wp_tempnam( sanitize_file_name( $base_name . '-voice.' . $extension ) );
 
@@ -226,6 +256,10 @@ class Goodsleep_Elementor_Audio_Mixer {
 	 * @return float|WP_Error
 	 */
 	protected function probe_duration( $filepath ) {
+		if ( ! $this->can_run_shell_commands() ) {
+			return new WP_Error( 'goodsleep_exec_missing', __( 'La ejecucion de comandos no esta disponible en el servidor.', 'goodsleep-elementor' ) );
+		}
+
 		$probe_command = sprintf(
 			'ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 %s 2>&1',
 			escapeshellarg( $filepath )
@@ -252,5 +286,16 @@ class Goodsleep_Elementor_Audio_Mixer {
 		}
 
 		return $duration;
+	}
+
+	/**
+	 * Carga helpers de archivos de WordPress requeridos para wp_tempnam().
+	 *
+	 * @return void
+	 */
+	protected function ensure_wp_file_functions() {
+		if ( ! function_exists( 'wp_tempnam' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
 	}
 }

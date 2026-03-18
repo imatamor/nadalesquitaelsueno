@@ -141,7 +141,7 @@ class Goodsleep_Elementor_REST_Controller {
 			return $rate_limit;
 		}
 
-		$rendered_phrase = $phrase ? sprintf( $phrase, $name ) : '';
+		$rendered_phrase = $this->render_phrase_template( $phrase, $name );
 		$combined_text   = trim( $text . "\n" . $rendered_phrase );
 		$speech_input    = $this->build_speechify_input( $text, $rendered_phrase, $emotion );
 
@@ -489,5 +489,27 @@ class Goodsleep_Elementor_REST_Controller {
 			htmlspecialchars( $phrase_text, ENT_XML1 | ENT_COMPAT, 'UTF-8' ),
 			htmlspecialchars( $emotion, ENT_XML1 | ENT_COMPAT, 'UTF-8' )
 		);
+	}
+
+	/**
+	 * Renderiza la frase final sin romper el flujo si la plantilla es invalida.
+	 *
+	 * @param string $template Plantilla configurable.
+	 * @param string $name     Nombre ingresado por el usuario.
+	 * @return string
+	 */
+	protected function render_phrase_template( $template, $name ) {
+		$template = (string) $template;
+		$name     = (string) $name;
+
+		if ( '' === trim( $template ) ) {
+			return '';
+		}
+
+		try {
+			return sprintf( $template, $name );
+		} catch ( ValueError $error ) {
+			return str_replace( '%s', $name, $template );
+		}
 	}
 }

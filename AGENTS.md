@@ -11,6 +11,7 @@ Sitio WordPress de campana "Nada les quita el sueno".
 
 ## Infraestructura
 - Servidor: DigitalOcean
+- Droplet operativo: `Maruri-2.0` (`159.223.141.225`)
 - Apache
 - Produccion: /var/www/html/maruri/casos/nada_les_quita_el_sueno/prod
 - Staging: /var/www/html/maruri/casos/nada_les_quita_el_sueno/staging
@@ -112,6 +113,8 @@ Define how agents should collaborate in this project.
 - Antes de retomar contexto, revisar Engram para recuperar decisiones, descubrimientos y trabajo previo del proyecto.
 - Toda decision, descubrimiento, cambio de configuracion, hito de implementacion o aprendizaje reusable importante debe guardarse en Engram y, cuando aplique, resumirse tambien en `../../memory`.
 - Toda decision reusable de arquitectura debe dejar un resumen legible en `../../memory` aunque la persistencia en Engram no se ejecute desde esta sesion.
+- El acceso operativo a Engram en este proyecto debe hacerse por CLI cuando este disponible, usando `engram context`, `engram search` y `engram save` desde terminal; no asumir falta de acceso a Engram sin verificar primero esos comandos.
+- Al cerrar una tarea con hallazgos importantes, confirmar la persistencia en Engram con una busqueda verificable (`engram search`) en lugar de asumir que el guardado se realizo correctamente.
 
 ## Documentation Rules
 - Documentar funciones, clases, hooks y bloques no obvios con code-documentation-standards.
@@ -123,3 +126,15 @@ Define how agents should collaborate in this project.
 - Prefer small reversible commits.
 - Always document complex logic.
 - Require human confirmation before touching production-only deployment logic, payments, checkout, pricing or destructive refactors.
+
+## Operational Access
+- Este entorno tiene acceso operativo a DigitalOcean por `doctl`.
+- La autenticacion operativa recomendada para `doctl` en este proyecto es la variable de entorno `DIGITALOCEAN_ACCESS_TOKEN`.
+- Antes de asumir falta de acceso a infraestructura, probar `doctl account get --access-token $env:DIGITALOCEAN_ACCESS_TOKEN` y `doctl compute droplet list --access-token $env:DIGITALOCEAN_ACCESS_TOKEN`.
+- Para entrar al droplet por SSH se puede usar `PuTTY/plink` o `ssh` contra `Maruri-2.0` (`159.223.141.225`) cuando haya credenciales disponibles.
+- En el droplet esta disponible `wp-cli` para manejo operativo de recursos de WordPress y verificaciones del entorno.
+- No guardar passwords, tokens ni llaves privadas en Git, Engram ni documentos del proyecto.
+- Si se formaliza la conexion por variables de entorno, preferir nombres como `MARURI_DROPLET_HOST=159.223.141.225`, `MARURI_DROPLET_NAME=Maruri-2.0` y referencias separadas para usuario o llaves fuera del repo.
+- Los directorios operativos del proyecto en el droplet son `/var/www/html/maruri/casos/nada_les_quita_el_sueno/prod` y `/var/www/html/maruri/casos/nada_les_quita_el_sueno/staging`.
+- Con ese acceso se pueden hacer revisiones operativas y, cuando el usuario lo apruebe, modificaciones de archivos o base de datos directamente en el droplet, recordando que cualquier cambio de codigo debe volver al repo.
+- Para verificaciones locales con PHP, usar `C:\tools\php`.
