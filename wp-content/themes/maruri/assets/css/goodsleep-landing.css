@@ -189,8 +189,17 @@
   }
 }
 
+body.goodsleep-story-share,
+.goodsleep-story-share {
+  background:
+    radial-gradient(circle at 82% 14%, rgba(255, 23, 152, 0.14), transparent 18%),
+    radial-gradient(circle at 12% 24%, rgba(255, 255, 255, 0.05), transparent 22%),
+    linear-gradient(180deg, #050507 0%, #09090d 100%);
+}
+
 .goodsleep-story-single {
   position: relative;
+  min-height: 100svh;
   background:
     radial-gradient(circle at 82% 14%, rgba(255, 23, 152, 0.14), transparent 18%),
     radial-gradient(circle at 12% 24%, rgba(255, 255, 255, 0.05), transparent 22%),
@@ -200,7 +209,7 @@
 
 .goodsleep-story-single__hero {
   position: relative;
-  min-height: calc(100svh - 120px);
+  min-height: 100svh;
   overflow: hidden;
 }
 
