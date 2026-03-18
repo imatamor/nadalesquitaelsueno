@@ -95,6 +95,15 @@ class Goodsleep_Elementor_Share_Router {
 
 		status_header( 200 );
 		nocache_headers();
+		if ( wp_style_is( 'maruri-style', 'registered' ) ) {
+			wp_enqueue_style( 'maruri-style' );
+		}
+		if ( wp_style_is( 'maruri-base', 'registered' ) ) {
+			wp_enqueue_style( 'maruri-base' );
+		}
+		if ( wp_style_is( 'maruri-goodsleep-landing', 'registered' ) ) {
+			wp_enqueue_style( 'maruri-goodsleep-landing' );
+		}
 		wp_enqueue_style( 'goodsleep-elementor-frontend' );
 		wp_enqueue_script( 'goodsleep-elementor-frontend' );
 
@@ -105,7 +114,9 @@ class Goodsleep_Elementor_Share_Router {
 		echo '<meta property="og:url" content="' . esc_url( $share_url ) . '">';
 		echo '<meta property="og:description" content="' . esc_attr( wp_trim_words( wp_strip_all_tags( $story->post_content ), 28 ) ) . '">';
 		wp_head();
-		echo '</head><body class="goodsleep-story-share"><main class="goodsleep-story-single"><section class="goodsleep-story-single__hero"><div class="goodsleep-story-single__overlay"></div><div class="goodsleep-story-single__shell">';
+		echo '</head><body class="goodsleep-story-share">';
+		wp_body_open();
+		echo '<main class="goodsleep-story-single"><section class="goodsleep-story-single__hero"><div class="goodsleep-story-single__overlay"></div><div class="maruri-shell goodsleep-story-single__shell">';
 		echo '<div class="goodsleep-story-single__intro">';
 		echo '<p class="goodsleep-story-single__eyebrow"><a href="' . esc_url( home_url( '/' ) ) . '">Goodsleep</a></p>';
 		echo '<h1 class="goodsleep-story-single__title">' . esc_html( $story_name ) . '</h1>';

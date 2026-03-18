@@ -32,6 +32,7 @@ class Goodsleep_Elementor_Campaign_404 {
 
 		status_header( 404 );
 		nocache_headers();
+		$this->prime_page_query_context( $page );
 
 		$this->prepare_elementor_runtime( $page->ID );
 
@@ -122,7 +123,9 @@ class Goodsleep_Elementor_Campaign_404 {
 
 		if ( isset( $plugin->frontend ) ) {
 			$plugin->frontend->enqueue_styles();
-			$plugin->frontend->enqueue_scripts();
+			if ( method_exists( $plugin->frontend, 'enqueue_scripts' ) ) {
+				$plugin->frontend->enqueue_scripts();
+			}
 		}
 
 		if ( isset( $plugin->documents ) ) {
@@ -131,5 +134,35 @@ class Goodsleep_Elementor_Campaign_404 {
 				$document->enqueue_styles();
 			}
 		}
+	}
+
+	/**
+	 * Fuerza un contexto de pagina para que Elementor cargue assets y documentos
+	 * aunque la respuesta HTTP siga siendo 404.
+	 *
+	 * @param WP_Post $page Pagina fuente del 404.
+	 * @return void
+	 */
+	protected function prime_page_query_context( $page ) {
+		global $post, $wp_query;
+
+		$post = $page;
+		setup_postdata( $post );
+
+		if ( ! $wp_query instanceof WP_Query ) {
+			return;
+		}
+
+		$wp_query->post              = $page;
+		$wp_query->posts             = array( $page );
+		$wp_query->post_count        = 1;
+		$wp_query->found_posts       = 1;
+		$wp_query->queried_object    = $page;
+		$wp_query->queried_object_id = (int) $page->ID;
+		$wp_query->is_404            = false;
+		$wp_query->is_page           = true;
+		$wp_query->is_singular       = true;
+		$wp_query->is_home           = false;
+		$wp_query->is_archive        = false;
 	}
 }
