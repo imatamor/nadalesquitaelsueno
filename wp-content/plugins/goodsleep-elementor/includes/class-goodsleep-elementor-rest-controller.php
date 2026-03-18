@@ -225,6 +225,8 @@ class Goodsleep_Elementor_REST_Controller {
 		update_post_meta( $post_id, '_goodsleep_story_audio_id', $audio_id );
 		update_post_meta( $post_id, '_goodsleep_short_slug', $short_slug );
 		update_post_meta( $post_id, '_goodsleep_vote_score', 0 );
+		update_post_meta( $post_id, '_goodsleep_vote_total', 0 );
+		update_post_meta( $post_id, '_goodsleep_vote_count', 0 );
 		update_post_meta( $post_id, '_goodsleep_favorite_count', 0 );
 
 		$mail_result = $this->mailjet->send_story_email(
@@ -278,26 +280,32 @@ class Goodsleep_Elementor_REST_Controller {
 		$stories = array();
 
 		foreach ( $query->posts as $post ) {
-			$audio_id   = (int) get_post_meta( $post->ID, '_goodsleep_story_audio_id', true );
-			$audio_url  = wp_get_attachment_url( $audio_id );
-			$vote_score = (int) get_post_meta( $post->ID, '_goodsleep_vote_score', true );
-			$story_name = (string) get_post_meta( $post->ID, '_goodsleep_story_name', true );
+			$audio_id       = (int) get_post_meta( $post->ID, '_goodsleep_story_audio_id', true );
+			$audio_url      = wp_get_attachment_url( $audio_id );
+			$vote_score     = (float) get_post_meta( $post->ID, '_goodsleep_vote_score', true );
+			$vote_count     = (int) get_post_meta( $post->ID, '_goodsleep_vote_count', true );
+			$favorite_count = (int) get_post_meta( $post->ID, '_goodsleep_favorite_count', true );
+			$story_name     = (string) get_post_meta( $post->ID, '_goodsleep_story_name', true );
 
 			if ( ! $audio_url ) {
 				continue;
 			}
 
 			$stories[] = array(
-				'id'          => $post->ID,
-				'title'       => $story_name ? $story_name : get_the_title( $post ),
-				'text'        => $post->post_content,
-				'audioUrl'    => $audio_url,
-				'downloadUrl' => $audio_url,
-				'shareUrl'    => goodsleep_get_story_share_url( $post->ID ),
-				'favorite'    => goodsleep_is_favorite_story( $post->ID ),
-				'voteScore'   => $vote_score,
-				'moonCount'   => min( 4, max( 0, $vote_score ) ),
-				'createdAt'   => get_the_date( DATE_ATOM, $post ),
+				'id'             => $post->ID,
+				'title'          => $story_name ? $story_name : get_the_title( $post ),
+				'text'           => $post->post_content,
+				'audioUrl'       => $audio_url,
+				'downloadUrl'    => $audio_url,
+				'shareUrl'       => goodsleep_get_story_share_url( $post->ID ),
+				'favorite'       => goodsleep_is_favorite_story( $post->ID ),
+				'favoriteCount'  => $favorite_count,
+				'voteAverage'    => round( $vote_score, 2 ),
+				'voteCount'      => $vote_count,
+				'moonCount'      => min( 5, max( 0, (int) round( $vote_score ) ) ),
+				'userHasVoted'   => goodsleep_has_voted_today( $post->ID ),
+				'createdAt'      => get_the_date( DATE_ATOM, $post ),
+				'publishedLabel' => get_the_date( 'd/m/Y', $post ),
 			);
 		}
 
@@ -360,21 +368,36 @@ class Goodsleep_Elementor_REST_Controller {
 	 */
 	public function vote_story( WP_REST_Request $request ) {
 		$story_id = (int) $request['id'];
+		$params   = $request->get_json_params();
+		$params   = is_array( $params ) ? $params : array();
+		$rating   = isset( $params['rating'] ) ? (int) $params['rating'] : 0;
+
+		if ( $rating < 1 || $rating > 5 ) {
+			return new WP_Error( 'goodsleep_invalid_vote', __( 'Selecciona una puntuacion valida entre 1 y 5 lunas.', 'goodsleep-elementor' ), array( 'status' => 400 ) );
+		}
 
 		if ( goodsleep_has_voted_today( $story_id ) ) {
 			return new WP_Error( 'goodsleep_already_voted', __( 'Ya votaste por esta historia hoy.', 'goodsleep-elementor' ), array( 'status' => 409 ) );
 		}
 
-		$score = (int) get_post_meta( $story_id, '_goodsleep_vote_score', true );
-		$score++;
+		$total = (int) get_post_meta( $story_id, '_goodsleep_vote_total', true );
+		$count = (int) get_post_meta( $story_id, '_goodsleep_vote_count', true );
+
+		$total += $rating;
+		$count++;
+		$score = $count > 0 ? round( $total / $count, 2 ) : 0;
 
 		update_post_meta( $story_id, '_goodsleep_vote_score', $score );
+		update_post_meta( $story_id, '_goodsleep_vote_total', $total );
+		update_post_meta( $story_id, '_goodsleep_vote_count', $count );
 		goodsleep_set_vote_cookie( $story_id );
 
 		return rest_ensure_response(
 			array(
-				'voteScore' => $score,
-				'moonCount' => min( 4, max( 0, $score ) ),
+				'voteAverage'  => $score,
+				'voteCount'    => $count,
+				'moonCount'    => min( 5, max( 0, (int) round( $score ) ) ),
+				'userHasVoted' => true,
 			)
 		);
 	}

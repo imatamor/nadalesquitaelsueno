@@ -53,7 +53,9 @@ class Goodsleep_Elementor_Story_Post_Type {
 			'_goodsleep_story_track_label'  => 'string',
 			'_goodsleep_story_audio_id'     => 'integer',
 			'_goodsleep_short_slug'         => 'string',
-			'_goodsleep_vote_score'         => 'integer',
+			'_goodsleep_vote_score'         => 'number',
+			'_goodsleep_vote_total'         => 'integer',
+			'_goodsleep_vote_count'         => 'integer',
 			'_goodsleep_favorite_count'     => 'integer',
 		);
 
@@ -65,7 +67,7 @@ class Goodsleep_Elementor_Story_Post_Type {
 					'type'              => $type,
 					'single'            => true,
 					'show_in_rest'      => true,
-					'sanitize_callback' => 'integer' === $type ? 'absint' : 'sanitize_text_field',
+					'sanitize_callback' => $this->get_meta_sanitizer( $type ),
 					'auth_callback'     => static function () {
 						return current_user_can( 'edit_posts' );
 					},
@@ -173,5 +175,23 @@ class Goodsleep_Elementor_Story_Post_Type {
 		}
 
 		wp_delete_attachment( $audio_id, true );
+	}
+
+	/**
+	 * Devuelve el sanitizador correcto segun el tipo de meta.
+	 *
+	 * @param string $type Tipo registrado.
+	 * @return callable
+	 */
+	protected function get_meta_sanitizer( $type ) {
+		if ( 'integer' === $type ) {
+			return 'absint';
+		}
+
+		if ( 'number' === $type ) {
+			return 'floatval';
+		}
+
+		return 'sanitize_text_field';
 	}
 }

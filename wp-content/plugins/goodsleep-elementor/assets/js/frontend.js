@@ -2,6 +2,10 @@
 	'use strict';
 
 	const storiesWidgets = [];
+	const iconMoon = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" d="M8.09 14.41c-.36 0-.75-.03-1.12-.09-2.75-.43-4.99-2.55-5.56-5.27C.79 6.13 2.05 3.25 4.62 1.71l.21-.13.87.38-.19.45C4.46 4.73 4.97 7.36 6.79 9.1c1.76 1.69 4.38 2.07 6.67.98l1.29-.61-.65 1.27c-1.19 2.31-3.48 3.67-6.01 3.67"></path></svg>';
+	const iconShare = '<svg viewBox="0 0 16 16" aria-hidden="true"><g fill="currentColor"><path d="M13.02 6 10.2 5.99c-.25 0-.48-.17-.5-.38-.03-.24.16-.51.43-.51l2.85.01c.67 0 1.39.55 1.39 1.28v8.23c0 .72-.7 1.28-1.39 1.28H3.04c-.7 0-1.4-.55-1.4-1.28V6.38c0-.73.71-1.28 1.39-1.28l2.63-.01c.25 0 .46.21.47.43 0 .22-.21.46-.47.46H3.12c-.33 0-.63.2-.63.58v7.86c0 .37.28.59.64.59h9.84c.32 0 .54-.27.54-.57v-7.9c0-.25-.18-.54-.47-.54"></path><path d="M8.48 10.08c0 .28-.23.45-.44.46-.18.01-.44-.16-.44-.4V1.65L5.4 3.77c-.16.16-.49.11-.62-.05-.12-.14-.13-.45.03-.6L7.7.29c.18-.18.5-.3.71-.09l2.89 2.89c.16.16.19.41.08.6-.08.16-.45.26-.61.1L8.48 1.53v8.55Z"></path></g></svg>';
+	const iconDownload = '<svg viewBox="0 0 16 16" aria-hidden="true"><g fill="currentColor"><path d="M13.02 6 10.2 5.99c-.25 0-.48-.17-.5-.38C9.67 5.37 9.86 5.1 10.13 5.1l2.85.01c.67 0 1.39.55 1.39 1.28v8.23c0 .72-.7 1.28-1.39 1.28H3.04c-.7 0-1.4-.55-1.4-1.28V6.38c0-.73.71-1.28 1.39-1.28l2.63-.01c.25 0 .46.21.47.43 0 .22-.21.46-.47.46H3.12c-.33 0-.63.2-.63.58v7.86c0 .37.28.59.64.59h9.84c.32 0 .54-.27.54-.57v-7.9c0-.25-.18-.54-.47-.54"></path><path d="M7.66.55c0-.28.23-.45.44-.46.18-.01.44.16.44.4v8.49l2.2-2.12c.16-.16.49-.11.62.05.12.14.13.45-.03.6l-2.89 2.83c-.18.18-.5.3-.71.09L4.84 7.54c-.16-.16-.19-.41-.08-.6.08-.16.45-.26.61-.1L7.66 9.1V.55Z"></path></g></svg>';
+	const iconFavorite = '<svg viewBox="0 0 16 16" aria-hidden="true"><polygon fill="none" stroke="currentColor" stroke-miterlimit="10" points="8.02,11.38 4.1,14.36 5.61,9.51 1.75,6.55 6.44,6.55 8.01,1.86 9.57,6.55 14.26,6.55 10.41,9.52 11.92,14.36"></polygon></svg>';
 
 	function formatWhatsAppUrl( template, name, shareUrl ) {
 		const message = ( template || 'Nada le quita el sueno a %s. Escucha esta historia: %s' )
@@ -11,27 +15,102 @@
 		return 'https://wa.me/?text=' + encodeURIComponent( message );
 	}
 
+	function escapeHtml( value ) {
+		return String( value || '' )
+			.replace( /&/g, '&amp;' )
+			.replace( /</g, '&lt;' )
+			.replace( />/g, '&gt;' )
+			.replace( /"/g, '&quot;' )
+			.replace( /'/g, '&#039;' );
+	}
+
+	function buildRatingMarkup( story ) {
+		const ratingValue = Number( story.voteAverage || 0 );
+		const moonCount = Math.min( 5, Math.max( 0, Math.round( ratingValue ) ) );
+		const isReadonly = !! story.userHasVoted;
+		const tooltipBase = isReadonly ? 'Ya votaste hoy.' : 'Haz clic para votar una vez hoy.';
+		let markup = `<div class="goodsleep-story-card__rating${ isReadonly ? ' is-readonly' : '' }" data-rating-group data-readonly="${ isReadonly ? 'true' : 'false' }" aria-label="Promedio ${ ratingValue.toFixed( 1 ) } de 5 basado en ${ Number( story.voteCount || 0 ) } votos">`;
+
+		for ( let index = 1; index <= 5; index += 1 ) {
+			const isActive = index <= moonCount;
+			const tooltip = isReadonly ? tooltipBase : `Votar con ${ index } ${ 1 === index ? 'luna' : 'lunas' }.`;
+			markup += `
+				<button
+					type="button"
+					class="goodsleep-story-card__moon${ isActive ? ' is-active' : '' }"
+					data-action="vote"
+					data-rating="${ index }"
+					data-tooltip="${ escapeHtml( tooltip ) }"
+					aria-label="${ escapeHtml( tooltip ) }"
+					${ isReadonly ? 'disabled' : '' }
+				>
+					${ iconMoon }
+				</button>
+			`;
+		}
+
+		markup += '</div>';
+
+		return markup;
+	}
+
 	function renderStoryCard( story ) {
-		const moons = Array.from( { length: 4 }, function( _, index ) {
-			return index < story.moonCount ? 'O' : 'o';
-		} ).join( ' ' );
-		const audioMarkup = story.audioUrl ? `<audio controls preload="metadata" src="${ story.audioUrl }"></audio>` : '';
+		const title = escapeHtml( story.title || '' );
+		const text = escapeHtml( story.text || '' );
+		const publishedLabel = escapeHtml( story.publishedLabel || '' );
+		const audioMarkup = story.audioUrl ? `<audio controls preload="metadata" src="${ escapeHtml( story.audioUrl ) }"></audio>` : '';
+		const shareUrl = formatWhatsAppUrl( goodsleepElementor.whatsappTemplate, story.title, story.shareUrl || '' );
+		const favoriteLabel = story.favorite ? 'Quitar de favoritos' : 'Agregar a favoritos';
+		const ratingSummary = Number( story.voteAverage || 0 ) > 0
+			? `${ Number( story.voteAverage || 0 ).toFixed( 1 ) }/5`
+			: 'Sin votos';
 
 		return `
 			<article class="goodsleep-story-card" data-story-id="${ story.id }">
 				<div class="goodsleep-story-card__topline">
-					<span class="goodsleep-story-card__title">${ story.title }</span>
-					<span class="goodsleep-story-card__moons">${ moons }</span>
+					<span class="goodsleep-story-card__title">${ title }</span>
+					<time class="goodsleep-story-card__date" datetime="${ escapeHtml( story.createdAt || '' ) }">${ publishedLabel }</time>
 				</div>
-				<p>${ story.text || '' }</p>
+				<p class="goodsleep-story-card__text">${ text }</p>
 				${ audioMarkup }
 				<div class="goodsleep-story-card__actions">
-					<div>
-						<button type="button" data-action="favorite">${ story.favorite ? 'Quitar favorito' : 'Favorito' }</button>
-						<button type="button" data-action="vote">Votar</button>
+					<div class="goodsleep-story-card__action-group">
+						<button
+							type="button"
+							class="goodsleep-story-card__action-button${ story.favorite ? ' is-active' : '' }"
+							data-action="favorite"
+							data-tooltip="${ favoriteLabel }"
+							aria-label="${ favoriteLabel }"
+							aria-pressed="${ story.favorite ? 'true' : 'false' }"
+						>
+							<span class="goodsleep-story-card__action-icon">${ iconFavorite }</span>
+							<span class="goodsleep-story-card__action-label">Favorito</span>
+						</button>
+						<a
+							href="${ escapeHtml( story.downloadUrl || '#' ) }"
+							class="goodsleep-story-card__action-button"
+							download
+							data-tooltip="Descargar audio"
+							aria-label="Descargar audio"
+						>
+							<span class="goodsleep-story-card__action-icon">${ iconDownload }</span>
+							<span class="goodsleep-story-card__action-label">Descargar</span>
+						</a>
+						<a
+							href="${ escapeHtml( shareUrl ) }"
+							class="goodsleep-story-card__action-button"
+							target="_blank"
+							rel="noopener noreferrer"
+							data-tooltip="Compartir historia"
+							aria-label="Compartir historia"
+						>
+							<span class="goodsleep-story-card__action-icon">${ iconShare }</span>
+							<span class="goodsleep-story-card__action-label">Compartir</span>
+						</a>
 					</div>
-					<div>
-						<a href="${ story.downloadUrl || '#' }" download title="Descargar">Descargar</a>
+					<div class="goodsleep-story-card__rating-wrap">
+						<span class="goodsleep-story-card__rating-summary">${ ratingSummary }</span>
+						${ buildRatingMarkup( story ) }
 					</div>
 				</div>
 			</article>
@@ -350,16 +429,52 @@
 			try {
 				if ( 'favorite' === button.dataset.action ) {
 					const payload = await requestJson( `stories/${ storyId }/favorite`, { method: 'POST', body: '{}' } );
-					button.textContent = payload.favorite ? 'Quitar favorito' : 'Favorito';
+					button.classList.toggle( 'is-active', !! payload.favorite );
+					button.setAttribute( 'aria-pressed', payload.favorite ? 'true' : 'false' );
+					button.setAttribute( 'aria-label', payload.favorite ? 'Quitar de favoritos' : 'Agregar a favoritos' );
+					button.dataset.tooltip = payload.favorite ? 'Quitar de favoritos' : 'Agregar a favoritos';
 				}
 
 				if ( 'vote' === button.dataset.action ) {
-					await requestJson( `stories/${ storyId }/vote`, { method: 'POST', body: '{}' } );
+					const rating = Number( button.dataset.rating || 0 );
+
+					await requestJson( `stories/${ storyId }/vote`, {
+						method: 'POST',
+						body: JSON.stringify( { rating } )
+					} );
+
 					loadStories( true );
 				}
 			} catch ( error ) {
 				window.alert( error.message );
 			}
+		} );
+
+		list.addEventListener( 'mouseover', function( event ) {
+			const button = event.target.closest( '.goodsleep-story-card__moon' );
+			const group = button ? button.closest( '[data-rating-group]' ) : null;
+
+			if ( ! button || ! group || 'true' === group.dataset.readonly ) {
+				return;
+			}
+
+			const rating = Number( button.dataset.rating || 0 );
+
+			group.querySelectorAll( '.goodsleep-story-card__moon' ).forEach( function( item ) {
+				item.classList.toggle( 'is-preview', Number( item.dataset.rating || 0 ) <= rating );
+			} );
+		} );
+
+		list.addEventListener( 'mouseout', function( event ) {
+			const group = event.target.closest( '[data-rating-group]' );
+
+			if ( ! group ) {
+				return;
+			}
+
+			group.querySelectorAll( '.goodsleep-story-card__moon' ).forEach( function( item ) {
+				item.classList.remove( 'is-preview' );
+			} );
 		} );
 
 		storiesWidgets.push( {

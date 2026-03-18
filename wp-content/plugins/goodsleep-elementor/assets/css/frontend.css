@@ -329,8 +329,9 @@
 .goodsleep-story-card {
   background: rgba(255, 255, 255, 0.96);
   color: #111;
-  border-radius: 20px;
+  border-radius: 10px;
   padding: 1rem;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.08);
 }
 
 .goodsleep-story-card__topline,
@@ -338,30 +339,195 @@
   display: flex;
   justify-content: space-between;
   gap: 0.75rem;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .goodsleep-story-card__title {
-  font-size: 0.8rem;
-  color: #aa1a71;
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.1;
+  color: #d11884;
+  font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  font-weight: 600;
+}
+
+.goodsleep-story-card__date {
+  margin: 0;
+  color: #69627a;
+  font-size: 0.82rem;
+  line-height: 1.1;
+  font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  font-weight: 600;
+}
+
+.goodsleep-story-card__text {
+  margin: 1rem 0 1.2rem;
+  color: #171717;
+  font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  font-size: clamp(1.1rem, 2vw, 1.28rem);
+  line-height: 1.45;
+  font-weight: 600;
 }
 
 .goodsleep-story-card audio {
   width: 100%;
-  margin: 0.75rem 0;
+  margin: 0;
+  border-radius: 8px;
+  background: #f2f2f2;
 }
 
-.goodsleep-story-card__actions button,
-.goodsleep-story-card__actions a {
-  background: none;
+.goodsleep-story-card audio::-webkit-media-controls-panel {
+  background: #f2f2f2;
+}
+
+.goodsleep-story-card audio::-webkit-media-controls-play-button {
+  background-color: #ff1798;
+  border-radius: 999px;
+}
+
+.goodsleep-story-card__actions {
+  margin-top: 1rem;
+  align-items: center;
+}
+
+.goodsleep-story-card__action-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.goodsleep-story-card__action-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  background: transparent;
   border: 0;
-  color: inherit;
+  padding: 0;
+  color: #171717;
   cursor: pointer;
   text-decoration: none;
+  transition: color 0.2s ease;
 }
 
-.goodsleep-story-card__moons {
-  color: #5d486b;
+.goodsleep-story-card__action-button:hover,
+.goodsleep-story-card__action-button:focus-visible,
+.goodsleep-story-card__action-button.is-active {
+  color: #ff1798;
+}
+
+.goodsleep-story-card__action-button::after,
+.goodsleep-story-card__moon::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%) translateY(4px);
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap;
+  background: rgba(17, 17, 17, 0.94);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.35rem 0.55rem;
+  font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.7rem;
+  line-height: 1;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: 5;
+}
+
+.goodsleep-story-card__action-button:hover::after,
+.goodsleep-story-card__action-button:focus-visible::after,
+.goodsleep-story-card__moon:hover::after,
+.goodsleep-story-card__moon:focus-visible::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.goodsleep-story-card__action-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.goodsleep-story-card__action-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.goodsleep-story-card__action-label {
+  font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.86rem;
+  line-height: 1;
+  font-weight: 500;
+}
+
+.goodsleep-story-card__rating-wrap {
+  display: grid;
+  justify-items: end;
+  gap: 0.35rem;
+}
+
+.goodsleep-story-card__rating-summary {
+  color: #5e5668;
+  font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.78rem;
+  line-height: 1;
+  font-weight: 600;
+}
+
+.goodsleep-story-card__rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.18rem;
+}
+
+.goodsleep-story-card__moon {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #171717;
+  cursor: pointer;
+  transition: color 0.18s ease, transform 0.18s ease;
+}
+
+.goodsleep-story-card__moon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.goodsleep-story-card__moon:hover,
+.goodsleep-story-card__moon:focus-visible {
+  color: #ff1798;
+  transform: translateY(-1px);
+}
+
+.goodsleep-story-card__moon.is-active,
+.goodsleep-story-card__moon.is-preview {
+  color: #ff1798;
+}
+
+.goodsleep-story-card__rating.is-readonly .goodsleep-story-card__moon {
+  cursor: default;
+}
+
+.goodsleep-story-card__rating.is-readonly .goodsleep-story-card__moon:hover,
+.goodsleep-story-card__rating.is-readonly .goodsleep-story-card__moon:focus-visible {
+  transform: none;
+}
+
+.goodsleep-story-card__rating.is-readonly .goodsleep-story-card__moon:disabled {
+  opacity: 1;
 }
 
 .goodsleep-story-share__main {
@@ -543,5 +709,24 @@
 
   .goodsleep-story-share__button {
     width: 100%;
+  }
+
+  .goodsleep-story-card__topline,
+  .goodsleep-story-card__actions {
+    display: grid;
+    gap: 0.9rem;
+  }
+
+  .goodsleep-story-card__date,
+  .goodsleep-story-card__rating-wrap {
+    justify-self: start;
+  }
+
+  .goodsleep-story-card__action-group {
+    gap: 0.8rem;
+  }
+
+  .goodsleep-story-card__action-label {
+    font-size: 0.8rem;
   }
 }
