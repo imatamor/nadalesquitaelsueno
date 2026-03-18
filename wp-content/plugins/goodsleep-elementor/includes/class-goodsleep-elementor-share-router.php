@@ -74,6 +74,7 @@ class Goodsleep_Elementor_Share_Router {
 		$share_url = goodsleep_get_story_share_url( $story->ID );
 		$story_name = (string) get_post_meta( $story->ID, '_goodsleep_story_name', true );
 		$story_name = $story_name ? $story_name : get_the_title( $story );
+		$published_label = get_the_date( 'd/m/Y', $story );
 		$page_title = sprintf(
 			/* translators: 1: story title, 2: site name */
 			__( '%1$s | %2$s', 'goodsleep-elementor' ),
@@ -83,6 +84,7 @@ class Goodsleep_Elementor_Share_Router {
 
 		status_header( 200 );
 		nocache_headers();
+		wp_enqueue_style( 'goodsleep-elementor-frontend' );
 
 		echo '<!doctype html><html ' . get_language_attributes() . '><head><meta charset="' . esc_attr( get_bloginfo( 'charset' ) ) . '"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' . esc_html( $page_title ) . '</title>';
 		echo '<meta property="og:title" content="' . esc_attr( $page_title ) . '">';
@@ -92,7 +94,7 @@ class Goodsleep_Elementor_Share_Router {
 		echo '<meta property="og:description" content="' . esc_attr( wp_trim_words( wp_strip_all_tags( $story->post_content ), 28 ) ) . '">';
 		wp_head();
 		echo '</head><body class="goodsleep-story-share"><main class="goodsleep-story-share__main"><article class="goodsleep-story-share__card">';
-		echo '<p class="goodsleep-story-share__eyebrow">Goodsleep</p>';
+		echo '<div class="goodsleep-story-share__meta"><p class="goodsleep-story-share__eyebrow">Goodsleep</p><p class="goodsleep-story-share__date">' . esc_html( $published_label ) . '</p></div>';
 		echo '<h1>' . esc_html( $story_name ) . '</h1>';
 		echo '<div class="goodsleep-story-share__content">' . wp_kses_post( wpautop( $story->post_content ) ) . '</div>';
 		if ( $audio_url ) {

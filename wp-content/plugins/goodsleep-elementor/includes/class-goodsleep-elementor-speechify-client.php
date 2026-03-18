@@ -85,6 +85,14 @@ class Goodsleep_Elementor_Speechify_Client {
 			'audio_format' => 'mp3',
 		);
 
+		if ( ! empty( $payload['model'] ) ) {
+			$request_body['model'] = sanitize_text_field( (string) $payload['model'] );
+		}
+
+		if ( ! empty( $payload['language'] ) ) {
+			$request_body['language'] = sanitize_text_field( (string) $payload['language'] );
+		}
+
 		$response = wp_remote_post(
 			$url,
 			array(
