@@ -1,6 +1,8 @@
 ( function() {
 	'use strict';
 
+	const storiesWidgets = [];
+
 	function formatWhatsAppUrl( template, name, shareUrl ) {
 		const message = ( template || 'Nada le quita el sueno a %s. Escucha esta historia: %s' )
 			.replace( '%s', name || '' )
@@ -13,6 +15,7 @@
 		const moons = Array.from( { length: 4 }, function( _, index ) {
 			return index < story.moonCount ? 'O' : 'o';
 		} ).join( ' ' );
+		const audioMarkup = story.audioUrl ? `<audio controls preload="metadata" src="${ story.audioUrl }"></audio>` : '';
 
 		return `
 			<article class="goodsleep-story-card" data-story-id="${ story.id }">
@@ -21,7 +24,7 @@
 					<span class="goodsleep-story-card__moons">${ moons }</span>
 				</div>
 				<p>${ story.text || '' }</p>
-				<audio controls preload="metadata" src="${ story.audioUrl || '' }"></audio>
+				${ audioMarkup }
 				<div class="goodsleep-story-card__actions">
 					<div>
 						<button type="button" data-action="favorite">${ story.favorite ? 'Quitar favorito' : 'Favorito' }</button>
@@ -62,6 +65,14 @@
 		return ( wrapper.textContent || wrapper.innerText || '' ).replace( /\s+/g, ' ' ).trim();
 	}
 
+	function clearPageHash() {
+		if ( ! window.location.hash || ! window.history || ! window.history.replaceState ) {
+			return;
+		}
+
+		window.history.replaceState( null, document.title, window.location.pathname + window.location.search );
+	}
+
 	function initGenerator( container ) {
 		const formSurface = container.querySelector( '.goodsleep-generator__surface--form' );
 		const loadingSurface = container.querySelector( '.goodsleep-generator__surface--loading' );
@@ -97,7 +108,19 @@
 			phraseNode.textContent = phraseTemplate ? phraseTemplate.replace( '%s', '' ) : '';
 		}
 
+		function syncSurfaceMinHeight() {
+			const formHeight = formSurface ? formSurface.offsetHeight : 0;
+
+			if ( formHeight > 0 ) {
+				container.style.minHeight = `${ formHeight }px`;
+				loadingSurface.style.minHeight = `${ formHeight }px`;
+				resultSurface.style.minHeight = `${ formHeight }px`;
+			}
+		}
+
 		resetGeneratorState();
+		syncSurfaceMinHeight();
+		window.addEventListener( 'resize', syncSurfaceMinHeight );
 
 		function getValidationMessage( field ) {
 			if ( ! field ) {
@@ -196,6 +219,7 @@
 			formSurface.hidden = true;
 			loadingSurface.hidden = false;
 			loaderText.textContent = ( loaderTemplate || 'Nada le quita el sueno a %s' ).replace( '%s', name );
+			syncSurfaceMinHeight();
 
 			try {
 				const payload = await requestJson( 'generate-story', {
@@ -220,10 +244,13 @@
 
 				loadingSurface.hidden = true;
 				resultSurface.hidden = false;
+				syncSurfaceMinHeight();
+				document.dispatchEvent( new CustomEvent( 'goodsleep:story-created', { detail: payload } ) );
 			} catch ( error ) {
 				loadingSurface.hidden = true;
 				formSurface.hidden = false;
 				feedback.textContent = sanitizeFeedbackMessage( error.message ) || 'Ocurrio un error al generar el audio.';
+				syncSurfaceMinHeight();
 			}
 		} );
 	}
@@ -287,6 +314,7 @@
 
 		filterButtons.forEach( function( button ) {
 			button.addEventListener( 'click', function() {
+				clearPageHash();
 				filterButtons.forEach( function( item ) {
 					item.classList.remove( 'is-active' );
 				} );
@@ -298,12 +326,14 @@
 
 		if ( search ) {
 			search.addEventListener( 'input', function() {
+				clearPageHash();
 				query = search.value.trim();
 				loadStories( true );
 			} );
 		}
 
 		list.addEventListener( 'click', async function( event ) {
+			clearPageHash();
 			const button = event.target.closest( '[data-action]' );
 
 			if ( ! button ) {
@@ -332,11 +362,35 @@
 			}
 		} );
 
+		storiesWidgets.push( {
+			container,
+			reload: function() {
+				sort = 'recent';
+				query = '';
+
+				if ( search ) {
+					search.value = '';
+				}
+
+				filterButtons.forEach( function( item ) {
+					item.classList.toggle( 'is-active', item.dataset.sort === 'recent' );
+				} );
+
+				loadStories( true );
+			}
+		} );
+
 		loadStories( true );
 	}
 
 	document.addEventListener( 'DOMContentLoaded', function() {
 		document.querySelectorAll( '.goodsleep-generator' ).forEach( initGenerator );
 		document.querySelectorAll( '.goodsleep-stories' ).forEach( initStories );
+	} );
+
+	document.addEventListener( 'goodsleep:story-created', function() {
+		storiesWidgets.forEach( function( widget ) {
+			widget.reload();
+		} );
 	} );
 }() );

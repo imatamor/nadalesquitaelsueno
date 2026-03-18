@@ -16,7 +16,7 @@ Implementar la landing one-page de la campana Goodsleep sobre `develop`, usando 
 - La web funciona como one-page scroll con secciones de alto minimo `100vh`.
 - Los anchors principales son:
   - `top`
-  - `como-funciona`
+  - `como-funciona` (completada)
   - `reglas`
   - `historia`
   - `historias`
@@ -63,6 +63,7 @@ Implementar la landing one-page de la campana Goodsleep sobre `develop`, usando 
 - La seccion Reglas debe repetir correctamente el ciclo apagado/prendido al entrar y salir del viewport.
 - `Historia Generator` debe cubrir formulario, loader y resultado.
 - `Historias List` debe soportar filtros, scroll interno, favoritos y votos.
+- La siguiente seccion activa del plan es `historias`.
 - Toda validacion final se hace en staging sobre `develop`.
 
 ## Operational Notes

@@ -193,10 +193,14 @@
 
 .goodsleep-generator__surface--loading {
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .goodsleep-generator__surface--result {
   display: flex;
+  align-items: center;
   justify-content: center;
 }
 
@@ -308,7 +312,7 @@
 }
 
 .goodsleep-stories__viewport {
-  max-height: min(70svh, 900px);
+  height: min(70svh, 900px);
   overflow: auto;
 }
 

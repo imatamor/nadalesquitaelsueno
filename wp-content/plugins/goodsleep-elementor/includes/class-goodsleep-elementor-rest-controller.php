@@ -283,6 +283,10 @@ class Goodsleep_Elementor_REST_Controller {
 			$vote_score = (int) get_post_meta( $post->ID, '_goodsleep_vote_score', true );
 			$story_name = (string) get_post_meta( $post->ID, '_goodsleep_story_name', true );
 
+			if ( ! $audio_url ) {
+				continue;
+			}
+
 			$stories[] = array(
 				'id'          => $post->ID,
 				'title'       => $story_name ? $story_name : get_the_title( $post ),

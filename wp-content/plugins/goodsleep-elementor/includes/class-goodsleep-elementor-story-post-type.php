@@ -14,6 +14,7 @@ class Goodsleep_Elementor_Story_Post_Type {
 	public function __construct() {
 		add_action( 'init', array( $this, 'register' ) );
 		add_action( 'add_meta_boxes', array( $this, 'register_meta_boxes' ) );
+		add_action( 'before_delete_post', array( $this, 'delete_attached_story_audio' ) );
 	}
 
 	/**
@@ -142,5 +143,35 @@ class Goodsleep_Elementor_Story_Post_Type {
 		}
 
 		echo '<p><strong>' . esc_html( $label ) . ':</strong><br>' . wp_kses_post( $value ) . '</p>';
+	}
+
+	/**
+	 * Borra el audio adjunto cuando se elimina definitivamente una historia.
+	 *
+	 * @param int $post_id ID del post eliminado.
+	 * @return void
+	 */
+	public function delete_attached_story_audio( $post_id ) {
+		$post_id = (int) $post_id;
+
+		if ( 'goodsleep_story' !== get_post_type( $post_id ) ) {
+			return;
+		}
+
+		$audio_id = (int) get_post_meta( $post_id, '_goodsleep_story_audio_id', true );
+		if ( ! $audio_id ) {
+			return;
+		}
+
+		$attachment = get_post( $audio_id );
+		if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
+			return;
+		}
+
+		if ( (int) $attachment->post_parent !== $post_id ) {
+			return;
+		}
+
+		wp_delete_attachment( $audio_id, true );
 	}
 }
