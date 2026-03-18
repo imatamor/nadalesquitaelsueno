@@ -52,7 +52,7 @@ class Goodsleep_Elementor_Audio_Mixer {
 			return $duration;
 		}
 
-		$output_path = wp_tempnam( sanitize_file_name( $base_name . '-mix.mp3' ) );
+		$output_path = $this->create_temp_file_path( $base_name . '-mix.mp3' );
 		if ( ! $output_path ) {
 			@unlink( $voice_path );
 			return new WP_Error( 'goodsleep_mix_temp_failed', __( 'No se pudo crear un archivo temporal para la mezcla.', 'goodsleep-elementor' ) );
@@ -160,7 +160,7 @@ class Goodsleep_Elementor_Audio_Mixer {
 		}
 
 		if ( ! empty( $track['url'] ) ) {
-			$temp_path = wp_tempnam( sanitize_file_name( wp_basename( $track['url'] ) ) );
+			$temp_path = $this->create_temp_file_path( wp_basename( $track['url'] ) );
 
 			if ( ! $temp_path ) {
 				return new WP_Error( 'goodsleep_track_temp_failed', __( 'No se pudo preparar el track musical.', 'goodsleep-elementor' ) );
@@ -210,7 +210,7 @@ class Goodsleep_Elementor_Audio_Mixer {
 		$this->ensure_wp_file_functions();
 
 		$extension = in_array( $format, array( 'mp3', 'wav', 'ogg', 'aac', 'pcm' ), true ) ? $format : 'mp3';
-		$temp_path = wp_tempnam( sanitize_file_name( $base_name . '-voice.' . $extension ) );
+		$temp_path = $this->create_temp_file_path( $base_name . '-voice.' . $extension );
 
 		if ( ! $temp_path ) {
 			return new WP_Error( 'goodsleep_voice_temp_failed', __( 'No se pudo preparar la locucion generada.', 'goodsleep-elementor' ) );
@@ -297,5 +297,30 @@ class Goodsleep_Elementor_Audio_Mixer {
 		if ( ! function_exists( 'wp_tempnam' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/file.php';
 		}
+	}
+
+	/**
+	 * Crea un archivo temporal preservando la extension solicitada.
+	 *
+	 * @param string $filename Nombre base esperado.
+	 * @return string
+	 */
+	protected function create_temp_file_path( $filename ) {
+		$this->ensure_wp_file_functions();
+
+		$temp_path = wp_tempnam( sanitize_file_name( $filename ) );
+		if ( ! $temp_path ) {
+			return '';
+		}
+
+		$extension = pathinfo( (string) $filename, PATHINFO_EXTENSION );
+		if ( '' === $extension ) {
+			return $temp_path;
+		}
+
+		$final_path = dirname( $temp_path ) . DIRECTORY_SEPARATOR . wp_unique_filename( dirname( $temp_path ), pathinfo( $temp_path, PATHINFO_FILENAME ) . '.' . $extension );
+		@unlink( $temp_path );
+
+		return $final_path;
 	}
 }

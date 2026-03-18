@@ -97,7 +97,7 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 		$this->add_control(
 			'phrase_emotion',
 			array(
-				'label'   => __( 'EmociÃ³n de la frase final', 'goodsleep-elementor' ),
+				'label'   => __( 'Emoción de la frase final', 'goodsleep-elementor' ),
 				'type'    => \Elementor\Controls_Manager::SELECT,
 				'options' => goodsleep_get_speechify_emotions(),
 				'default' => 'cheerful',
