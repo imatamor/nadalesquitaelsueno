@@ -34,12 +34,12 @@ class Goodsleep_Elementor_Campaign_404 {
 		nocache_headers();
 		$this->prime_page_query_context( $page );
 
-		$this->prepare_elementor_runtime( $page->ID );
-
 		$content = $this->get_page_content( $page->ID );
 		if ( '' === trim( wp_strip_all_tags( $content ) ) ) {
 			return;
 		}
+
+		$this->prepare_elementor_runtime( $page->ID );
 
 		echo '<!doctype html><html ' . get_language_attributes() . '><head><meta charset="' . esc_attr( get_bloginfo( 'charset' ) ) . '"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' . esc_html( get_the_title( $page ) ) . '</title>';
 		wp_head();
