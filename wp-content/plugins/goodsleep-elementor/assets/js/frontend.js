@@ -24,9 +24,19 @@
 			.replace( /'/g, '&#039;' );
 	}
 
+	function formatRatingSummary( story ) {
+		const voteCount = Number( story.voteCount || 0 );
+		const voteAverage = Number( story.voteAverage || 0 );
+		const hasRating = voteCount > 0 || voteAverage > 0;
+
+		return hasRating ? `${ voteAverage.toFixed( 1 ) }/5` : 'Sin votos';
+	}
+
 	function buildRatingMarkup( story ) {
 		const ratingValue = Number( story.voteAverage || 0 );
-		const moonCount = Math.min( 5, Math.max( 0, Math.round( ratingValue ) ) );
+		const voteCount = Number( story.voteCount || 0 );
+		const hasRating = voteCount > 0 || ratingValue > 0;
+		const moonCount = hasRating ? Math.min( 5, Math.max( 0, Math.round( ratingValue ) ) ) : 0;
 		const isReadonly = !! story.userHasVoted;
 		const tooltipBase = isReadonly ? 'Ya votaste hoy.' : 'Haz clic para votar una vez hoy.';
 		let markup = `<div class="goodsleep-story-card__rating${ isReadonly ? ' is-readonly' : '' }" data-rating-group data-readonly="${ isReadonly ? 'true' : 'false' }" aria-label="Promedio ${ ratingValue.toFixed( 1 ) } de 5 basado en ${ Number( story.voteCount || 0 ) } votos">`;
@@ -61,9 +71,7 @@
 		const audioMarkup = story.audioUrl ? `<audio controls preload="metadata" src="${ escapeHtml( story.audioUrl ) }"></audio>` : '';
 		const shareUrl = formatWhatsAppUrl( goodsleepElementor.whatsappTemplate, story.title, story.shareUrl || '' );
 		const favoriteLabel = story.favorite ? 'Quitar de favoritos' : 'Agregar a favoritos';
-		const ratingSummary = Number( story.voteAverage || 0 ) > 0
-			? `${ Number( story.voteAverage || 0 ).toFixed( 1 ) }/5`
-			: 'Sin votos';
+		const ratingSummary = formatRatingSummary( story );
 
 		return `
 			<article class="goodsleep-story-card" data-story-id="${ story.id }">
@@ -115,6 +123,31 @@
 				</div>
 			</article>
 		`;
+	}
+
+	function syncRatingCard( card, payload ) {
+		if ( ! card || ! payload ) {
+			return;
+		}
+
+		const summary = card.querySelector( '.goodsleep-story-card__rating-summary' );
+		const ratingWrap = card.querySelector( '.goodsleep-story-card__rating-wrap' );
+		const story = {
+			voteAverage: Number( payload.voteAverage || 0 ),
+			voteCount: Number( payload.voteCount || 0 ),
+			userHasVoted: !! payload.userHasVoted
+		};
+
+		if ( summary ) {
+			summary.textContent = formatRatingSummary( story );
+		}
+
+		if ( ratingWrap ) {
+			const currentGroup = ratingWrap.querySelector( '[data-rating-group]' );
+			if ( currentGroup ) {
+				currentGroup.outerHTML = buildRatingMarkup( story );
+			}
+		}
 	}
 
 	async function requestJson( path, options ) {
@@ -438,11 +471,12 @@
 				if ( 'vote' === button.dataset.action ) {
 					const rating = Number( button.dataset.rating || 0 );
 
-					await requestJson( `stories/${ storyId }/vote`, {
+					const payload = await requestJson( `stories/${ storyId }/vote`, {
 						method: 'POST',
 						body: JSON.stringify( { rating } )
 					} );
 
+					syncRatingCard( card, payload );
 					loadStories( true );
 				}
 			} catch ( error ) {

@@ -315,6 +315,9 @@
 .goodsleep-stories__viewport {
   height: min(70svh, 900px);
   overflow: auto;
+  box-sizing: border-box;
+  padding-right: 0.85rem;
+  scrollbar-gutter: stable;
 }
 
 .goodsleep-stories__list {
@@ -332,6 +335,7 @@
   border-radius: 10px;
   padding: 1rem;
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.08);
+  overflow: visible;
 }
 
 .goodsleep-story-card__topline,
@@ -444,6 +448,17 @@
 .goodsleep-story-card__moon:focus-visible::after {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
+}
+
+.goodsleep-story-card__moon::after {
+  left: auto;
+  right: 0;
+  transform: translateY(4px);
+}
+
+.goodsleep-story-card__moon:hover::after,
+.goodsleep-story-card__moon:focus-visible::after {
+  transform: translateY(0);
 }
 
 .goodsleep-story-card__action-icon {

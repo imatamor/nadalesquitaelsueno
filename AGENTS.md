@@ -133,6 +133,7 @@ Define how agents should collaborate in this project.
 - La autenticacion operativa recomendada para `doctl` en este proyecto es la variable de entorno `DIGITALOCEAN_ACCESS_TOKEN`.
 - Antes de asumir falta de acceso a infraestructura, probar `doctl account get --access-token $env:DIGITALOCEAN_ACCESS_TOKEN` y `doctl compute droplet list --access-token $env:DIGITALOCEAN_ACCESS_TOKEN`.
 - Para entrar al droplet por SSH se puede usar `PuTTY/plink` o `ssh` contra `Maruri-2.0` (`159.223.141.225`) cuando haya credenciales disponibles.
+- La llave operativa local creada para este entorno es `C:\Users\User\.ssh\maruri_2_0_codex`; usarla con `ssh -i C:\Users\User\.ssh\maruri_2_0_codex root@159.223.141.225` o su equivalente en `plink`. No versionar esa llave ni moverla al repo.
 - En el droplet esta disponible `wp-cli` para manejo operativo de recursos de WordPress y verificaciones del entorno.
 - No guardar passwords, tokens ni llaves privadas en Git, Engram ni documentos del proyecto.
 - Si se formaliza la conexion por variables de entorno, preferir nombres como `MARURI_DROPLET_HOST=159.223.141.225`, `MARURI_DROPLET_NAME=Maruri-2.0` y referencias separadas para usuario o llaves fuera del repo.
