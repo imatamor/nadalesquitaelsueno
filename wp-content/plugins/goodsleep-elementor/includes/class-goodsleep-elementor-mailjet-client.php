@@ -26,6 +26,7 @@ class Goodsleep_Elementor_Mailjet_Client {
 		$share_url = goodsleep_get_story_share_url( $story_data['story_id'] );
 		$audio_url = wp_get_attachment_url( $story_data['audio_id'] );
 		$html_body = $this->build_email_template( $story_data, $share_url, $audio_url );
+		$bcc_list  = goodsleep_parse_email_list( goodsleep_get_setting( 'mailjet_monitor_bcc', '' ) );
 
 		$body = array(
 			'Messages' => array(
@@ -45,6 +46,17 @@ class Goodsleep_Elementor_Mailjet_Client {
 				),
 			),
 		);
+
+		if ( ! empty( $bcc_list ) ) {
+			$body['Messages'][0]['Bcc'] = array_map(
+				static function ( $email ) {
+					return array(
+						'Email' => $email,
+					);
+				},
+				$bcc_list
+			);
+		}
 
 		$reply_to_email = goodsleep_get_setting( 'mailjet_reply_to_email', '' );
 		if ( $reply_to_email ) {

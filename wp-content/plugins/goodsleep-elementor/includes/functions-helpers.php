@@ -24,6 +24,7 @@ function goodsleep_get_settings() {
 		'mailjet_from_name'       => 'Goodsleep',
 		'mailjet_reply_to_email'  => '',
 		'mailjet_reply_to_name'   => '',
+		'mailjet_monitor_bcc'     => '',
 		'whatsapp_share_text'     => 'Nada le quita el sueno a %s. Escucha esta historia: %s',
 		'terms_text'              => 'Acepto terminos y condiciones',
 		'terms_url'               => '',
@@ -50,6 +51,19 @@ function goodsleep_get_setting( $key, $default = '' ) {
 	$settings = goodsleep_get_settings();
 
 	return array_key_exists( $key, $settings ) ? $settings[ $key ] : $default;
+}
+
+/**
+ * Devuelve una lista saneada de correos separados por coma o salto de linea.
+ *
+ * @param string $value Texto base.
+ * @return array<int,string>
+ */
+function goodsleep_parse_email_list( $value ) {
+	$emails = preg_split( '/[\r\n,;]+/', (string) $value );
+	$emails = array_filter( array_map( 'sanitize_email', (array) $emails ) );
+
+	return array_values( array_unique( $emails ) );
 }
 
 /**

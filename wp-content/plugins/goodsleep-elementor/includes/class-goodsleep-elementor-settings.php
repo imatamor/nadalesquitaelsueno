@@ -58,6 +58,7 @@ class Goodsleep_Elementor_Settings {
 		$this->add_text_field( 'mailjet_from_name', __( 'Mailjet From Name', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'mailjet_reply_to_email', __( 'Reply-To Email', 'goodsleep-elementor' ), 'email' );
 		$this->add_text_field( 'mailjet_reply_to_name', __( 'Reply-To Name', 'goodsleep-elementor' ) );
+		$this->add_textarea_field( 'mailjet_monitor_bcc', __( 'Correos de monitoreo (CCO)', 'goodsleep-elementor' ), 4, 'goodsleep_api_section', __( 'Ingresa uno o varios correos separados por coma o salto de linea.', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'terms_url', __( 'URL de términos global', 'goodsleep-elementor' ), 'url' );
 		$this->add_text_field( 'terms_text', __( 'Texto de términos global', 'goodsleep-elementor' ) );
 		$this->add_textarea_field( 'whatsapp_share_text', __( 'Texto para compartir por WhatsApp', 'goodsleep-elementor' ), 3 );
@@ -114,6 +115,7 @@ class Goodsleep_Elementor_Settings {
 		$sanitized['mailjet_from_name']      = isset( $input['mailjet_from_name'] ) ? sanitize_text_field( $input['mailjet_from_name'] ) : '';
 		$sanitized['mailjet_reply_to_email'] = isset( $input['mailjet_reply_to_email'] ) ? sanitize_email( $input['mailjet_reply_to_email'] ) : '';
 		$sanitized['mailjet_reply_to_name']  = isset( $input['mailjet_reply_to_name'] ) ? sanitize_text_field( $input['mailjet_reply_to_name'] ) : '';
+		$sanitized['mailjet_monitor_bcc']    = isset( $input['mailjet_monitor_bcc'] ) ? $this->sanitize_email_list_textarea( $input['mailjet_monitor_bcc'] ) : '';
 		$sanitized['terms_url']              = isset( $input['terms_url'] ) ? esc_url_raw( $input['terms_url'] ) : '';
 		$sanitized['terms_text']             = isset( $input['terms_text'] ) ? sanitize_text_field( $input['terms_text'] ) : '';
 		$sanitized['whatsapp_share_text']      = isset( $input['whatsapp_share_text'] ) ? sanitize_textarea_field( $input['whatsapp_share_text'] ) : '';
@@ -153,6 +155,21 @@ class Goodsleep_Elementor_Settings {
 		$sanitized['tracks_catalog'] = $tracks_catalog;
 
 		return $sanitized;
+	}
+
+	/**
+	 * Sanitiza una lista de correos separada por coma o salto de linea.
+	 *
+	 * @param string $value Texto ingresado.
+	 * @return string
+	 */
+	protected function sanitize_email_list_textarea( $value ) {
+		$value  = (string) $value;
+		$emails = preg_split( '/[\r\n,;]+/', $value );
+		$emails = array_filter( array_map( 'sanitize_email', (array) $emails ) );
+		$emails = array_values( array_unique( $emails ) );
+
+		return implode( "\n", $emails );
 	}
 
 	/**
