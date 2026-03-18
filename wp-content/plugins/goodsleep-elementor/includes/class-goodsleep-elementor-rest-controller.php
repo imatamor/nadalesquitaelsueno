@@ -480,7 +480,6 @@ class Goodsleep_Elementor_REST_Controller {
 	protected function build_speechify_input( $story_text, $phrase_text, $emotion = 'cheerful' ) {
 		$story_text  = trim( wp_strip_all_tags( (string) $story_text ) );
 		$phrase_text = trim( wp_strip_all_tags( (string) $phrase_text ) );
-		$emotion     = goodsleep_sanitize_speechify_emotion( $emotion );
 
 		if ( '' === $phrase_text ) {
 			return sprintf(
@@ -490,10 +489,9 @@ class Goodsleep_Elementor_REST_Controller {
 		}
 
 		return sprintf(
-			'<speak><prosody rate="-8%%" pitch="-4%%">%1$s</prosody><break time="700ms" /><speechify:style emotion="%3$s"><prosody rate="-2%%" pitch="+4%%">%2$s</prosody></speechify:style></speak>',
+			'<speak><prosody rate="-8%%" pitch="-4%%">%1$s</prosody><break time="700ms" /><prosody rate="-6%%" pitch="-2%%">%2$s</prosody></speak>',
 			htmlspecialchars( $story_text, ENT_XML1 | ENT_COMPAT, 'UTF-8' ),
-			htmlspecialchars( $phrase_text, ENT_XML1 | ENT_COMPAT, 'UTF-8' ),
-			htmlspecialchars( $emotion, ENT_XML1 | ENT_COMPAT, 'UTF-8' )
+			htmlspecialchars( $phrase_text, ENT_XML1 | ENT_COMPAT, 'UTF-8' )
 		);
 	}
 

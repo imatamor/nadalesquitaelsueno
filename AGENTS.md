@@ -25,6 +25,7 @@ Sitio WordPress de campana "Nada les quita el sueno".
 - no versionar uploads, cache, logs ni backups
 - mantener compatibilidad con WordPress y Apache
 - preferir cambios minimos y seguros
+- toda pregunta de toma de decisiones dirigida al usuario debe hacerse en español
 - todo texto visible para usuario debe revisarse por ortografia, gramatica y tono antes de cerrar una tarea; no se permiten errores de redaccion en copies de frontend
 - si se modifica theme o plugin, indicar archivos tocados
 - no romper el flujo de deploy automatico

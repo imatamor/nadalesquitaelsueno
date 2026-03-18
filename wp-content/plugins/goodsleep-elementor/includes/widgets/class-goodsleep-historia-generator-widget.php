@@ -101,6 +101,11 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 				'type'    => \Elementor\Controls_Manager::SELECT,
 				'options' => goodsleep_get_speechify_emotions(),
 				'default' => 'cheerful',
+				// Hidden for now while we prioritize voice continuity over expressive style changes.
+				'render_type' => 'none',
+				'condition' => array(
+					'_goodsleep_show_phrase_emotion' => 'yes',
+				),
 			)
 		);
 
