@@ -47,6 +47,7 @@ class Goodsleep_Elementor_Plugin {
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-speechify-client.php';
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-audio-mixer.php';
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-mailjet-client.php';
+		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-campaign-404.php';
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-share-router.php';
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-rest-controller.php';
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-elementor.php';
@@ -60,6 +61,7 @@ class Goodsleep_Elementor_Plugin {
 	protected function boot() {
 		new Goodsleep_Elementor_Settings();
 		new Goodsleep_Elementor_Story_Post_Type();
+		new Goodsleep_Elementor_Campaign_404();
 		new Goodsleep_Elementor_Share_Router();
 		new Goodsleep_Elementor_REST_Controller( new Goodsleep_Elementor_Speechify_Client(), new Goodsleep_Elementor_Audio_Mixer(), new Goodsleep_Elementor_Mailjet_Client() );
 		new Goodsleep_Elementor_Elementor();

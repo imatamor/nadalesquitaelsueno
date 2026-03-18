@@ -188,3 +188,108 @@
     transition: none;
   }
 }
+
+.goodsleep-story-single {
+  position: relative;
+  background:
+    radial-gradient(circle at 82% 14%, rgba(255, 23, 152, 0.14), transparent 18%),
+    radial-gradient(circle at 12% 24%, rgba(255, 255, 255, 0.05), transparent 22%),
+    linear-gradient(180deg, #050507 0%, #09090d 100%);
+  color: #fff;
+}
+
+.goodsleep-story-single__hero {
+  position: relative;
+  min-height: calc(100svh - 120px);
+  overflow: hidden;
+}
+
+.goodsleep-story-single__overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 8% 22%, rgba(255, 255, 255, 0.08), transparent 26%),
+    radial-gradient(circle at 88% 16%, rgba(255, 23, 152, 0.16), transparent 18%),
+    radial-gradient(circle at 74% 74%, rgba(255, 255, 255, 0.05), transparent 18%);
+  opacity: 0.95;
+}
+
+.goodsleep-story-single__shell {
+  position: relative;
+  z-index: 1;
+  min-height: inherit;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 720px);
+  gap: clamp(1.5rem, 4vw, 4rem);
+  align-items: center;
+  padding-top: clamp(3rem, 7vw, 6rem);
+  padding-bottom: clamp(3rem, 7vw, 6rem);
+}
+
+.goodsleep-story-single__intro {
+  max-width: 520px;
+}
+
+.goodsleep-story-single__eyebrow {
+  margin: 0 0 0.9rem;
+  color: #ff1798;
+  font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.goodsleep-story-single__title {
+  margin: 0;
+  color: #fff;
+  font-family: "Montserrat ExtraBold", "Montserrat", Arial, sans-serif;
+  font-size: clamp(2.6rem, 6vw, 4.8rem);
+  line-height: 0.96;
+}
+
+.goodsleep-story-single__lead {
+  margin: 1.1rem 0 0;
+  color: rgba(255, 255, 255, 0.76);
+  font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  font-size: clamp(1rem, 1.6vw, 1.15rem);
+  line-height: 1.6;
+}
+
+.goodsleep-story-single__card {
+  width: min(100%, 760px);
+  margin-left: auto;
+}
+
+.goodsleep-story-single .goodsleep-story-card__text p:first-child {
+  margin-top: 0;
+}
+
+.goodsleep-story-single .goodsleep-story-card__text p:last-child {
+  margin-bottom: 0;
+}
+
+.goodsleep-story-single .goodsleep-story-card__rating.is-readonly {
+  pointer-events: none;
+}
+
+@media (max-width: 991px) {
+  .goodsleep-story-single__shell {
+    grid-template-columns: 1fr;
+  }
+
+  .goodsleep-story-single__card {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  .goodsleep-story-single__hero {
+    min-height: auto;
+  }
+
+  .goodsleep-story-single__shell {
+    padding-top: 2.25rem;
+    padding-bottom: 2.5rem;
+  }
+}
