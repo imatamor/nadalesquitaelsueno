@@ -318,6 +318,31 @@
   box-sizing: border-box;
   padding-right: 0.85rem;
   scrollbar-gutter: stable;
+  scrollbar-width: auto;
+  scrollbar-color: #ff1798 #595959;
+}
+
+.goodsleep-stories__viewport::-webkit-scrollbar {
+  width: 18px;
+}
+
+.goodsleep-stories__viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.goodsleep-stories__viewport::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ff1798 0%, #ff1798 100%);
+  border-radius: 999px;
+  border: 6px solid #595959;
+  min-height: 64px;
+}
+
+.goodsleep-stories__viewport::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #ff3aaa 0%, #ff1798 100%);
+}
+
+.goodsleep-stories__viewport::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .goodsleep-stories__list {
