@@ -57,6 +57,11 @@ class Goodsleep_Elementor_Campaign_404 {
 			return $template;
 		}
 
+		$elementor_canvas = WP_PLUGIN_DIR . '/elementor/modules/page-templates/templates/canvas.php';
+		if ( file_exists( $elementor_canvas ) ) {
+			return $elementor_canvas;
+		}
+
 		$page_template = get_page_template();
 		if ( $page_template ) {
 			return $page_template;
