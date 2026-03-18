@@ -53,7 +53,7 @@ class Goodsleep_Elementor_Story_Post_Type {
 			'_goodsleep_story_track_label'  => 'string',
 			'_goodsleep_story_audio_id'     => 'integer',
 			'_goodsleep_short_slug'         => 'string',
-			'_goodsleep_vote_score'         => 'number',
+			'_goodsleep_vote_score'         => 'string',
 			'_goodsleep_vote_total'         => 'integer',
 			'_goodsleep_vote_count'         => 'integer',
 			'_goodsleep_favorite_count'     => 'integer',

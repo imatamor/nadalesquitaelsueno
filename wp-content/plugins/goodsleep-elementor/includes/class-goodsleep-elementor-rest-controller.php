@@ -224,7 +224,7 @@ class Goodsleep_Elementor_REST_Controller {
 		update_post_meta( $post_id, '_goodsleep_story_track_label', $track_label );
 		update_post_meta( $post_id, '_goodsleep_story_audio_id', $audio_id );
 		update_post_meta( $post_id, '_goodsleep_short_slug', $short_slug );
-		update_post_meta( $post_id, '_goodsleep_vote_score', 0 );
+		update_post_meta( $post_id, '_goodsleep_vote_score', '0.00' );
 		update_post_meta( $post_id, '_goodsleep_vote_total', 0 );
 		update_post_meta( $post_id, '_goodsleep_vote_count', 0 );
 		update_post_meta( $post_id, '_goodsleep_favorite_count', 0 );
@@ -280,12 +280,23 @@ class Goodsleep_Elementor_REST_Controller {
 		$stories = array();
 
 		foreach ( $query->posts as $post ) {
-			$audio_id       = (int) get_post_meta( $post->ID, '_goodsleep_story_audio_id', true );
-			$audio_url      = wp_get_attachment_url( $audio_id );
-			$vote_score     = (float) get_post_meta( $post->ID, '_goodsleep_vote_score', true );
-			$vote_count     = (int) get_post_meta( $post->ID, '_goodsleep_vote_count', true );
-			$favorite_count = (int) get_post_meta( $post->ID, '_goodsleep_favorite_count', true );
-			$story_name     = (string) get_post_meta( $post->ID, '_goodsleep_story_name', true );
+			$audio_id          = (int) get_post_meta( $post->ID, '_goodsleep_story_audio_id', true );
+			$audio_url         = wp_get_attachment_url( $audio_id );
+			$stored_vote_score = (string) get_post_meta( $post->ID, '_goodsleep_vote_score', true );
+			$vote_total        = (int) get_post_meta( $post->ID, '_goodsleep_vote_total', true );
+			$vote_count        = (int) get_post_meta( $post->ID, '_goodsleep_vote_count', true );
+			$favorite_count    = (int) get_post_meta( $post->ID, '_goodsleep_favorite_count', true );
+			$story_name        = (string) get_post_meta( $post->ID, '_goodsleep_story_name', true );
+			$vote_score        = '' !== $stored_vote_score ? (float) $stored_vote_score : 0.0;
+
+			if ( $vote_count > 0 ) {
+				$calculated_vote_score = round( $vote_total / $vote_count, 2 );
+
+				if ( abs( $calculated_vote_score - $vote_score ) > 0.001 ) {
+					$vote_score = $calculated_vote_score;
+					update_post_meta( $post->ID, '_goodsleep_vote_score', number_format( $vote_score, 2, '.', '' ) );
+				}
+			}
 
 			if ( ! $audio_url ) {
 				continue;
@@ -387,7 +398,7 @@ class Goodsleep_Elementor_REST_Controller {
 		$count++;
 		$score = $count > 0 ? round( $total / $count, 2 ) : 0;
 
-		update_post_meta( $story_id, '_goodsleep_vote_score', $score );
+		update_post_meta( $story_id, '_goodsleep_vote_score', number_format( $score, 2, '.', '' ) );
 		update_post_meta( $story_id, '_goodsleep_vote_total', $total );
 		update_post_meta( $story_id, '_goodsleep_vote_count', $count );
 		goodsleep_set_vote_cookie( $story_id );
