@@ -17,8 +17,8 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 *	HEADER
 * ----------------------------------------------------------*/
 .menu_btn {
-	background-color: #d92d8a;
-	padding: 5px 15px;
+	padding: 15px 15px;
 	border-radius: 10px;
-	font-weight: initial;
+	font-weight: 800;
+	border: 2px solid #FDDF48;
 }

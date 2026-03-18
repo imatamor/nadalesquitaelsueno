@@ -21,7 +21,7 @@ while ( have_posts() ) :
 	$audio_id        = (int) get_post_meta( $post_id, '_goodsleep_story_audio_id', true );
 	$audio_url       = $audio_id ? wp_get_attachment_url( $audio_id ) : '';
 	$share_url       = function_exists( 'goodsleep_get_story_share_url' ) ? goodsleep_get_story_share_url( $post_id ) : get_permalink();
-	$published_label = get_the_date( 'd/m/Y' );
+	$published_label = get_the_date( 'd/m/Y H:i' );
 	$vote_total      = (int) get_post_meta( $post_id, '_goodsleep_vote_total', true );
 	$vote_count      = (int) get_post_meta( $post_id, '_goodsleep_vote_count', true );
 	$stored_average  = (float) get_post_meta( $post_id, '_goodsleep_vote_score', true );

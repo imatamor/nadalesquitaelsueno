@@ -316,7 +316,7 @@ class Goodsleep_Elementor_REST_Controller {
 				'moonCount'      => min( 5, max( 0, (int) round( $vote_score ) ) ),
 				'userHasVoted'   => goodsleep_has_voted_today( $post->ID ),
 				'createdAt'      => get_the_date( DATE_ATOM, $post ),
-				'publishedLabel' => get_the_date( 'd/m/Y', $post ),
+				'publishedLabel' => get_the_date( 'd/m/Y H:i', $post ),
 			);
 		}
 

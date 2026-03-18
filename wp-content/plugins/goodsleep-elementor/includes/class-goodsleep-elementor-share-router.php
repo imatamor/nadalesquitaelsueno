@@ -74,7 +74,7 @@ class Goodsleep_Elementor_Share_Router {
 		$share_url        = goodsleep_get_story_share_url( $story->ID );
 		$story_name       = (string) get_post_meta( $story->ID, '_goodsleep_story_name', true );
 		$story_name       = $story_name ? $story_name : get_the_title( $story );
-		$published_label  = get_the_date( 'd/m/Y', $story );
+		$published_label  = get_the_date( 'd/m/Y H:i', $story );
 		$vote_total       = (int) get_post_meta( $story->ID, '_goodsleep_vote_total', true );
 		$vote_count       = (int) get_post_meta( $story->ID, '_goodsleep_vote_count', true );
 		$stored_average   = (float) get_post_meta( $story->ID, '_goodsleep_vote_score', true );
