@@ -18,6 +18,7 @@ class Goodsleep_Elementor_Mailjet_Client {
 		$api_key    = goodsleep_get_setting( 'mailjet_api_key', '' );
 		$secret_key = goodsleep_get_setting( 'mailjet_secret_key', '' );
 		$from_email = goodsleep_normalize_email( goodsleep_get_setting( 'mailjet_from_email', '' ) );
+		$from_name  = $this->get_sender_name();
 
 		if ( '' === $api_key || '' === $secret_key || '' === $from_email ) {
 			return new WP_Error( 'goodsleep_missing_mailjet_config', __( 'Mailjet no esta configurado.', 'goodsleep-elementor' ) );
@@ -33,7 +34,7 @@ class Goodsleep_Elementor_Mailjet_Client {
 				array(
 					'From' => array(
 						'Email' => $from_email,
-						'Name'  => goodsleep_get_setting( 'mailjet_from_name', 'Goodsleep' ),
+						'Name'  => $from_name,
 					),
 					'To'   => array(
 						array(
@@ -62,7 +63,7 @@ class Goodsleep_Elementor_Mailjet_Client {
 		if ( $reply_to_email ) {
 			$body['Messages'][0]['ReplyTo'] = array(
 				'Email' => $reply_to_email,
-				'Name'  => goodsleep_get_setting( 'mailjet_reply_to_name', goodsleep_get_setting( 'mailjet_from_name', 'Goodsleep' ) ),
+				'Name'  => $this->get_reply_to_name( $from_name ),
 			);
 		}
 
@@ -91,6 +92,33 @@ class Goodsleep_Elementor_Mailjet_Client {
 	}
 
 	/**
+	 * Devuelve un nombre visible mas amable para el remitente.
+	 *
+	 * @return string
+	 */
+	protected function get_sender_name() {
+		$from_name = trim( (string) goodsleep_get_setting( 'mailjet_from_name', 'Goodsleep' ) );
+
+		if ( '' === $from_name || 'Goodsleep' === $from_name ) {
+			return 'Goodsleep | Nada les quita el sueño';
+		}
+
+		return $from_name;
+	}
+
+	/**
+	 * Devuelve el nombre visible del reply-to.
+	 *
+	 * @param string $fallback Nombre fallback.
+	 * @return string
+	 */
+	protected function get_reply_to_name( $fallback ) {
+		$reply_to_name = trim( (string) goodsleep_get_setting( 'mailjet_reply_to_name', '' ) );
+
+		return '' !== $reply_to_name ? $reply_to_name : $fallback;
+	}
+
+	/**
 	 * Construye template HTML base.
 	 *
 	 * @param array<string,mixed> $story_data Datos.
@@ -99,7 +127,20 @@ class Goodsleep_Elementor_Mailjet_Client {
 	 * @return string
 	 */
 	protected function build_email_template( $story_data, $share_url, $audio_url ) {
-		$name = esc_html( $story_data['name'] );
+		$name        = esc_html( $story_data['name'] );
+		$story_id    = isset( $story_data['story_id'] ) ? absint( $story_data['story_id'] ) : 0;
+		$story_text  = $story_id ? (string) get_post_meta( $story_id, '_goodsleep_story_text', true ) : '';
+		$story_phrase = $story_id ? (string) get_post_meta( $story_id, '_goodsleep_story_phrase', true ) : '';
+		$combined    = $story_id ? (string) get_post_meta( $story_id, '_goodsleep_story_combined', true ) : '';
+
+		if ( '' === $combined ) {
+			$combined = trim( $story_text . "\n\n" . $story_phrase );
+		}
+
+		$combined_html = '';
+		if ( '' !== $combined ) {
+			$combined_html = '<div style="margin:0 0 24px;padding:20px 22px;background:#ffffff;border-radius:18px;color:#171717;font-size:17px;line-height:1.6;">' . wp_kses_post( wpautop( esc_html( $combined ) ) ) . '</div>';
+		}
 
 		return '
 		<div style="background:#0b0b10;padding:40px 24px;font-family:Arial,sans-serif;color:#ffffff;">
@@ -107,6 +148,7 @@ class Goodsleep_Elementor_Mailjet_Client {
 				<p style="margin:0 0 12px;color:#ff1b9c;font-size:12px;letter-spacing:1px;text-transform:uppercase;">Goodsleep</p>
 				<h1 style="margin:0 0 16px;font-size:32px;line-height:1.1;">Tu historia ya esta lista, ' . $name . '.</h1>
 				<p style="margin:0 0 24px;color:#d8d8e5;font-size:16px;line-height:1.6;">Ya puedes escucharla, descargarla o compartirla.</p>
+				' . $combined_html . '
 				<p style="margin:0 0 24px;">
 					<a href="' . esc_url( $share_url ) . '" style="display:inline-block;background:#ff1b9c;color:#ffffff;text-decoration:none;padding:14px 20px;border-radius:999px;font-weight:bold;">Escuchar historia</a>
 				</p>
