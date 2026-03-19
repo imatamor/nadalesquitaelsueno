@@ -72,7 +72,7 @@
 	font-size: clamp(2.5rem, 6vw, 4.5rem);
 	line-height: 1;
 	font-weight: 700;
-	font-family: "Montserrat ExtraBold";
+	font-family: "Montserrat";
 }
 
 .goodsleep-rules-scene__copy {
@@ -146,6 +146,18 @@
 .goodsleep-static-copy .n2-ss-layer {
   opacity: 1 !important;
   transform: none !important;
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .goodsleep-rules-scene__content {
+    max-width: 540px;
+    margin-left: 0;
+    margin-right: 0;
+    padding: 3rem 2.5rem 4rem;
+    display: grid;
+    align-content: end;
+    min-height: 100svh;
+  }
 }
 
 @media (max-width: 767px) {

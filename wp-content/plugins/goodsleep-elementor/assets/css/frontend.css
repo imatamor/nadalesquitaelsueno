@@ -285,6 +285,8 @@
 
 .goodsleep-stories {
   color: #fff;
+  width: min(100%, 980px);
+  margin: 0 auto;
 }
 
 .goodsleep-stories__toolbar {
@@ -294,12 +296,13 @@
 }
 
 .goodsleep-stories__search {
-  width: 100%;
-  border-radius: 999px;
+  width: 60%;
+  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.15);
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
   padding: 0.85rem 1rem;
+  margin: auto;
 }
 
 .goodsleep-stories__filters {
@@ -771,7 +774,7 @@
 
   .goodsleep-story-card__date,
   .goodsleep-story-card__rating-wrap {
-    justify-self: start;
+    justify-self: end;
   }
 
   .goodsleep-story-card__action-group {
