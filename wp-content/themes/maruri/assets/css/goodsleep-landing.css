@@ -151,12 +151,12 @@
 @media (min-width: 768px) and (max-width: 1024px) {
   .goodsleep-rules-scene__content {
     max-width: 540px;
-    margin-left: 0;
+    margin-left: 20%;
     margin-right: 0;
     padding: 3rem 2.5rem 4rem;
     display: grid;
     align-content: end;
-    min-height: 100svh;
+    min-height: 85svh;
   }
 }
 

@@ -285,7 +285,7 @@
 
 .goodsleep-stories {
   color: #fff;
-  width: min(100%, 980px);
+  width: 100%;
   margin: 0 auto;
 }
 
@@ -293,6 +293,7 @@
   display: grid;
   gap: 1.75rem;
   margin-bottom: 1.5rem;
+  width: 100%;
 }
 
 .goodsleep-stories__search {
@@ -325,6 +326,7 @@
 }
 
 .goodsleep-stories__viewport {
+  width: 100%;
   height: min(70svh, 900px);
   overflow: auto;
   box-sizing: border-box;
