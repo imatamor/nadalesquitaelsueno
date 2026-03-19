@@ -54,6 +54,34 @@ function goodsleep_get_setting( $key, $default = '' ) {
 }
 
 /**
+ * Normaliza un correo y convierte dominios IDN a punycode cuando aplica.
+ *
+ * @param string $email Correo base.
+ * @return string
+ */
+function goodsleep_normalize_email( $email ) {
+	$email = trim( (string) $email );
+
+	if ( '' === $email || false === strpos( $email, '@' ) ) {
+		return sanitize_email( $email );
+	}
+
+	list( $local_part, $domain_part ) = array_pad( explode( '@', $email, 2 ), 2, '' );
+	$local_part  = trim( $local_part );
+	$domain_part = trim( $domain_part );
+
+	if ( '' !== $domain_part && preg_match( '/[^\x20-\x7E]/', $domain_part ) && class_exists( '\WpOrg\Requests\IdnaEncoder' ) ) {
+		try {
+			$domain_part = \WpOrg\Requests\IdnaEncoder::encode( $domain_part );
+		} catch ( Exception $exception ) {
+			$domain_part = trim( $domain_part );
+		}
+	}
+
+	return sanitize_email( $local_part . '@' . $domain_part );
+}
+
+/**
  * Devuelve una lista saneada de correos separados por coma o salto de linea.
  *
  * @param string $value Texto base.
@@ -61,7 +89,7 @@ function goodsleep_get_setting( $key, $default = '' ) {
  */
 function goodsleep_parse_email_list( $value ) {
 	$emails = preg_split( '/[\r\n,;]+/', (string) $value );
-	$emails = array_filter( array_map( 'sanitize_email', (array) $emails ) );
+	$emails = array_filter( array_map( 'goodsleep_normalize_email', (array) $emails ) );
 
 	return array_values( array_unique( $emails ) );
 }

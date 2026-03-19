@@ -111,9 +111,9 @@ class Goodsleep_Elementor_Settings {
 		$sanitized['speechify_voices_path']  = isset( $input['speechify_voices_path'] ) ? sanitize_text_field( $input['speechify_voices_path'] ) : '';
 		$sanitized['mailjet_api_key']        = isset( $input['mailjet_api_key'] ) ? sanitize_text_field( $input['mailjet_api_key'] ) : '';
 		$sanitized['mailjet_secret_key']     = isset( $input['mailjet_secret_key'] ) ? sanitize_text_field( $input['mailjet_secret_key'] ) : '';
-		$sanitized['mailjet_from_email']     = isset( $input['mailjet_from_email'] ) ? sanitize_email( $input['mailjet_from_email'] ) : '';
+		$sanitized['mailjet_from_email']     = isset( $input['mailjet_from_email'] ) ? goodsleep_normalize_email( $input['mailjet_from_email'] ) : '';
 		$sanitized['mailjet_from_name']      = isset( $input['mailjet_from_name'] ) ? sanitize_text_field( $input['mailjet_from_name'] ) : '';
-		$sanitized['mailjet_reply_to_email'] = isset( $input['mailjet_reply_to_email'] ) ? sanitize_email( $input['mailjet_reply_to_email'] ) : '';
+		$sanitized['mailjet_reply_to_email'] = isset( $input['mailjet_reply_to_email'] ) ? goodsleep_normalize_email( $input['mailjet_reply_to_email'] ) : '';
 		$sanitized['mailjet_reply_to_name']  = isset( $input['mailjet_reply_to_name'] ) ? sanitize_text_field( $input['mailjet_reply_to_name'] ) : '';
 		$sanitized['mailjet_monitor_bcc']    = isset( $input['mailjet_monitor_bcc'] ) ? $this->sanitize_email_list_textarea( $input['mailjet_monitor_bcc'] ) : '';
 		$sanitized['terms_url']              = isset( $input['terms_url'] ) ? esc_url_raw( $input['terms_url'] ) : '';
@@ -166,7 +166,7 @@ class Goodsleep_Elementor_Settings {
 	protected function sanitize_email_list_textarea( $value ) {
 		$value  = (string) $value;
 		$emails = preg_split( '/[\r\n,;]+/', $value );
-		$emails = array_filter( array_map( 'sanitize_email', (array) $emails ) );
+		$emails = array_filter( array_map( 'goodsleep_normalize_email', (array) $emails ) );
 		$emails = array_values( array_unique( $emails ) );
 
 		return implode( "\n", $emails );

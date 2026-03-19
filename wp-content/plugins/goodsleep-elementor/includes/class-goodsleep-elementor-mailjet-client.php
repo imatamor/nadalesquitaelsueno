@@ -17,7 +17,7 @@ class Goodsleep_Elementor_Mailjet_Client {
 	public function send_story_email( $story_data ) {
 		$api_key    = goodsleep_get_setting( 'mailjet_api_key', '' );
 		$secret_key = goodsleep_get_setting( 'mailjet_secret_key', '' );
-		$from_email = goodsleep_get_setting( 'mailjet_from_email', '' );
+		$from_email = goodsleep_normalize_email( goodsleep_get_setting( 'mailjet_from_email', '' ) );
 
 		if ( '' === $api_key || '' === $secret_key || '' === $from_email ) {
 			return new WP_Error( 'goodsleep_missing_mailjet_config', __( 'Mailjet no esta configurado.', 'goodsleep-elementor' ) );
@@ -58,7 +58,7 @@ class Goodsleep_Elementor_Mailjet_Client {
 			);
 		}
 
-		$reply_to_email = goodsleep_get_setting( 'mailjet_reply_to_email', '' );
+		$reply_to_email = goodsleep_normalize_email( goodsleep_get_setting( 'mailjet_reply_to_email', '' ) );
 		if ( $reply_to_email ) {
 			$body['Messages'][0]['ReplyTo'] = array(
 				'Email' => $reply_to_email,
