@@ -53,8 +53,8 @@
 	padding: clamp(2rem, 6vw, 5rem);
 	transform: translateY(18px);
 	transition: color 1s ease, transform 1s ease, opacity 1s ease;
-	margin-right: 15%;
-	margin-top: 5%;
+	margin-right: clamp(4rem, 8vw, 10rem);
+	margin-top: clamp(2rem, 5vw, 5rem);
 }
 
 .goodsleep-rules-scene__eyebrow {
