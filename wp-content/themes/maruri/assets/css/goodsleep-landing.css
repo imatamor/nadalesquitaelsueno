@@ -302,10 +302,24 @@ body.goodsleep-story-share,
 @media (max-width: 991px) {
   .goodsleep-story-single__shell {
     grid-template-columns: 1fr;
+    align-content: start;
+    gap: 1.5rem;
   }
 
   .goodsleep-story-single__card {
     margin-left: 0;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  .goodsleep-story-single__hero {
+    min-height: auto;
+  }
+
+  .goodsleep-story-single__shell {
+    min-height: auto;
+    padding-top: 3rem;
+    padding-bottom: 3rem;
   }
 }
 
