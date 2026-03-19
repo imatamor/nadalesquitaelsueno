@@ -121,8 +121,9 @@ class Goodsleep_Elementor_Share_Router {
 		echo '<main class="goodsleep-story-single"><section class="goodsleep-story-single__hero"><div class="goodsleep-story-single__overlay"></div><div class="maruri-shell goodsleep-story-single__shell">';
 		echo '<div class="goodsleep-story-single__intro">';
 		echo '<div class="goodsleep-story-single__eyebrow"><a href="' . esc_url( home_url( '/' ) ) . '" aria-label="' . esc_attr( get_bloginfo( 'name' ) ) . '">' . $brand_markup . '</a></div>';
+		echo '<p class="goodsleep-story-single__prefix">' . esc_html__( 'A', 'goodsleep-elementor' ) . '</p>';
 		echo '<h1 class="goodsleep-story-single__title">' . esc_html( $story_name ) . '</h1>';
-		echo '<p class="goodsleep-story-single__lead">' . esc_html__( 'Que nada te quite el sueño', 'goodsleep-elementor' ) . '</p>';
+		echo '<p class="goodsleep-story-single__lead">' . esc_html__( 'Nada le quita el sueño', 'goodsleep-elementor' ) . '</p>';
 		echo '</div>';
 		echo '<article class="goodsleep-story-card goodsleep-story-single__card" data-story-detail data-story-id="' . esc_attr( $story->ID ) . '">';
 		echo '<div class="goodsleep-story-card__topline"><span class="goodsleep-story-card__title">' . esc_html( $story_name ) . '</span><time class="goodsleep-story-card__date" datetime="' . esc_attr( get_the_date( DATE_ATOM, $story ) ) . '">' . esc_html( $published_label ) . '</time></div>';
