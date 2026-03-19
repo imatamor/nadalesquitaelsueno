@@ -121,8 +121,10 @@ class Goodsleep_Elementor_Share_Router {
 		echo '<main class="goodsleep-story-single"><section class="goodsleep-story-single__hero"><div class="goodsleep-story-single__overlay"></div><div class="maruri-shell goodsleep-story-single__shell">';
 		echo '<div class="goodsleep-story-single__intro">';
 		echo '<div class="goodsleep-story-single__eyebrow"><a href="' . esc_url( home_url( '/' ) ) . '" aria-label="' . esc_attr( get_bloginfo( 'name' ) ) . '">' . $brand_markup . '</a></div>';
+		echo '<div class="goodsleep-story-single__heading">';
 		echo '<p class="goodsleep-story-single__prefix">' . esc_html__( 'A', 'goodsleep-elementor' ) . '</p>';
 		echo '<h1 class="goodsleep-story-single__title">' . esc_html( $story_name ) . '</h1>';
+		echo '</div>';
 		echo '<p class="goodsleep-story-single__lead">' . esc_html__( 'Nada le quita el sueño', 'goodsleep-elementor' ) . '</p>';
 		echo '</div>';
 		echo '<article class="goodsleep-story-card goodsleep-story-single__card" data-story-detail data-story-id="' . esc_attr( $story->ID ) . '">';

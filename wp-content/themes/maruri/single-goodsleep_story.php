@@ -57,8 +57,10 @@ while ( have_posts() ) :
 			<div class="maruri-shell goodsleep-story-single__shell">
 				<div class="goodsleep-story-single__intro">
 					<div class="goodsleep-story-single__eyebrow"><a href="<?php echo esc_url( home_url( '/' ) ); ?>" aria-label="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>"><?php echo wp_kses_post( $brand_markup ); ?></a></div>
-					<p class="goodsleep-story-single__prefix"><?php esc_html_e( 'A', 'maruri' ); ?></p>
-					<h1 class="goodsleep-story-single__title"><?php echo esc_html( $story_name ); ?></h1>
+					<div class="goodsleep-story-single__heading">
+						<p class="goodsleep-story-single__prefix"><?php esc_html_e( 'A', 'maruri' ); ?></p>
+						<h1 class="goodsleep-story-single__title"><?php echo esc_html( $story_name ); ?></h1>
+					</div>
 					<p class="goodsleep-story-single__lead"><?php esc_html_e( 'Nada le quita el sueño', 'maruri' ); ?></p>
 				</div>
 

@@ -292,8 +292,14 @@ body.goodsleep-story-share,
   line-height: 0.96;
 }
 
+.goodsleep-story-single__heading {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
 .goodsleep-story-single__prefix {
-  margin: 0 0 0.35rem;
+  margin: 0 0 0.28rem;
   color: rgba(255, 255, 255, 0.82);
   font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif;
   font-size: 1.1rem;
