@@ -40,6 +40,8 @@ while ( have_posts() ) :
 
 	$whatsapp_url   = 'https://wa.me/?text=' . rawurlencode( (string) $whatsapp_message );
 	$rating_summary = $vote_average > 0 ? number_format( $vote_average, 1, '.', '' ) . '/5' : __( 'Sin votos', 'maruri' );
+	$custom_logo    = function_exists( 'get_custom_logo' ) ? get_custom_logo() : '';
+	$brand_markup   = $custom_logo ? $custom_logo : '<span class="goodsleep-story-single__brand-text">Goodsleep</span>';
 
 	status_header( 200 );
 	nocache_headers();
@@ -54,7 +56,7 @@ while ( have_posts() ) :
 			<div class="goodsleep-story-single__overlay"></div>
 			<div class="maruri-shell goodsleep-story-single__shell">
 				<div class="goodsleep-story-single__intro">
-					<p class="goodsleep-story-single__eyebrow"><a href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php esc_html_e( 'Goodsleep', 'maruri' ); ?></a></p>
+					<div class="goodsleep-story-single__eyebrow"><a href="<?php echo esc_url( home_url( '/' ) ); ?>" aria-label="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>"><?php echo wp_kses_post( $brand_markup ); ?></a></div>
 					<h1 class="goodsleep-story-single__title"><?php echo esc_html( $story_name ); ?></h1>
 					<p class="goodsleep-story-single__lead"><?php esc_html_e( 'Que nada te quite el sueño', 'maruri' ); ?></p>
 				</div>

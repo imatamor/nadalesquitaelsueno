@@ -258,8 +258,25 @@ body.goodsleep-story-share,
 }
 
 .goodsleep-story-single__eyebrow a {
+  display: inline-flex;
+  align-items: center;
   color: inherit;
   text-decoration: none;
+}
+
+.goodsleep-story-single__eyebrow .custom-logo-link,
+.goodsleep-story-single__eyebrow .custom-logo {
+  display: block;
+}
+
+.goodsleep-story-single__eyebrow .custom-logo {
+  width: auto;
+  max-width: min(180px, 40vw);
+  max-height: 42px;
+}
+
+.goodsleep-story-single__brand-text {
+  display: inline-block;
 }
 
 .goodsleep-story-single__eyebrow a:hover,

@@ -86,6 +86,8 @@ class Goodsleep_Elementor_Share_Router {
 		$whatsapp_template = $whatsapp_template ? $whatsapp_template : 'Nada le quita el sueno a %s. Escucha esta historia: %s';
 		$whatsapp_message  = $this->render_share_message( $whatsapp_template, $story_name, $share_url );
 		$whatsapp_url      = 'https://wa.me/?text=' . rawurlencode( $whatsapp_message );
+		$custom_logo       = function_exists( 'get_custom_logo' ) ? get_custom_logo() : '';
+		$brand_markup      = $custom_logo ? $custom_logo : '<span class="goodsleep-story-single__brand-text">Goodsleep</span>';
 		$page_title = sprintf(
 			/* translators: 1: story title, 2: site name */
 			__( '%1$s | %2$s', 'goodsleep-elementor' ),
@@ -118,7 +120,7 @@ class Goodsleep_Elementor_Share_Router {
 		wp_body_open();
 		echo '<main class="goodsleep-story-single"><section class="goodsleep-story-single__hero"><div class="goodsleep-story-single__overlay"></div><div class="maruri-shell goodsleep-story-single__shell">';
 		echo '<div class="goodsleep-story-single__intro">';
-		echo '<p class="goodsleep-story-single__eyebrow"><a href="' . esc_url( home_url( '/' ) ) . '">Goodsleep</a></p>';
+		echo '<div class="goodsleep-story-single__eyebrow"><a href="' . esc_url( home_url( '/' ) ) . '" aria-label="' . esc_attr( get_bloginfo( 'name' ) ) . '">' . $brand_markup . '</a></div>';
 		echo '<h1 class="goodsleep-story-single__title">' . esc_html( $story_name ) . '</h1>';
 		echo '<p class="goodsleep-story-single__lead">' . esc_html__( 'Que nada te quite el sueño', 'goodsleep-elementor' ) . '</p>';
 		echo '</div>';
