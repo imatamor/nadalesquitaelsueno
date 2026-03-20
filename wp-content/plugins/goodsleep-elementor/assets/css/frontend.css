@@ -23,6 +23,10 @@
   display: none !important;
 }
 
+.goodsleep-generator__controls[hidden] {
+  display: none !important;
+}
+
 .goodsleep-generator__result-card {
   width: min(100%, 630px);
   margin: 0 auto;
