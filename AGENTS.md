@@ -29,6 +29,9 @@ Sitio WordPress de campana "Nada les quita el sueno".
 - todo texto visible para usuario debe revisarse por ortografia, gramatica y tono antes de cerrar una tarea; no se permiten errores de redaccion en copies de frontend
 - si se modifica theme o plugin, indicar archivos tocados
 - no romper el flujo de deploy automatico
+- antes de cualquier push a produccion o promocion de `main`, revisar y aplicar la skill `website-production-release`
+- antes de cualquier release a produccion, declarar explicitamente el protocolo a usar (`first go-live`, `repo-only` o `incremental live`)
+- antes de cualquier release a produccion, solicitar o confirmar la lista declarada de cambios esperados y reconciliarla con los cambios detectados antes de ejecutar
 - antes de cerrar una tarea, resumir que cambio
 
 ## Purpose
@@ -101,7 +104,8 @@ Define how agents should collaborate in this project.
 3. Dejar que GitHub Actions despliegue a staging.
 4. Validar en staging.
 5. Exportar o documentar cambios de DB/Elementor cuando sean relevantes.
-6. Promover a main solo despues de aprobacion.
+6. Antes de promover a `main`, revisar la skill `website-production-release`, clasificar el release y reconciliar cambios declarados vs cambios detectados.
+7. Promover a main solo despues de aprobacion.
 
 ## Recovery Rules
 - Si se instala o modifica algo manualmente en staging y afecta archivos, esos cambios deben copiarse de vuelta al proyecto, revisarse y commitearse.
