@@ -65,6 +65,11 @@
   gap: 1rem;
 }
 
+.goodsleep-generator__field-row--email {
+  margin-top: 0;
+  margin-bottom: 0.95rem;
+}
+
 .goodsleep-generator__field input {
   width: 300px;
   background: #fff;
