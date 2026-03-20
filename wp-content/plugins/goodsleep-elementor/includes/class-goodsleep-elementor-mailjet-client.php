@@ -132,6 +132,7 @@ class Goodsleep_Elementor_Mailjet_Client {
 		$story_text  = $story_id ? (string) get_post_meta( $story_id, '_goodsleep_story_text', true ) : '';
 		$story_phrase = $story_id ? (string) get_post_meta( $story_id, '_goodsleep_story_phrase', true ) : '';
 		$combined    = $story_id ? (string) get_post_meta( $story_id, '_goodsleep_story_combined', true ) : '';
+		$brand_html  = $this->get_email_brand_markup();
 
 		if ( '' === $combined ) {
 			$combined = trim( $story_text . "\n\n" . $story_phrase );
@@ -145,7 +146,7 @@ class Goodsleep_Elementor_Mailjet_Client {
 		return '
 		<div style="background:#0b0b10;padding:40px 24px;font-family:Arial,sans-serif;color:#ffffff;">
 			<div style="max-width:640px;margin:0 auto;background:#171722;border-radius:24px;padding:40px;">
-				<p style="margin:0 0 12px;color:#ff1b9c;font-size:12px;letter-spacing:1px;text-transform:uppercase;">Goodsleep</p>
+				<div style="margin:0 0 20px;">' . $brand_html . '</div>
 				<h1 style="margin:0 0 16px;font-size:32px;line-height:1.1;">Tu historia ya esta lista, ' . $name . '.</h1>
 				<p style="margin:0 0 24px;color:#d8d8e5;font-size:16px;line-height:1.6;">Ya puedes escucharla, descargarla o compartirla.</p>
 				' . $combined_html . '
@@ -157,5 +158,21 @@ class Goodsleep_Elementor_Mailjet_Client {
 				<p style="margin:0;color:#8a8aa0;font-size:13px;">Si no pediste este correo, puedes ignorarlo.</p>
 			</div>
 		</div>';
+	}
+
+	/**
+	 * Devuelve el branding superior del correo usando el logo del sitio.
+	 *
+	 * @return string
+	 */
+	protected function get_email_brand_markup() {
+		$logo_id  = (int) get_theme_mod( 'custom_logo' );
+		$logo_url = $logo_id ? wp_get_attachment_image_url( $logo_id, 'full' ) : '';
+
+		if ( $logo_url ) {
+			return '<img src="' . esc_url( $logo_url ) . '" alt="' . esc_attr( get_bloginfo( 'name' ) ) . '" style="display:block;width:auto;max-width:180px;max-height:60px;height:auto;border:0;">';
+		}
+
+		return '<p style="margin:0;color:#ff1b9c;font-size:12px;letter-spacing:1px;text-transform:uppercase;">Goodsleep</p>';
 	}
 }
