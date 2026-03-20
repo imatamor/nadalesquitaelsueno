@@ -74,6 +74,22 @@ function maruri_get_theme_option( $key, $default = '' ) {
 }
 
 /**
+ * Nombre: maruri_sanitize_code_snippet
+ * Descripcion: Conserva snippets de codigo confiables escritos por administradores para inyectarlos en hooks del theme.
+ * Uso: Callback interna al sanitizar opciones como head_scripts, body_open_scripts y footer_scripts.
+ * Parametros:
+ * - $value: Valor recibido desde el formulario de opciones.
+ * Retorna: Snippet normalizado como string o cadena vacia si el valor no es escalar.
+ */
+function maruri_sanitize_code_snippet( $value ) {
+	if ( is_array( $value ) || is_object( $value ) ) {
+		return '';
+	}
+
+	return trim( wp_unslash( (string) $value ) );
+}
+
+/**
  * Nombre: maruri_get_brand_name
  * Descripcion: Resuelve el nombre de marca mostrado por el theme, priorizando la configuracion del admin.
  * Uso: echo maruri_get_brand_name();

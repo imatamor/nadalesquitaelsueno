@@ -160,9 +160,9 @@ function maruri_sanitize_theme_options( $input ) {
 	$sanitized['reading_width']     = isset( $input['reading_width'] ) ? absint( $input['reading_width'] ) : 0;
 	$sanitized['custom_css']        = isset( $input['custom_css'] ) ? sanitize_textarea_field( $input['custom_css'] ) : '';
 	$sanitized['custom_js']         = isset( $input['custom_js'] ) ? sanitize_textarea_field( $input['custom_js'] ) : '';
-	$sanitized['head_scripts']      = isset( $input['head_scripts'] ) ? wp_kses_post( $input['head_scripts'] ) : '';
-	$sanitized['body_open_scripts'] = isset( $input['body_open_scripts'] ) ? wp_kses_post( $input['body_open_scripts'] ) : '';
-	$sanitized['footer_scripts']    = isset( $input['footer_scripts'] ) ? wp_kses_post( $input['footer_scripts'] ) : '';
+	$sanitized['head_scripts']      = isset( $input['head_scripts'] ) ? maruri_sanitize_code_snippet( $input['head_scripts'] ) : '';
+	$sanitized['body_open_scripts'] = isset( $input['body_open_scripts'] ) ? maruri_sanitize_code_snippet( $input['body_open_scripts'] ) : '';
+	$sanitized['footer_scripts']    = isset( $input['footer_scripts'] ) ? maruri_sanitize_code_snippet( $input['footer_scripts'] ) : '';
 
 	return $sanitized;
 }
