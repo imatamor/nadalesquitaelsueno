@@ -39,10 +39,9 @@ class Goodsleep_Elementor_Mailjet_Client {
 					'To'   => array(
 						array(
 							'Email' => $story_data['email'],
-							'Name'  => $story_data['name'],
 						),
 					),
-					'Subject'  => sprintf( __( 'Tu historia de Goodsleep ya esta lista, %s', 'goodsleep-elementor' ), $story_data['name'] ),
+					'Subject'  => sprintf( __( 'La historia de %s, está lista', 'goodsleep-elementor' ), $story_data['name'] ),
 					'HTMLPart' => $html_body,
 				),
 			),
@@ -100,7 +99,7 @@ class Goodsleep_Elementor_Mailjet_Client {
 		$from_name = trim( (string) goodsleep_get_setting( 'mailjet_from_name', 'Goodsleep' ) );
 
 		if ( '' === $from_name || 'Goodsleep' === $from_name ) {
-			return 'Goodsleep | Nada les quita el sueño';
+			return get_bloginfo( 'name' );
 		}
 
 		return $from_name;
@@ -127,12 +126,13 @@ class Goodsleep_Elementor_Mailjet_Client {
 	 * @return string
 	 */
 	protected function build_email_template( $story_data, $share_url, $audio_url ) {
-		$name        = esc_html( $story_data['name'] );
-		$story_id    = isset( $story_data['story_id'] ) ? absint( $story_data['story_id'] ) : 0;
-		$story_text  = $story_id ? (string) get_post_meta( $story_id, '_goodsleep_story_text', true ) : '';
+		$name         = esc_html( $story_data['name'] );
+		$story_id     = isset( $story_data['story_id'] ) ? absint( $story_data['story_id'] ) : 0;
+		$story_text   = $story_id ? (string) get_post_meta( $story_id, '_goodsleep_story_text', true ) : '';
 		$story_phrase = $story_id ? (string) get_post_meta( $story_id, '_goodsleep_story_phrase', true ) : '';
-		$combined    = $story_id ? (string) get_post_meta( $story_id, '_goodsleep_story_combined', true ) : '';
-		$brand_html  = $this->get_email_brand_markup();
+		$combined     = $story_id ? (string) get_post_meta( $story_id, '_goodsleep_story_combined', true ) : '';
+		$brand_html   = $this->get_email_brand_markup();
+		$bg_url       = $this->get_email_background_url();
 
 		if ( '' === $combined ) {
 			$combined = trim( $story_text . "\n\n" . $story_phrase );
@@ -144,17 +144,17 @@ class Goodsleep_Elementor_Mailjet_Client {
 		}
 
 		return '
-		<div style="background:#0b0b10;padding:40px 24px;font-family:Arial,sans-serif;color:#ffffff;">
-			<div style="max-width:640px;margin:0 auto;background:#171722;border-radius:24px;padding:40px;">
+		<div style="background-color:#0b0b10;background-image:url(' . esc_url( $bg_url ) . ');background-repeat:no-repeat;background-size:cover;background-position:bottom center;padding:40px 24px;font-family:Arial,sans-serif;color:#ffffff;">
+			<div style="max-width:640px;margin:0 auto;background:rgba(23, 23, 34, 0.6);border-radius:24px;padding:40px;">
 				<div style="margin:0 0 20px;">' . $brand_html . '</div>
-				<h1 style="margin:0 0 16px;font-size:32px;line-height:1.1;">Tu historia ya esta lista, ' . $name . '.</h1>
+				<h1 style="margin:0 0 16px;font-size:32px;line-height:1.1;">La historia de ' . $name . ', está lista</h1>
 				<p style="margin:0 0 24px;color:#d8d8e5;font-size:16px;line-height:1.6;">Ya puedes escucharla, descargarla o compartirla.</p>
 				' . $combined_html . '
 				<p style="margin:0 0 24px;">
-					<a href="' . esc_url( $share_url ) . '" style="display:inline-block;background:#ff1b9c;color:#ffffff;text-decoration:none;padding:14px 20px;border-radius:999px;font-weight:bold;">Escuchar historia</a>
+					<a href="' . esc_url( $share_url ) . '" style="display:inline-block;background:#ff1b9c;color:#ffffff;text-decoration:none;padding:14px 20px;border-radius:10px;font-weight:bold;">Escuchar historia</a>
 				</p>
 				<p style="margin:0 0 8px;color:#d8d8e5;font-size:14px;">Descarga directa:</p>
-				<p style="margin:0 0 24px;"><a href="' . esc_url( $audio_url ) . '" style="color:#ffffff;">' . esc_html( $audio_url ) . '</a></p>
+				<p style="margin:0 0 24px;"><a href="' . esc_url( $audio_url ) . '" style="color:#ffffff;">Aquí</a></p>
 				<p style="margin:0;color:#8a8aa0;font-size:13px;">Si no pediste este correo, puedes ignorarlo.</p>
 			</div>
 		</div>';
@@ -174,5 +174,20 @@ class Goodsleep_Elementor_Mailjet_Client {
 		}
 
 		return '<p style="margin:0;color:#ff1b9c;font-size:12px;letter-spacing:1px;text-transform:uppercase;">Goodsleep</p>';
+	}
+
+	/**
+	 * Devuelve la imagen de fondo usada por el correo de historias.
+	 *
+	 * @return string
+	 */
+	protected function get_email_background_url() {
+		$uploads = wp_get_upload_dir();
+
+		if ( ! empty( $uploads['baseurl'] ) ) {
+			return trailingslashit( $uploads['baseurl'] ) . '2026/03/historias_bg.jpg';
+		}
+
+		return '';
 	}
 }
