@@ -387,6 +387,36 @@ function goodsleep_get_allowed_tracks() {
 }
 
 /**
+ * Devuelve la primera voz habilitada como fallback operativo.
+ *
+ * @return array<string,mixed>|null
+ */
+function goodsleep_get_default_voice() {
+	$voices = goodsleep_get_allowed_voices();
+
+	if ( empty( $voices ) ) {
+		return null;
+	}
+
+	return is_array( $voices[0] ) ? $voices[0] : null;
+}
+
+/**
+ * Devuelve el primer track habilitado como fallback operativo.
+ *
+ * @return array<string,mixed>|null
+ */
+function goodsleep_get_default_track() {
+	$tracks = goodsleep_get_allowed_tracks();
+
+	if ( empty( $tracks ) ) {
+		return null;
+	}
+
+	return is_array( $tracks[0] ) ? $tracks[0] : null;
+}
+
+/**
  * Devuelve las emociones soportadas por Speechify para SSML.
  *
  * @return array<string,string>

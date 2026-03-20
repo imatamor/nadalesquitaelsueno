@@ -161,6 +161,10 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 		$result_cta_url = ! empty( $settings['result_cta_url']['url'] ) ? $settings['result_cta_url']['url'] : home_url( '/#historias' );
 		$widget_id      = 'goodsleep-historia-generator-' . $this->get_id();
 		$emotion        = ! empty( $settings['phrase_emotion'] ) ? goodsleep_sanitize_speechify_emotion( $settings['phrase_emotion'] ) : 'cheerful';
+		$allowed_voices = goodsleep_get_allowed_voices();
+		$allowed_tracks = goodsleep_get_allowed_tracks();
+		$default_voice  = goodsleep_get_default_voice();
+		$default_track  = goodsleep_get_default_track();
 		?>
 		<div id="<?php echo esc_attr( $widget_id ); ?>" class="goodsleep-generator" data-phrase-template="<?php echo esc_attr( $settings['phrase_template'] ); ?>" data-loader-template="<?php echo esc_attr( $settings['loader_label'] ); ?>" data-phrase-emotion="<?php echo esc_attr( $emotion ); ?>">
 			<div class="goodsleep-generator__surface goodsleep-generator__surface--form" data-state="form">
@@ -179,17 +183,15 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 						<p class="goodsleep-generator__phrase" data-dynamic-phrase><?php echo esc_html( sprintf( $settings['phrase_template'], '' ) ); ?></p>
 						<div class="goodsleep-generator__counter"><span data-char-count>0</span>/500</div>
 					</div>
-					<div class="goodsleep-generator__controls">
+					<div class="goodsleep-generator__controls goodsleep-generator__controls--auto" hidden aria-hidden="true">
 						<select name="voice_id" required>
-							<option value=""><?php esc_html_e( 'Voz', 'goodsleep-elementor' ); ?></option>
-							<?php foreach ( goodsleep_get_allowed_voices() as $voice ) : ?>
-								<option value="<?php echo esc_attr( $voice['id'] ); ?>" data-label="<?php echo esc_attr( $voice['label'] ); ?>"><?php echo esc_html( $voice['label'] ); ?></option>
+							<?php foreach ( $allowed_voices as $voice ) : ?>
+								<option value="<?php echo esc_attr( $voice['id'] ); ?>" data-label="<?php echo esc_attr( $voice['label'] ); ?>" <?php selected( ! empty( $default_voice['id'] ) ? $default_voice['id'] : '', $voice['id'] ); ?>><?php echo esc_html( $voice['label'] ); ?></option>
 							<?php endforeach; ?>
 						</select>
 						<select name="track_id" required>
-							<option value=""><?php esc_html_e( 'Música', 'goodsleep-elementor' ); ?></option>
-							<?php foreach ( goodsleep_get_allowed_tracks() as $track ) : ?>
-								<option value="<?php echo esc_attr( $track['id'] ); ?>" data-label="<?php echo esc_attr( $track['label'] ); ?>"><?php echo esc_html( $track['label'] ); ?></option>
+							<?php foreach ( $allowed_tracks as $track ) : ?>
+								<option value="<?php echo esc_attr( $track['id'] ); ?>" data-label="<?php echo esc_attr( $track['label'] ); ?>" <?php selected( ! empty( $default_track['id'] ) ? $default_track['id'] : '', $track['id'] ); ?>><?php echo esc_html( $track['label'] ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</div>

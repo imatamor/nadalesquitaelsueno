@@ -112,11 +112,29 @@ class Goodsleep_Elementor_REST_Controller {
 		$text        = isset( $params['story_text'] ) ? sanitize_textarea_field( $params['story_text'] ) : '';
 		$phrase      = isset( $params['phrase_template'] ) ? sanitize_text_field( $params['phrase_template'] ) : '';
 		$emotion     = isset( $params['phrase_emotion'] ) ? goodsleep_sanitize_speechify_emotion( $params['phrase_emotion'] ) : 'cheerful';
+		$default_voice = goodsleep_get_default_voice();
+		$default_track = goodsleep_get_default_track();
 		$voice_id    = isset( $params['voice_id'] ) ? sanitize_text_field( $params['voice_id'] ) : '';
 		$voice_label = isset( $params['voice_label'] ) ? sanitize_text_field( $params['voice_label'] ) : '';
 		$track_id    = isset( $params['track_id'] ) ? sanitize_text_field( $params['track_id'] ) : '';
 		$track_label = isset( $params['track_label'] ) ? sanitize_text_field( $params['track_label'] ) : '';
 		$accepted    = ! empty( $params['accepted_terms'] );
+
+		if ( '' === $voice_id && ! empty( $default_voice['id'] ) ) {
+			$voice_id = sanitize_text_field( (string) $default_voice['id'] );
+		}
+
+		if ( '' === $voice_label && ! empty( $default_voice['label'] ) ) {
+			$voice_label = sanitize_text_field( (string) $default_voice['label'] );
+		}
+
+		if ( '' === $track_id && ! empty( $default_track['id'] ) ) {
+			$track_id = sanitize_text_field( (string) $default_track['id'] );
+		}
+
+		if ( '' === $track_label && ! empty( $default_track['label'] ) ) {
+			$track_label = sanitize_text_field( (string) $default_track['label'] );
+		}
 
 		if ( ! $accepted || '' === $name || '' === $email || ! is_email( $email ) || '' === $voice_id || '' === $track_id || '' === $text ) {
 			return new WP_Error( 'goodsleep_invalid_submission', __( 'Faltan campos obligatorios del formulario.', 'goodsleep-elementor' ), array( 'status' => 400 ) );
