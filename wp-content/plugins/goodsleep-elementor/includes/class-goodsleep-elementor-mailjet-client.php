@@ -155,7 +155,7 @@ class Goodsleep_Elementor_Mailjet_Client {
 				</p>
 				<p style="margin:0 0 8px;color:#d8d8e5;font-size:14px;">Descarga directa:</p>
 				<p style="margin:0 0 24px;"><a href="' . esc_url( $audio_url ) . '" style="color:#ffffff;">Aquí</a></p>
-				<p style="margin:0;color:#8a8aa0;font-size:13px;">Si no pediste este correo, puedes ignorarlo.</p>
+				<p style="margin:0;color:#ffffff;font-size:13px;">Si no pediste este correo, puedes ignorarlo.</p>
 			</div>
 		</div>';
 	}
