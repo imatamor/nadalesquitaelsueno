@@ -32,10 +32,10 @@ class Goodsleep_Elementor_OpenAI_Video_Client {
 		}
 
 		$request_body = array(
-			'model'    => $model,
-			'prompt'   => $prompt,
-			'size'     => $size,
-			'duration' => $duration,
+			'model'   => $model,
+			'prompt'  => $prompt,
+			'size'    => $size,
+			'seconds' => $duration,
 		);
 
 		$response = wp_remote_post(
@@ -113,7 +113,13 @@ class Goodsleep_Elementor_OpenAI_Video_Client {
 	public function extract_status( $payload ) {
 		foreach ( array( 'status', 'state' ) as $candidate ) {
 			if ( ! empty( $payload[ $candidate ] ) ) {
-				return strtolower( sanitize_text_field( (string) $payload[ $candidate ] ) );
+				$status = strtolower( sanitize_text_field( (string) $payload[ $candidate ] ) );
+
+				if ( 'in_progress' === $status ) {
+					return 'processing';
+				}
+
+				return $status;
 			}
 		}
 
@@ -200,6 +206,10 @@ class Goodsleep_Elementor_OpenAI_Video_Client {
 			if ( ! empty( $payload[ $key ] ) && is_string( $payload[ $key ] ) ) {
 				return sanitize_text_field( $payload[ $key ] );
 			}
+		}
+
+		if ( ! empty( $payload['error'] ) && is_array( $payload['error'] ) ) {
+			return $this->extract_error_message( $payload['error'], $fallback );
 		}
 
 		if ( ! empty( $payload['data'] ) && is_array( $payload['data'] ) ) {
