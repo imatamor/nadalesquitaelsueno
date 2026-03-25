@@ -120,12 +120,14 @@ class Goodsleep_Elementor_Story_Video_Service {
 	 * @return true|WP_Error
 	 */
 	public function queue_story_generation( $post_id, $backfill = false, $force = false ) {
-		$post_id      = (int) $post_id;
-		$combined     = goodsleep_get_story_combined_text( $post_id );
-		$story_name   = (string) get_post_meta( $post_id, '_goodsleep_story_name', true );
-		$track_id     = (string) get_post_meta( $post_id, '_goodsleep_story_track_id', true );
-		$track        = goodsleep_get_track_by_id( $track_id );
-		$current_type = goodsleep_get_story_primary_media( $post_id );
+		$post_id        = (int) $post_id;
+		$combined       = goodsleep_get_story_combined_text( $post_id );
+		$story_text     = (string) get_post_meta( $post_id, '_goodsleep_story_text', true );
+		$closing_phrase = (string) get_post_meta( $post_id, '_goodsleep_story_phrase', true );
+		$story_name     = (string) get_post_meta( $post_id, '_goodsleep_story_name', true );
+		$track_id       = (string) get_post_meta( $post_id, '_goodsleep_story_track_id', true );
+		$track          = goodsleep_get_track_by_id( $track_id );
+		$current_type   = goodsleep_get_story_primary_media( $post_id );
 
 		if ( ! $force && 'video' === $current_type['type'] ) {
 			return new WP_Error( 'goodsleep_story_has_video', __( 'La historia ya tiene video generado.', 'goodsleep-elementor' ) );
@@ -136,7 +138,11 @@ class Goodsleep_Elementor_Story_Video_Service {
 		}
 
 		$scene_count = goodsleep_estimate_scene_count( $combined );
-		$prompt      = goodsleep_build_video_prompt( $combined, $story_name );
+		$prompt      = goodsleep_build_video_prompt(
+			'' !== trim( $story_text ) ? $story_text : $combined,
+			$story_name,
+			$closing_phrase
+		);
 		$task        = $this->provider_client->create_video_task(
 			array(
 				'model'    => goodsleep_get_setting( 'openai_video_model', 'sora-2' ),

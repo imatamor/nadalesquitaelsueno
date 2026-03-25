@@ -24,7 +24,7 @@ function goodsleep_get_settings() {
 		'video_duration'          => 12,
 		'video_poll_interval'     => 5,
 		'video_poll_attempts'     => 24,
-		'video_prompt_style'      => 'Video vertical 9:16 cinematografico, nocturno, dramatico, inspirado en el tono de la campana Nada les quita el sueno. Visuales realistas, alto contraste y atmosfera publicitaria premium. Sin texto en pantalla ni subtitulos incrustados. La pieza debe incluir audio sincronizado y una locucion clara en espanol latino.',
+		'video_prompt_style'      => goodsleep_get_default_video_prompt_style(),
 		'video_music_enabled'     => 1,
 		'video_public_only'       => 0,
 		'mailjet_api_key'         => '',
@@ -58,8 +58,93 @@ function goodsleep_get_settings() {
  */
 function goodsleep_get_setting( $key, $default = '' ) {
 	$settings = goodsleep_get_settings();
+	$value    = array_key_exists( $key, $settings ) ? $settings[ $key ] : $default;
 
-	return array_key_exists( $key, $settings ) ? $settings[ $key ] : $default;
+	if ( 'video_prompt_style' === $key ) {
+		return goodsleep_normalize_video_prompt_style( $value );
+	}
+
+	return $value;
+}
+
+/**
+ * Devuelve el prompt base recomendado para Sora 2.
+ *
+ * @return string
+ */
+function goodsleep_get_default_video_prompt_style() {
+	return 'Video vertical 9:16, estilo cinematografico publicitario, realista y de alto impacto emocional. Estetica premium, actuacion natural y escenas visualmente claras, faciles de entender y conectadas con la historia narrada. La pieza debe representar de forma visual los hechos principales del relato, manteniendo coherencia entre narracion, acciones, emociones y entorno. No usar texto en pantalla, subtitulos ni elementos graficos sobreimpresos. Incluir audio sincronizado con locucion clara en espanol latino, con tono narrativo firme, natural y envolvente. La frase final obligatoria del relato es exactamente esta: "[FRASE_FINAL]". Esa frase debe definir el cierre visual del video. En el plano final, la persona protagonista debe aparecer durmiendo placidamente, en calma absoluta, como si nada le afectara.';
+}
+
+/**
+ * Indica si el prompt base corresponde al sesgo legacy previo a Sora 2.
+ *
+ * @param string $style Prompt base configurado.
+ * @return bool
+ */
+function goodsleep_is_legacy_video_prompt_style( $style ) {
+	$style = trim( preg_replace( '/\s+/', ' ', (string) $style ) );
+
+	return in_array(
+		$style,
+		array(
+			'Video vertical 9:16 cinematografico, nocturno, dramatico, inspirado en el tono de la campana Nada les quita el sueno. Visuales realistas, alto contraste y atmosfera publicitaria premium. Sin texto en pantalla ni subtitulos incrustados. La pieza debe incluir audio sincronizado y una locucion clara en espanol latino.',
+			'Video vertical 9:16 cinematografico, inspirado en el tono de la campana Nada les quita el sueno. Visuales realistas, lenguaje publicitario premium y tono emocional humano. Evita asumir de antemano que es de noche o que ocurre en un entorno especifico: cada escena debe surgir de la historia narrada. Sin texto en pantalla ni subtitulos incrustados. La pieza debe incluir audio sincronizado y una locucion clara en espanol latino.',
+		),
+		true
+	);
+}
+
+/**
+ * Normaliza el prompt base de video para evitar sesgos no deseados.
+ *
+ * @param string $style Prompt base configurado.
+ * @return string
+ */
+function goodsleep_normalize_video_prompt_style( $style ) {
+	$style = trim( (string) $style );
+
+	if ( '' === $style || goodsleep_is_legacy_video_prompt_style( $style ) ) {
+		return goodsleep_get_default_video_prompt_style();
+	}
+
+	return $style;
+}
+
+/**
+ * Escapa texto para citarlo literalmente dentro del prompt.
+ *
+ * @param string $text Texto a citar.
+ * @return string
+ */
+function goodsleep_escape_prompt_literal( $text ) {
+	return str_replace(
+		array( '\\', '"' ),
+		array( '\\\\', '\"' ),
+		trim( preg_replace( '/\s+/', ' ', (string) $text ) )
+	);
+}
+
+/**
+ * Reemplaza placeholders soportados dentro del prompt base.
+ *
+ * @param string $template       Prompt base configurado.
+ * @param string $closing_phrase Frase final obligatoria.
+ * @return string
+ */
+function goodsleep_render_video_prompt_template( $template, $closing_phrase = '' ) {
+	$template       = trim( (string) $template );
+	$closing_phrase = goodsleep_escape_prompt_literal( $closing_phrase );
+
+	if ( '' === $template ) {
+		$template = goodsleep_get_default_video_prompt_style();
+	}
+
+	return str_replace(
+		array( '[FRASE_FINAL]' ),
+		array( $closing_phrase ),
+		$template
+	);
 }
 
 /**
@@ -598,22 +683,23 @@ function goodsleep_get_story_combined_text( $story_id ) {
 }
 
 /**
- * Devuelve un prompt base para video a partir del texto combinado.
+ * Devuelve un prompt de video optimizado para Sora 2.
  *
- * @param string $combined_text Texto narrativo completo.
- * @param string $story_name    Nombre visible.
+ * @param string $story_text     Cuerpo principal de la historia.
+ * @param string $story_name     Nombre visible.
+ * @param string $closing_phrase Frase final obligatoria.
  * @return string
  */
-function goodsleep_build_video_prompt( $combined_text, $story_name = '' ) {
-	$style        = trim( (string) goodsleep_get_setting( 'video_prompt_style', '' ) );
-	$story_name   = trim( wp_strip_all_tags( (string) $story_name ) );
-	$combined_text = trim( wp_strip_all_tags( (string) $combined_text ) );
+function goodsleep_build_video_prompt( $story_text, $story_name = '', $closing_phrase = '' ) {
+	$style          = goodsleep_render_video_prompt_template( (string) goodsleep_get_setting( 'video_prompt_style', '' ), $closing_phrase );
+	$story_name     = trim( wp_strip_all_tags( (string) $story_name ) );
+	$story_text     = trim( wp_strip_all_tags( (string) $story_text ) );
 
 	$parts = array_filter(
 		array(
 			$style,
 			'' !== $story_name ? 'Personaje central: ' . $story_name . '.' : '',
-			'La narracion completa en espanol latino debe seguir esta historia: ' . $combined_text,
+			'' !== $story_text ? 'La narracion principal en espanol latino debe seguir esta historia: ' . $story_text : '',
 		)
 	);
 

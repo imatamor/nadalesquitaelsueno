@@ -74,6 +74,10 @@
   margin-bottom: 0.95rem;
 }
 
+.goodsleep-generator__field-row--name {
+  margin-bottom: 0.95rem;
+}
+
 .goodsleep-generator__field input {
   width: 300px;
   background: #fff;
@@ -81,7 +85,7 @@
   font-size: 1.05rem;
 }
 
-.goodsleep-generator__email-note {
+.goodsleep-generator__field-note {
   margin: 0;
   color: #f6f1ee;
   font-size: 1rem;
@@ -752,6 +756,10 @@
   }
 
   .goodsleep-generator__email-note {
+    font-size: 0.82rem;
+  }
+
+  .goodsleep-generator__name-note {
     font-size: 0.82rem;
   }
 
