@@ -44,9 +44,11 @@ class Goodsleep_Elementor_Plugin {
 	protected function includes() {
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-settings.php';
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-story-post-type.php';
-		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-speechify-client.php';
-		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-audio-mixer.php';
+		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-openai-video-client.php';
+		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-video-processor.php';
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-mailjet-client.php';
+		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-story-video-service.php';
+		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-backfill-command.php';
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-campaign-404.php';
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-share-router.php';
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-rest-controller.php';
@@ -59,12 +61,22 @@ class Goodsleep_Elementor_Plugin {
 	 * @return void
 	 */
 	protected function boot() {
+		$video_service = new Goodsleep_Elementor_Story_Video_Service(
+			new Goodsleep_Elementor_OpenAI_Video_Client(),
+			new Goodsleep_Elementor_Video_Processor(),
+			new Goodsleep_Elementor_Mailjet_Client()
+		);
+
 		new Goodsleep_Elementor_Settings();
 		new Goodsleep_Elementor_Story_Post_Type();
 		new Goodsleep_Elementor_Campaign_404();
 		new Goodsleep_Elementor_Share_Router();
-		new Goodsleep_Elementor_REST_Controller( new Goodsleep_Elementor_Speechify_Client(), new Goodsleep_Elementor_Audio_Mixer(), new Goodsleep_Elementor_Mailjet_Client() );
+		new Goodsleep_Elementor_REST_Controller( $video_service, new Goodsleep_Elementor_Mailjet_Client() );
 		new Goodsleep_Elementor_Elementor();
+
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			WP_CLI::add_command( 'goodsleep backfill', new Goodsleep_Elementor_Backfill_Command( $video_service ) );
+		}
 
 		add_action( 'init', array( $this, 'load_textdomain' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'register_assets' ) );
@@ -96,11 +108,13 @@ class Goodsleep_Elementor_Plugin {
 			array(
 				'restUrl'          => esc_url_raw( rest_url( 'goodsleep/v1/' ) ),
 				'nonce'            => wp_create_nonce( 'wp_rest' ),
-				'voices'           => goodsleep_get_allowed_voices(),
 				'tracks'           => goodsleep_get_allowed_tracks(),
 				'termsText'        => goodsleep_get_setting( 'terms_text', 'Acepto terminos y condiciones' ),
 				'termsUrl'         => esc_url_raw( goodsleep_get_setting( 'terms_url', '' ) ),
 				'whatsappTemplate' => goodsleep_get_setting( 'whatsapp_share_text', '' ),
+				'pollInterval'     => (int) goodsleep_get_setting( 'video_poll_interval', 5 ),
+				'pollAttempts'     => (int) goodsleep_get_setting( 'video_poll_attempts', 24 ),
+				'videoPublicOnly'  => goodsleep_is_video_public_only(),
 			)
 		);
 	}

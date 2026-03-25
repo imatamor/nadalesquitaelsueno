@@ -1,0 +1,233 @@
+<?php
+/**
+ * Postprocesa videos y mezcla musica usando ffmpeg.
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+class Goodsleep_Elementor_Video_Processor {
+	/**
+	 * Determina si ffmpeg esta disponible.
+	 *
+	 * @return bool
+	 */
+	public function is_available() {
+		$null_device = strtoupper( substr( PHP_OS, 0, 3 ) ) === 'WIN' ? 'NUL' : '/dev/null';
+		$command     = 'ffmpeg -version > ' . $null_device . ' 2>&1';
+		$exit_code   = 1;
+
+		exec( $command, $output, $exit_code );
+
+		return 0 === (int) $exit_code;
+	}
+
+	/**
+	 * Mezcla un track musical con un video remoto o local.
+	 *
+	 * @param array<string,mixed> $video_source Video generado.
+	 * @param array<string,mixed> $track        Track musical.
+	 * @param string              $base_name    Nombre base.
+	 * @return array<string,string>|WP_Error
+	 */
+	public function finalize_video( $video_source, $track, $base_name ) {
+		$this->ensure_wp_file_functions();
+
+		$video_path = $this->create_video_source_file( $video_source, $base_name );
+		if ( is_wp_error( $video_path ) ) {
+			return $video_path;
+		}
+
+		if ( empty( $track['url'] ) || empty( goodsleep_get_setting( 'video_music_enabled', 1 ) ) ) {
+			return array(
+				'path'   => $video_path,
+				'format' => 'mp4',
+			);
+		}
+
+		if ( ! $this->can_run_shell_commands() || ! $this->is_available() ) {
+			return array(
+				'path'   => $video_path,
+				'format' => 'mp4',
+			);
+		}
+
+		$track_source = $this->resolve_track_file( $track );
+		if ( is_wp_error( $track_source ) ) {
+			return array(
+				'path'   => $video_path,
+				'format' => 'mp4',
+			);
+		}
+
+		$output_path = $this->create_temp_file_path( $base_name . '-final.mp4' );
+		if ( ! $output_path ) {
+			return array(
+				'path'   => $video_path,
+				'format' => 'mp4',
+			);
+		}
+
+		$mix_command = sprintf(
+			'ffmpeg -y -i %1$s -stream_loop -1 -i %2$s -filter_complex %3$s -map 0:v:0 -map "[aout]" -c:v copy -c:a aac -shortest %4$s 2>&1',
+			escapeshellarg( $video_path ),
+			escapeshellarg( $track_source['path'] ),
+			escapeshellarg( '[1:a]volume=0.08[bg];[0:a][bg]amix=inputs=2:duration=first:dropout_transition=2[aout]' ),
+			escapeshellarg( $output_path )
+		);
+
+		$command_output = array();
+		$command_code   = 0;
+		exec( $mix_command, $command_output, $command_code );
+
+		if ( ! empty( $track_source['cleanup'] ) && file_exists( $track_source['path'] ) ) {
+			@unlink( $track_source['path'] );
+		}
+
+		if ( 0 !== $command_code || ! file_exists( $output_path ) || 0 === filesize( $output_path ) ) {
+			return array(
+				'path'   => $video_path,
+				'format' => 'mp4',
+			);
+		}
+
+		@unlink( $video_path );
+
+		return array(
+			'path'   => $output_path,
+			'format' => 'mp4',
+		);
+	}
+
+	/**
+	 * Determina si se puede ejecutar shell.
+	 *
+	 * @return bool
+	 */
+	protected function can_run_shell_commands() {
+		if ( ! function_exists( 'exec' ) ) {
+			return false;
+		}
+
+		$disabled = (string) ini_get( 'disable_functions' );
+		if ( '' === $disabled ) {
+			return true;
+		}
+
+		return ! in_array( 'exec', array_map( 'trim', explode( ',', $disabled ) ), true );
+	}
+
+	/**
+	 * Crea un archivo local desde el video fuente.
+	 *
+	 * @param array<string,mixed> $video_source Fuente.
+	 * @param string              $base_name    Nombre.
+	 * @return string|WP_Error
+	 */
+	protected function create_video_source_file( $video_source, $base_name ) {
+		$this->ensure_wp_file_functions();
+
+		$temp_path = $this->create_temp_file_path( $base_name . '-video.mp4' );
+		if ( ! $temp_path ) {
+			return new WP_Error( 'goodsleep_video_temp_failed', __( 'No se pudo preparar el video generado.', 'goodsleep-elementor' ) );
+		}
+
+		$content = '';
+		if ( ! empty( $video_source['video_path'] ) && file_exists( $video_source['video_path'] ) ) {
+			$content = file_get_contents( $video_source['video_path'] );
+		} elseif ( ! empty( $video_source['video_url'] ) ) {
+			$response = wp_remote_get( esc_url_raw( $video_source['video_url'] ), array( 'timeout' => 90 ) );
+
+			if ( is_wp_error( $response ) ) {
+				@unlink( $temp_path );
+				return $response;
+			}
+
+			$content = wp_remote_retrieve_body( $response );
+		}
+
+		if ( ! $content ) {
+			@unlink( $temp_path );
+			return new WP_Error( 'goodsleep_video_empty', __( 'No se pudo obtener el video generado.', 'goodsleep-elementor' ) );
+		}
+
+		if ( false === file_put_contents( $temp_path, $content ) ) {
+			@unlink( $temp_path );
+			return new WP_Error( 'goodsleep_video_write_failed', __( 'No se pudo copiar temporalmente el video generado.', 'goodsleep-elementor' ) );
+		}
+
+		return $temp_path;
+	}
+
+	/**
+	 * Resuelve el archivo del track.
+	 *
+	 * @param array<string,mixed> $track Track.
+	 * @return array<string,mixed>|WP_Error
+	 */
+	protected function resolve_track_file( $track ) {
+		$this->ensure_wp_file_functions();
+
+		$attachment_id = ! empty( $track['attachment_id'] ) ? absint( $track['attachment_id'] ) : 0;
+		if ( $attachment_id ) {
+			$filepath = get_attached_file( $attachment_id );
+			if ( $filepath && file_exists( $filepath ) ) {
+				return array(
+					'path'    => $filepath,
+					'cleanup' => false,
+				);
+			}
+		}
+
+		if ( empty( $track['url'] ) ) {
+			return new WP_Error( 'goodsleep_track_missing', __( 'No se encontro el archivo del track musical.', 'goodsleep-elementor' ) );
+		}
+
+		$temp_path = $this->create_temp_file_path( wp_basename( $track['url'] ) );
+		if ( ! $temp_path ) {
+			return new WP_Error( 'goodsleep_track_temp_failed', __( 'No se pudo preparar el track musical.', 'goodsleep-elementor' ) );
+		}
+
+		$response = wp_remote_get( esc_url_raw( $track['url'] ), array( 'timeout' => 45 ) );
+		if ( is_wp_error( $response ) ) {
+			@unlink( $temp_path );
+			return $response;
+		}
+
+		$content = wp_remote_retrieve_body( $response );
+		if ( '' === $content || false === file_put_contents( $temp_path, $content ) ) {
+			@unlink( $temp_path );
+			return new WP_Error( 'goodsleep_track_write_failed', __( 'No se pudo copiar el track musical temporal.', 'goodsleep-elementor' ) );
+		}
+
+		return array(
+			'path'    => $temp_path,
+			'cleanup' => true,
+		);
+	}
+
+	/**
+	 * Carga helpers de archivos.
+	 *
+	 * @return void
+	 */
+	protected function ensure_wp_file_functions() {
+		if ( ! function_exists( 'wp_tempnam' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+	}
+
+	/**
+	 * Crea un archivo temporal.
+	 *
+	 * @param string $filename Nombre.
+	 * @return string
+	 */
+	protected function create_temp_file_path( $filename ) {
+		$this->ensure_wp_file_functions();
+		$temp_path = wp_tempnam( sanitize_file_name( $filename ) );
+
+		return $temp_path ? $temp_path : '';
+	}
+}

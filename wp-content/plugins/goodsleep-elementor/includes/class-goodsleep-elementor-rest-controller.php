@@ -9,16 +9,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Goodsleep_Elementor_REST_Controller {
 	/**
-	 * @var Goodsleep_Elementor_Speechify_Client
+	 * Servicio de video.
+	 *
+	 * @var Goodsleep_Elementor_Story_Video_Service
 	 */
-	protected $speechify;
+	protected $video_service;
 
 	/**
-	 * @var Goodsleep_Elementor_Audio_Mixer
-	 */
-	protected $audio_mixer;
-
-	/**
+	 * Cliente Mailjet.
+	 *
 	 * @var Goodsleep_Elementor_Mailjet_Client
 	 */
 	protected $mailjet;
@@ -26,14 +25,12 @@ class Goodsleep_Elementor_REST_Controller {
 	/**
 	 * Constructor.
 	 *
-	 * @param Goodsleep_Elementor_Speechify_Client $speechify Cliente Speechify.
-	 * @param Goodsleep_Elementor_Audio_Mixer      $audio_mixer Mezclador de audio.
-	 * @param Goodsleep_Elementor_Mailjet_Client   $mailjet   Cliente Mailjet.
+	 * @param Goodsleep_Elementor_Story_Video_Service $video_service Servicio principal.
+	 * @param Goodsleep_Elementor_Mailjet_Client      $mailjet       Correo.
 	 */
-	public function __construct( Goodsleep_Elementor_Speechify_Client $speechify, Goodsleep_Elementor_Audio_Mixer $audio_mixer, Goodsleep_Elementor_Mailjet_Client $mailjet ) {
-		$this->speechify   = $speechify;
-		$this->audio_mixer = $audio_mixer;
-		$this->mailjet     = $mailjet;
+	public function __construct( Goodsleep_Elementor_Story_Video_Service $video_service, Goodsleep_Elementor_Mailjet_Client $mailjet ) {
+		$this->video_service = $video_service;
+		$this->mailjet       = $mailjet;
 
 		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
 	}
@@ -50,6 +47,16 @@ class Goodsleep_Elementor_REST_Controller {
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
 				'callback'            => array( $this, 'generate_story' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+
+		register_rest_route(
+			'goodsleep/v1',
+			'/stories/(?P<id>\d+)/status',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'get_story_status' ),
 				'permission_callback' => '__return_true',
 			)
 		);
@@ -83,22 +90,10 @@ class Goodsleep_Elementor_REST_Controller {
 				'permission_callback' => '__return_true',
 			)
 		);
-
-		register_rest_route(
-			'goodsleep/v1',
-			'/catalog/voices/sync',
-			array(
-				'methods'             => WP_REST_Server::CREATABLE,
-				'callback'            => array( $this, 'sync_voices' ),
-				'permission_callback' => static function () {
-					return current_user_can( 'manage_options' );
-				},
-			)
-		);
 	}
 
 	/**
-	 * Genera una historia y su audio.
+	 * Genera una historia y crea su tarea de video.
 	 *
 	 * @param WP_REST_Request $request Request.
 	 * @return WP_REST_Response|WP_Error
@@ -107,51 +102,13 @@ class Goodsleep_Elementor_REST_Controller {
 		$params = $request->get_json_params();
 		$params = is_array( $params ) ? $params : array();
 
-		$name        = goodsleep_sanitize_story_name( isset( $params['name'] ) ? $params['name'] : '' );
-		$email       = isset( $params['email'] ) ? sanitize_email( $params['email'] ) : '';
-		$text        = isset( $params['story_text'] ) ? sanitize_textarea_field( $params['story_text'] ) : '';
-		$phrase      = isset( $params['phrase_template'] ) ? sanitize_text_field( $params['phrase_template'] ) : '';
-		$emotion     = isset( $params['phrase_emotion'] ) ? goodsleep_sanitize_speechify_emotion( $params['phrase_emotion'] ) : 'cheerful';
-		$default_voice = goodsleep_get_default_voice();
 		$default_track = goodsleep_get_default_track();
-		$voice_id    = isset( $params['voice_id'] ) ? sanitize_text_field( $params['voice_id'] ) : '';
-		$voice_label = isset( $params['voice_label'] ) ? sanitize_text_field( $params['voice_label'] ) : '';
-		$track_id    = isset( $params['track_id'] ) ? sanitize_text_field( $params['track_id'] ) : '';
-		$track_label = isset( $params['track_label'] ) ? sanitize_text_field( $params['track_label'] ) : '';
-		$accepted    = ! empty( $params['accepted_terms'] );
-
-		if ( '' === $voice_id && ! empty( $default_voice['id'] ) ) {
-			$voice_id = sanitize_text_field( (string) $default_voice['id'] );
+		if ( empty( $params['track_id'] ) && ! empty( $default_track['id'] ) ) {
+			$params['track_id'] = (string) $default_track['id'];
 		}
 
-		if ( '' === $voice_label && ! empty( $default_voice['label'] ) ) {
-			$voice_label = sanitize_text_field( (string) $default_voice['label'] );
-		}
-
-		if ( '' === $track_id && ! empty( $default_track['id'] ) ) {
-			$track_id = sanitize_text_field( (string) $default_track['id'] );
-		}
-
-		if ( '' === $track_label && ! empty( $default_track['label'] ) ) {
-			$track_label = sanitize_text_field( (string) $default_track['label'] );
-		}
-
-		if ( ! $accepted || '' === $name || '' === $email || ! is_email( $email ) || '' === $voice_id || '' === $track_id || '' === $text ) {
-			return new WP_Error( 'goodsleep_invalid_submission', __( 'Faltan campos obligatorios del formulario.', 'goodsleep-elementor' ), array( 'status' => 400 ) );
-		}
-
-		if ( strlen( $text ) > 500 ) {
-			return new WP_Error( 'goodsleep_invalid_story_text', __( 'La historia supera el maximo de 500 caracteres.', 'goodsleep-elementor' ), array( 'status' => 400 ) );
-		}
-
-		$track = goodsleep_get_track_by_id( $track_id );
-
-		if ( ! $track || empty( $track['url'] ) ) {
-			return new WP_Error( 'goodsleep_invalid_track', __( 'Selecciona un track de musica valido.', 'goodsleep-elementor' ), array( 'status' => 400 ) );
-		}
-
-		if ( '' === $track_label && ! empty( $track['label'] ) ) {
-			$track_label = sanitize_text_field( $track['label'] );
+		if ( empty( $params['track_label'] ) && ! empty( $default_track['label'] ) ) {
+			$params['track_label'] = (string) $default_track['label'];
 		}
 
 		$rate_limit = goodsleep_assert_generation_rate_limit();
@@ -159,112 +116,33 @@ class Goodsleep_Elementor_REST_Controller {
 			return $rate_limit;
 		}
 
-		$rendered_phrase = $this->render_phrase_template( $phrase, $name );
-		$combined_text   = trim( $text . "\n" . $rendered_phrase );
-		$speech_input    = $this->build_speechify_input( $text, $rendered_phrase, $emotion );
-
-		$audio_response = $this->speechify->generate_audio(
-			array(
-				'text'     => $combined_text,
-				'ssml'     => $speech_input,
-				'voice_id' => $voice_id,
-				'model'    => 'simba-multilingual',
-				'language' => 'es-ES',
-			)
-		);
-
-		if ( is_wp_error( $audio_response ) ) {
-			return $audio_response;
+		$result = $this->video_service->create_generation( $params );
+		if ( is_wp_error( $result ) ) {
+			return $result;
 		}
 
-		$audio_url    = ! empty( $audio_response['audio_url'] ) ? esc_url_raw( $audio_response['audio_url'] ) : '';
-		$audio_data   = ! empty( $audio_response['audio_data'] ) ? $audio_response['audio_data'] : '';
-		$audio_format = ! empty( $audio_response['audio_format'] ) ? sanitize_key( $audio_response['audio_format'] ) : 'mp3';
+		return rest_ensure_response( $result );
+	}
 
-		if ( '' === $audio_url && '' === $audio_data ) {
-			return new WP_Error( 'goodsleep_audio_missing', __( 'Speechify no devolvio un audio utilizable.', 'goodsleep-elementor' ), array( 'status' => 502 ) );
+	/**
+	 * Devuelve el estado de una historia.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function get_story_status( WP_REST_Request $request ) {
+		$story_id = (int) $request['id'];
+
+		if ( $story_id <= 0 || 'goodsleep_story' !== get_post_type( $story_id ) ) {
+			return new WP_Error( 'goodsleep_story_not_found', __( 'No se encontro la historia solicitada.', 'goodsleep-elementor' ), array( 'status' => 404 ) );
 		}
 
-		$mixed_audio = $this->audio_mixer->mix_generated_audio(
-			array(
-				'audio_url'    => $audio_url,
-				'audio_data'   => $audio_data,
-				'audio_format' => $audio_format,
-			),
-			$track,
-			goodsleep_normalize_slug( $name ) . '-' . time()
-		);
-
-		if ( is_wp_error( $mixed_audio ) ) {
-			return $mixed_audio;
+		$status = (string) get_post_meta( $story_id, '_goodsleep_story_generation_status', true );
+		if ( in_array( $status, array( 'processing', 'pending_backfill' ), true ) ) {
+			$this->video_service->process_story( $story_id );
 		}
 
-		$post_id = wp_insert_post(
-			array(
-				'post_type'    => 'goodsleep_story',
-				'post_status'  => 'publish',
-				'post_title'   => $this->build_story_post_title( $name, $email ),
-				'post_content' => $text,
-				'post_excerpt' => wp_trim_words( $text, 30 ),
-			),
-			true
-		);
-
-		if ( is_wp_error( $post_id ) ) {
-			return $post_id;
-		}
-
-		$audio_id = $this->store_audio_attachment( $post_id, $name, '', '', $mixed_audio['format'], $mixed_audio['path'] );
-
-		if ( is_wp_error( $audio_id ) ) {
-			if ( ! empty( $mixed_audio['path'] ) && file_exists( $mixed_audio['path'] ) ) {
-				@unlink( $mixed_audio['path'] );
-			}
-
-			return $audio_id;
-		}
-
-		if ( ! empty( $mixed_audio['path'] ) && file_exists( $mixed_audio['path'] ) ) {
-			@unlink( $mixed_audio['path'] );
-		}
-
-		$short_slug = goodsleep_normalize_slug( $name ) . '-' . $post_id;
-
-		update_post_meta( $post_id, '_goodsleep_story_name', $name );
-		update_post_meta( $post_id, '_goodsleep_story_email', $email );
-		update_post_meta( $post_id, '_goodsleep_story_phrase', $rendered_phrase );
-		update_post_meta( $post_id, '_goodsleep_story_phrase_emotion', $emotion );
-		update_post_meta( $post_id, '_goodsleep_story_text', $text );
-		update_post_meta( $post_id, '_goodsleep_story_combined', $combined_text );
-		update_post_meta( $post_id, '_goodsleep_story_voice_id', $voice_id );
-		update_post_meta( $post_id, '_goodsleep_story_voice_label', $voice_label );
-		update_post_meta( $post_id, '_goodsleep_story_track_id', $track_id );
-		update_post_meta( $post_id, '_goodsleep_story_track_label', $track_label );
-		update_post_meta( $post_id, '_goodsleep_story_audio_id', $audio_id );
-		update_post_meta( $post_id, '_goodsleep_short_slug', $short_slug );
-		update_post_meta( $post_id, '_goodsleep_vote_score', '0.00' );
-		update_post_meta( $post_id, '_goodsleep_vote_total', 0 );
-		update_post_meta( $post_id, '_goodsleep_vote_count', 0 );
-		update_post_meta( $post_id, '_goodsleep_favorite_count', 0 );
-
-		$mail_result = $this->mailjet->send_story_email(
-			array(
-				'story_id' => $post_id,
-				'audio_id' => $audio_id,
-				'name'     => $name,
-				'email'    => $email,
-			)
-		);
-
-		return rest_ensure_response(
-			array(
-				'storyId'     => $post_id,
-				'shareUrl'    => goodsleep_get_story_share_url( $post_id ),
-				'audioUrl'    => wp_get_attachment_url( $audio_id ),
-				'downloadUrl' => wp_get_attachment_url( $audio_id ),
-				'emailSent'   => ! is_wp_error( $mail_result ),
-			)
-		);
+		return rest_ensure_response( $this->video_service->build_status_payload( $story_id ) );
 	}
 
 	/**
@@ -298,25 +176,24 @@ class Goodsleep_Elementor_REST_Controller {
 		$stories = array();
 
 		foreach ( $query->posts as $post ) {
-			$audio_id          = (int) get_post_meta( $post->ID, '_goodsleep_story_audio_id', true );
-			$audio_url         = wp_get_attachment_url( $audio_id );
-			$stored_vote_score = (string) get_post_meta( $post->ID, '_goodsleep_vote_score', true );
-			$vote_total        = (int) get_post_meta( $post->ID, '_goodsleep_vote_total', true );
-			$vote_count        = (int) get_post_meta( $post->ID, '_goodsleep_vote_count', true );
-			$favorite_count    = (int) get_post_meta( $post->ID, '_goodsleep_favorite_count', true );
-			$story_name        = (string) get_post_meta( $post->ID, '_goodsleep_story_name', true );
-			$vote_score        = '' !== $stored_vote_score ? (float) $stored_vote_score : 0.0;
+			$media              = goodsleep_get_story_primary_media( $post->ID );
+			$stored_vote_score  = (string) get_post_meta( $post->ID, '_goodsleep_vote_score', true );
+			$vote_total         = (int) get_post_meta( $post->ID, '_goodsleep_vote_total', true );
+			$vote_count         = (int) get_post_meta( $post->ID, '_goodsleep_vote_count', true );
+			$favorite_count     = (int) get_post_meta( $post->ID, '_goodsleep_favorite_count', true );
+			$story_name         = (string) get_post_meta( $post->ID, '_goodsleep_story_name', true );
+			$generation_status  = (string) get_post_meta( $post->ID, '_goodsleep_story_generation_status', true );
+			$vote_score         = '' !== $stored_vote_score ? (float) $stored_vote_score : 0.0;
 
 			if ( $vote_count > 0 ) {
 				$calculated_vote_score = round( $vote_total / $vote_count, 2 );
-
 				if ( abs( $calculated_vote_score - $vote_score ) > 0.001 ) {
 					$vote_score = $calculated_vote_score;
 					update_post_meta( $post->ID, '_goodsleep_vote_score', number_format( $vote_score, 2, '.', '' ) );
 				}
 			}
 
-			if ( ! $audio_url ) {
+			if ( empty( $media['url'] ) ) {
 				continue;
 			}
 
@@ -324,8 +201,10 @@ class Goodsleep_Elementor_REST_Controller {
 				'id'             => $post->ID,
 				'title'          => $story_name ? $story_name : get_the_title( $post ),
 				'text'           => $post->post_content,
-				'audioUrl'       => $audio_url,
-				'downloadUrl'    => $audio_url,
+				'mediaType'      => $media['type'],
+				'videoUrl'       => 'video' === $media['type'] ? $media['url'] : '',
+				'audioUrl'       => 'audio' === $media['type'] ? $media['url'] : '',
+				'downloadUrl'    => $media['download_url'],
 				'shareUrl'       => goodsleep_get_story_share_url( $post->ID ),
 				'favorite'       => goodsleep_is_favorite_story( $post->ID ),
 				'favoriteCount'  => $favorite_count,
@@ -335,6 +214,7 @@ class Goodsleep_Elementor_REST_Controller {
 				'userHasVoted'   => goodsleep_has_voted_today( $post->ID ),
 				'createdAt'      => get_the_date( DATE_ATOM, $post ),
 				'publishedLabel' => get_the_date( 'd/m/Y H:i', $post ),
+				'status'         => $generation_status ? $generation_status : 'ready',
 			);
 		}
 
@@ -357,7 +237,7 @@ class Goodsleep_Elementor_REST_Controller {
 	}
 
 	/**
-	 * Alterna el estado favorito.
+	 * Alterna favoritos.
 	 *
 	 * @param WP_REST_Request $request Request.
 	 * @return WP_REST_Response
@@ -429,170 +309,5 @@ class Goodsleep_Elementor_REST_Controller {
 				'userHasVoted' => true,
 			)
 		);
-	}
-
-	/**
-	 * Sincroniza voces desde Speechify.
-	 *
-	 * @return WP_REST_Response|WP_Error
-	 */
-	public function sync_voices() {
-		$voices = $this->speechify->fetch_voices();
-
-		if ( is_wp_error( $voices ) ) {
-			return $voices;
-		}
-
-		return rest_ensure_response( $voices );
-	}
-
-	/**
-	 * Guarda el audio como adjunto.
-	 *
-	 * @param int    $post_id    ID del post.
-	 * @param string $name       Nombre base.
-	 * @param string $audio_url  URL remota.
-	 * @param string $audio_data Base64 o contenido plano.
-	 * @param string $audio_format Formato de audio.
-	 * @param string $local_file   Archivo local preprocesado.
-	 * @return int|WP_Error
-	 */
-	protected function store_audio_attachment( $post_id, $name, $audio_url, $audio_data, $audio_format = 'mp3', $local_file = '' ) {
-		$upload = wp_upload_dir();
-
-		if ( ! empty( $upload['error'] ) ) {
-			return new WP_Error( 'goodsleep_upload_error', $upload['error'] );
-		}
-
-		$extension = in_array( $audio_format, array( 'mp3', 'wav', 'ogg', 'aac', 'pcm' ), true ) ? $audio_format : 'mp3';
-		$mime_type = 'audio/mpeg';
-
-		if ( 'wav' === $extension ) {
-			$mime_type = 'audio/wav';
-		} elseif ( 'ogg' === $extension ) {
-			$mime_type = 'audio/ogg';
-		} elseif ( 'aac' === $extension ) {
-			$mime_type = 'audio/aac';
-		}
-
-		$filename = goodsleep_normalize_slug( $name ) . '-' . $post_id . '.' . $extension;
-		$content  = '';
-
-		if ( $local_file && file_exists( $local_file ) ) {
-			$content = file_get_contents( $local_file );
-		} elseif ( $audio_url ) {
-			$response = wp_remote_get( $audio_url, array( 'timeout' => 45 ) );
-
-			if ( is_wp_error( $response ) ) {
-				return $response;
-			}
-
-			$content = wp_remote_retrieve_body( $response );
-		} elseif ( $audio_data ) {
-			$content = base64_decode( $audio_data );
-		}
-
-		if ( ! $content ) {
-			return new WP_Error( 'goodsleep_empty_audio', __( 'No se pudo guardar el audio generado.', 'goodsleep-elementor' ) );
-		}
-
-		$written = wp_upload_bits( $filename, null, $content );
-		if ( ! empty( $written['error'] ) ) {
-			return new WP_Error( 'goodsleep_audio_write_failed', $written['error'] );
-		}
-
-		$filepath = $written['file'];
-
-		$attachment_id = wp_insert_attachment(
-			array(
-				'post_mime_type' => $mime_type,
-				'post_title'     => $name,
-				'post_status'    => 'inherit',
-			),
-			$filepath,
-			$post_id
-		);
-
-		if ( is_wp_error( $attachment_id ) ) {
-			return $attachment_id;
-		}
-
-		require_once ABSPATH . 'wp-admin/includes/media.php';
-		require_once ABSPATH . 'wp-admin/includes/image.php';
-		$metadata = wp_generate_attachment_metadata( $attachment_id, $filepath );
-		wp_update_attachment_metadata( $attachment_id, $metadata );
-
-		return $attachment_id;
-	}
-
-	/**
-	 * Construye el input SSML para Speechify.
-	 *
-	 * @param string $story_text Texto principal de la historia.
-	 * @param string $phrase_text Frase final dinamica.
-	 * @param string $emotion Emocion aplicada a la frase final.
-	 * @return string
-	 */
-	protected function build_speechify_input( $story_text, $phrase_text, $emotion = 'cheerful' ) {
-		$story_text  = trim( wp_strip_all_tags( (string) $story_text ) );
-		$phrase_text = trim( wp_strip_all_tags( (string) $phrase_text ) );
-
-		if ( '' === $phrase_text ) {
-			return sprintf(
-				'<speak><prosody rate="-8%%" pitch="-4%%">%1$s</prosody></speak>',
-				htmlspecialchars( $story_text, ENT_XML1 | ENT_COMPAT, 'UTF-8' )
-			);
-		}
-
-		return sprintf(
-			'<speak><prosody rate="-8%%" pitch="-4%%">%1$s</prosody><break time="700ms" /><prosody rate="-6%%" pitch="-2%%">%2$s</prosody></speak>',
-			htmlspecialchars( $story_text, ENT_XML1 | ENT_COMPAT, 'UTF-8' ),
-			htmlspecialchars( $phrase_text, ENT_XML1 | ENT_COMPAT, 'UTF-8' )
-		);
-	}
-
-	/**
-	 * Renderiza la frase final sin romper el flujo si la plantilla es invalida.
-	 *
-	 * @param string $template Plantilla configurable.
-	 * @param string $name     Nombre ingresado por el usuario.
-	 * @return string
-	 */
-	protected function render_phrase_template( $template, $name ) {
-		$template = (string) $template;
-		$name     = (string) $name;
-
-		if ( '' === trim( $template ) ) {
-			return '';
-		}
-
-		try {
-			return sprintf( $template, $name );
-		} catch ( ValueError $error ) {
-			return str_replace( '%s', $name, $template );
-		}
-	}
-
-	/**
-	 * Construye un titulo administrativo mas distintivo para el CPT.
-	 *
-	 * @param string $name  Nombre enviado en el formulario.
-	 * @param string $email Correo enviado en el formulario.
-	 * @return string
-	 */
-	protected function build_story_post_title( $name, $email ) {
-		$name          = trim( (string) $name );
-		$email         = sanitize_email( (string) $email );
-		$email_user    = $email ? sanitize_text_field( (string) current( explode( '@', $email ) ) ) : '';
-		$generated_at  = current_time( 'Y-m-d H:i' );
-		$title_segments = array_filter(
-			array(
-				$name,
-				$email_user ? '@' . $email_user : '',
-				$generated_at,
-			)
-		);
-
-		return implode( ' | ', $title_segments );
 	}
 }

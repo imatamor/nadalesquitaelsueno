@@ -232,14 +232,21 @@
   margin: 0 0 1.6rem;
 }
 
-.goodsleep-generator__result-card audio {
+.goodsleep-generator__result-card audio,
+.goodsleep-generator__result-card video {
   width: 100%;
   margin: 0;
   border-radius: 8px;
   background: #f3f3f3;
 }
 
-.goodsleep-generator__result-card audio::-webkit-media-controls-panel {
+.goodsleep-generator__result-card video {
+  aspect-ratio: 9 / 16;
+  object-fit: cover;
+}
+
+.goodsleep-generator__result-card audio::-webkit-media-controls-panel,
+.goodsleep-generator__result-card video::-webkit-media-controls-panel {
   background: #f3f3f3;
 }
 
@@ -423,14 +430,29 @@
   font-size: 18px;
 }
 
-.goodsleep-story-card audio {
+.goodsleep-story-card audio,
+.goodsleep-story-card video {
   width: 100%;
   margin: 0;
   border-radius: 8px;
   background: #f2f2f2;
 }
 
-.goodsleep-story-card audio::-webkit-media-controls-panel {
+.goodsleep-story-card__media-wrap {
+  margin: 0 0 1rem;
+}
+
+.goodsleep-story-card__media-wrap[hidden] {
+  display: none !important;
+}
+
+.goodsleep-story-card video {
+  aspect-ratio: 9 / 16;
+  object-fit: cover;
+}
+
+.goodsleep-story-card audio::-webkit-media-controls-panel,
+.goodsleep-story-card video::-webkit-media-controls-panel {
   background: #f2f2f2;
 }
 
@@ -665,12 +687,19 @@
   border-radius: 10px;
 }
 
-.goodsleep-story-share__player audio {
+.goodsleep-story-share__player audio,
+.goodsleep-story-share__player video {
   width: 100%;
   margin: 0;
 }
 
-.goodsleep-story-share__player audio::-webkit-media-controls-panel {
+.goodsleep-story-share__player video {
+  aspect-ratio: 9 / 16;
+  object-fit: cover;
+}
+
+.goodsleep-story-share__player audio::-webkit-media-controls-panel,
+.goodsleep-story-share__player video::-webkit-media-controls-panel {
   background: #f3f3f3;
 }
 

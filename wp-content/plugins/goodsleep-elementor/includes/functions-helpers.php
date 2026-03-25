@@ -14,10 +14,19 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function goodsleep_get_settings() {
 	$defaults = array(
-		'speechify_api_key'       => '',
-		'speechify_base_url'      => 'https://api.sws.speechify.com',
-		'speechify_audio_path'    => '/v1/audio/speech',
-		'speechify_voices_path'   => '/v1/voices',
+		'openai_api_key'          => '',
+		'openai_base_url'         => 'https://api.openai.com/v1',
+		'openai_video_model'      => 'sora-2',
+		'openai_video_submit_path'=> '/videos',
+		'openai_video_status_path'=> '/videos/%s',
+		'video_resolution'        => '720p',
+		'video_aspect_ratio'      => '9:16',
+		'video_duration'          => 12,
+		'video_poll_interval'     => 5,
+		'video_poll_attempts'     => 24,
+		'video_prompt_style'      => 'Video vertical 9:16 cinematografico, nocturno, dramatico, inspirado en el tono de la campana Nada les quita el sueno. Visuales realistas, alto contraste y atmosfera publicitaria premium. Sin texto en pantalla ni subtitulos incrustados. La pieza debe incluir audio sincronizado y una locucion clara en espanol latino.',
+		'video_music_enabled'     => 1,
+		'video_public_only'       => 0,
 		'mailjet_api_key'         => '',
 		'mailjet_secret_key'      => '',
 		'mailjet_from_email'      => '',
@@ -473,4 +482,195 @@ function goodsleep_assert_generation_rate_limit() {
 	set_transient( $transient, 1, MINUTE_IN_SECONDS );
 
 	return true;
+}
+
+/**
+ * Devuelve si el flujo publico debe mostrar solo video.
+ *
+ * @return bool
+ */
+function goodsleep_is_video_public_only() {
+	return ! empty( goodsleep_get_setting( 'video_public_only', 0 ) );
+}
+
+/**
+ * Devuelve el ID del adjunto de video de una historia.
+ *
+ * @param int $story_id ID del post.
+ * @return int
+ */
+function goodsleep_get_story_video_id( $story_id ) {
+	return (int) get_post_meta( (int) $story_id, '_goodsleep_story_video_id', true );
+}
+
+/**
+ * Devuelve la URL del video de una historia.
+ *
+ * @param int $story_id ID del post.
+ * @return string
+ */
+function goodsleep_get_story_video_url( $story_id ) {
+	$video_id = goodsleep_get_story_video_id( $story_id );
+
+	return $video_id ? (string) wp_get_attachment_url( $video_id ) : '';
+}
+
+/**
+ * Devuelve el ID del audio legacy de una historia.
+ *
+ * @param int $story_id ID del post.
+ * @return int
+ */
+function goodsleep_get_story_audio_id( $story_id ) {
+	return (int) get_post_meta( (int) $story_id, '_goodsleep_story_audio_id', true );
+}
+
+/**
+ * Devuelve la URL del audio legacy de una historia.
+ *
+ * @param int $story_id ID del post.
+ * @return string
+ */
+function goodsleep_get_story_audio_url( $story_id ) {
+	$audio_id = goodsleep_get_story_audio_id( $story_id );
+
+	return $audio_id ? (string) wp_get_attachment_url( $audio_id ) : '';
+}
+
+/**
+ * Devuelve el medio publico principal de una historia.
+ *
+ * @param int $story_id ID del post.
+ * @return array<string,mixed>
+ */
+function goodsleep_get_story_primary_media( $story_id ) {
+	$story_id  = (int) $story_id;
+	$video_url = goodsleep_get_story_video_url( $story_id );
+	$audio_url = goodsleep_get_story_audio_url( $story_id );
+
+	if ( '' !== $video_url ) {
+		return array(
+			'type'          => 'video',
+			'url'           => $video_url,
+			'download_url'  => $video_url,
+			'attachment_id' => goodsleep_get_story_video_id( $story_id ),
+			'is_ready'      => true,
+		);
+	}
+
+	if ( ! goodsleep_is_video_public_only() && '' !== $audio_url ) {
+		return array(
+			'type'          => 'audio',
+			'url'           => $audio_url,
+			'download_url'  => $audio_url,
+			'attachment_id' => goodsleep_get_story_audio_id( $story_id ),
+			'is_ready'      => true,
+		);
+	}
+
+	return array(
+		'type'          => '',
+		'url'           => '',
+		'download_url'  => '',
+		'attachment_id' => 0,
+		'is_ready'      => false,
+	);
+}
+
+/**
+ * Devuelve el texto combinado de una historia.
+ *
+ * @param int $story_id ID de la historia.
+ * @return string
+ */
+function goodsleep_get_story_combined_text( $story_id ) {
+	$story_id = (int) $story_id;
+	$combined = (string) get_post_meta( $story_id, '_goodsleep_story_combined', true );
+
+	if ( '' !== trim( $combined ) ) {
+		return trim( $combined );
+	}
+
+	$story_text = (string) get_post_meta( $story_id, '_goodsleep_story_text', true );
+	$phrase     = (string) get_post_meta( $story_id, '_goodsleep_story_phrase', true );
+
+	return trim( trim( $story_text ) . "\n" . trim( $phrase ) );
+}
+
+/**
+ * Devuelve un prompt base para video a partir del texto combinado.
+ *
+ * @param string $combined_text Texto narrativo completo.
+ * @param string $story_name    Nombre visible.
+ * @return string
+ */
+function goodsleep_build_video_prompt( $combined_text, $story_name = '' ) {
+	$style        = trim( (string) goodsleep_get_setting( 'video_prompt_style', '' ) );
+	$story_name   = trim( wp_strip_all_tags( (string) $story_name ) );
+	$combined_text = trim( wp_strip_all_tags( (string) $combined_text ) );
+
+	$parts = array_filter(
+		array(
+			$style,
+			'' !== $story_name ? 'Personaje central: ' . $story_name . '.' : '',
+			'La narracion completa en espanol latino debe seguir esta historia: ' . $combined_text,
+		)
+	);
+
+	return implode( ' ', $parts );
+}
+
+/**
+ * Estima cuantas escenas necesita un texto narrado.
+ *
+ * @param string $combined_text Texto narrativo.
+ * @return int
+ */
+function goodsleep_estimate_scene_count( $combined_text ) {
+	$combined_text = trim( (string) $combined_text );
+	$length        = function_exists( 'mb_strlen' ) ? mb_strlen( $combined_text ) : strlen( $combined_text );
+
+	if ( $length <= 180 ) {
+		return 1;
+	}
+
+	if ( $length <= 340 ) {
+		return 2;
+	}
+
+	if ( $length <= 520 ) {
+		return 3;
+	}
+
+	return 4;
+}
+
+/**
+ * Divide un texto narrativo en escenas pequenas para video.
+ *
+ * @param string $combined_text Texto narrativo.
+ * @return array<int,string>
+ */
+function goodsleep_split_story_into_scenes( $combined_text ) {
+	$combined_text = trim( preg_replace( '/\s+/', ' ', (string) $combined_text ) );
+
+	if ( '' === $combined_text ) {
+		return array();
+	}
+
+	$target_scenes = goodsleep_estimate_scene_count( $combined_text );
+	$sentences     = preg_split( '/(?<=[\.\!\?])\s+/u', $combined_text );
+	$sentences     = array_values( array_filter( array_map( 'trim', (array) $sentences ) ) );
+
+	if ( count( $sentences ) <= 1 ) {
+		return array( $combined_text );
+	}
+
+	$scenes = array_fill( 0, $target_scenes, '' );
+	foreach ( $sentences as $index => $sentence ) {
+		$scene_index = $index % $target_scenes;
+		$scenes[ $scene_index ] = trim( $scenes[ $scene_index ] . ' ' . $sentence );
+	}
+
+	return array_values( array_filter( $scenes ) );
 }

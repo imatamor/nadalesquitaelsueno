@@ -24,10 +24,13 @@ class Goodsleep_Elementor_Mailjet_Client {
 			return new WP_Error( 'goodsleep_missing_mailjet_config', __( 'Mailjet no esta configurado.', 'goodsleep-elementor' ) );
 		}
 
-		$share_url = goodsleep_get_story_share_url( $story_data['story_id'] );
-		$audio_url = wp_get_attachment_url( $story_data['audio_id'] );
-		$html_body = $this->build_email_template( $story_data, $share_url, $audio_url );
-		$bcc_list  = goodsleep_parse_email_list( goodsleep_get_setting( 'mailjet_monitor_bcc', '' ) );
+		$story_id   = isset( $story_data['story_id'] ) ? absint( $story_data['story_id'] ) : 0;
+		$share_url  = goodsleep_get_story_share_url( $story_id );
+		$media      = goodsleep_get_story_primary_media( $story_id );
+		$media_url  = ! empty( $story_data['video_id'] ) ? wp_get_attachment_url( (int) $story_data['video_id'] ) : (string) $media['url'];
+		$media_type = ! empty( $media['type'] ) ? (string) $media['type'] : 'video';
+		$html_body  = $this->build_email_template( $story_data, $share_url, $media_url, $media_type );
+		$bcc_list   = goodsleep_parse_email_list( goodsleep_get_setting( 'mailjet_monitor_bcc', '' ) );
 
 		$body = array(
 			'Messages' => array(
@@ -41,7 +44,7 @@ class Goodsleep_Elementor_Mailjet_Client {
 							'Email' => $story_data['email'],
 						),
 					),
-					'Subject'  => sprintf( __( 'La historia de %s, está lista', 'goodsleep-elementor' ), $story_data['name'] ),
+					'Subject'  => sprintf( __( 'La historia de %s, esta lista en video', 'goodsleep-elementor' ), $story_data['name'] ),
 					'HTMLPart' => $html_body,
 				),
 			),
@@ -122,39 +125,37 @@ class Goodsleep_Elementor_Mailjet_Client {
 	 *
 	 * @param array<string,mixed> $story_data Datos.
 	 * @param string              $share_url  URL publica.
-	 * @param string              $audio_url  URL audio.
+	 * @param string              $media_url  URL final.
+	 * @param string              $media_type Tipo de media.
 	 * @return string
 	 */
-	protected function build_email_template( $story_data, $share_url, $audio_url ) {
-		$name         = esc_html( $story_data['name'] );
-		$story_id     = isset( $story_data['story_id'] ) ? absint( $story_data['story_id'] ) : 0;
-		$story_text   = $story_id ? (string) get_post_meta( $story_id, '_goodsleep_story_text', true ) : '';
-		$story_phrase = $story_id ? (string) get_post_meta( $story_id, '_goodsleep_story_phrase', true ) : '';
-		$combined     = $story_id ? (string) get_post_meta( $story_id, '_goodsleep_story_combined', true ) : '';
-		$brand_html   = $this->get_email_brand_markup();
-		$bg_url       = $this->get_email_background_url();
-
-		if ( '' === $combined ) {
-			$combined = trim( $story_text . "\n\n" . $story_phrase );
-		}
+	protected function build_email_template( $story_data, $share_url, $media_url, $media_type = 'video' ) {
+		$name       = esc_html( $story_data['name'] );
+		$story_id   = isset( $story_data['story_id'] ) ? absint( $story_data['story_id'] ) : 0;
+		$combined   = $story_id ? goodsleep_get_story_combined_text( $story_id ) : '';
+		$brand_html = $this->get_email_brand_markup();
+		$bg_url     = $this->get_email_background_url();
 
 		$combined_html = '';
 		if ( '' !== $combined ) {
 			$combined_html = '<div style="margin:0 0 24px;padding:20px 22px;background:#ffffff;border-radius:18px;color:#171717;font-size:17px;line-height:1.6;">' . wp_kses_post( wpautop( esc_html( $combined ) ) ) . '</div>';
 		}
 
+		$cta_label      = 'video' === $media_type ? 'Ver historia' : 'Escuchar historia';
+		$download_label = 'video' === $media_type ? 'video' : 'audio';
+
 		return '
 		<div style="background-color:#0b0b10;background-image:url(' . esc_url( $bg_url ) . ');background-repeat:no-repeat;background-size:cover;background-position:bottom center;padding:40px 24px;font-family:Arial,sans-serif;color:#ffffff;">
 			<div style="max-width:640px;margin:0 auto;background:rgba(23, 23, 34, 0.6);border-radius:24px;padding:40px;">
 				<div style="margin:0 0 20px;">' . $brand_html . '</div>
-				<h1 style="margin:0 0 16px;font-size:32px;line-height:1.1;">La historia de ' . $name . ', está lista</h1>
-				<p style="margin:0 0 24px;color:#d8d8e5;font-size:16px;line-height:1.6;">Ya puedes escucharla, descargarla o compartirla.</p>
+				<h1 style="margin:0 0 16px;font-size:32px;line-height:1.1;">La historia de ' . $name . ', esta lista en video</h1>
+				<p style="margin:0 0 24px;color:#d8d8e5;font-size:16px;line-height:1.6;">Ya puedes verla, descargarla o compartirla.</p>
 				' . $combined_html . '
 				<p style="margin:0 0 24px;">
-					<a href="' . esc_url( $share_url ) . '" style="display:inline-block;background:#ff1b9c;color:#ffffff;text-decoration:none;padding:14px 20px;border-radius:10px;font-weight:bold;">Escuchar historia</a>
+					<a href="' . esc_url( $share_url ) . '" style="display:inline-block;background:#ff1b9c;color:#ffffff;text-decoration:none;padding:14px 20px;border-radius:10px;font-weight:bold;">' . esc_html( $cta_label ) . '</a>
 				</p>
-				<p style="margin:0 0 8px;color:#d8d8e5;font-size:14px;">Descarga directa:</p>
-				<p style="margin:0 0 24px;"><a href="' . esc_url( $audio_url ) . '" style="color:#ffffff;">Aquí</a></p>
+				<p style="margin:0 0 8px;color:#d8d8e5;font-size:14px;">Descarga directa del ' . esc_html( $download_label ) . ':</p>
+				<p style="margin:0 0 24px;"><a href="' . esc_url( $media_url ) . '" style="color:#ffffff;">Aqui</a></p>
 				<p style="margin:0;color:#ffffff;font-size:13px;">Si no pediste este correo, puedes ignorarlo.</p>
 			</div>
 		</div>';

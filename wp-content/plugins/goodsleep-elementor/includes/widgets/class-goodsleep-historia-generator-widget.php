@@ -66,9 +66,9 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 		$this->add_control(
 			'phrase_template',
 			array(
-				'label'       => __( 'Frase dinámica', 'goodsleep-elementor' ),
+				'label'       => __( 'Frase dinamica', 'goodsleep-elementor' ),
 				'type'        => \Elementor\Controls_Manager::TEXTAREA,
-				'default'     => __( 'Nada le quita el sueño a %s porque toma Goodsleep.', 'goodsleep-elementor' ),
+				'default'     => __( 'Nada le quita el sueno a %s porque toma Goodsleep.', 'goodsleep-elementor' ),
 				'description' => __( 'Usa %s para insertar el nombre ingresado.', 'goodsleep-elementor' ),
 			)
 		);
@@ -76,16 +76,16 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 		$this->add_control(
 			'terms_text',
 			array(
-				'label'   => __( 'Texto de términos', 'goodsleep-elementor' ),
+				'label'   => __( 'Texto de terminos', 'goodsleep-elementor' ),
 				'type'    => \Elementor\Controls_Manager::TEXT,
-				'default' => goodsleep_get_setting( 'terms_text', __( 'Acepto términos y condiciones', 'goodsleep-elementor' ) ),
+				'default' => goodsleep_get_setting( 'terms_text', __( 'Acepto terminos y condiciones', 'goodsleep-elementor' ) ),
 			)
 		);
 
 		$this->add_control(
 			'terms_url',
 			array(
-				'label'   => __( 'URL de términos', 'goodsleep-elementor' ),
+				'label'   => __( 'URL de terminos', 'goodsleep-elementor' ),
 				'type'    => \Elementor\Controls_Manager::URL,
 				'default' => array(
 					'url'         => goodsleep_get_setting( 'terms_url', '' ),
@@ -95,25 +95,11 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 		);
 
 		$this->add_control(
-			'phrase_emotion',
-			array(
-				'label'   => __( 'Emoción de la frase final', 'goodsleep-elementor' ),
-				'type'    => \Elementor\Controls_Manager::SELECT,
-				'options' => goodsleep_get_speechify_emotions(),
-				'default' => 'cheerful',
-				'render_type' => 'none',
-				'condition' => array(
-					'_goodsleep_show_phrase_emotion' => 'yes',
-				),
-			)
-		);
-
-		$this->add_control(
 			'submit_label',
 			array(
-				'label'   => __( 'Texto del botón', 'goodsleep-elementor' ),
+				'label'   => __( 'Texto del boton', 'goodsleep-elementor' ),
 				'type'    => \Elementor\Controls_Manager::TEXT,
-				'default' => __( 'Hazlo audio', 'goodsleep-elementor' ),
+				'default' => __( 'Hazlo video', 'goodsleep-elementor' ),
 			)
 		);
 
@@ -122,7 +108,7 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 			array(
 				'label'   => __( 'Texto del loader', 'goodsleep-elementor' ),
 				'type'    => \Elementor\Controls_Manager::TEXT,
-				'default' => __( 'Nada le quita el sueño a %s', 'goodsleep-elementor' ),
+				'default' => __( 'Nada le quita el sueno a %s', 'goodsleep-elementor' ),
 			)
 		);
 
@@ -160,20 +146,17 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 		$terms_url      = ! empty( $settings['terms_url']['url'] ) ? $settings['terms_url']['url'] : '';
 		$result_cta_url = ! empty( $settings['result_cta_url']['url'] ) ? $settings['result_cta_url']['url'] : home_url( '/#historias' );
 		$widget_id      = 'goodsleep-historia-generator-' . $this->get_id();
-		$emotion        = ! empty( $settings['phrase_emotion'] ) ? goodsleep_sanitize_speechify_emotion( $settings['phrase_emotion'] ) : 'cheerful';
-		$allowed_voices = goodsleep_get_allowed_voices();
 		$allowed_tracks = goodsleep_get_allowed_tracks();
-		$default_voice  = goodsleep_get_default_voice();
 		$default_track  = goodsleep_get_default_track();
 		?>
-		<div id="<?php echo esc_attr( $widget_id ); ?>" class="goodsleep-generator" data-phrase-template="<?php echo esc_attr( $settings['phrase_template'] ); ?>" data-loader-template="<?php echo esc_attr( $settings['loader_label'] ); ?>" data-phrase-emotion="<?php echo esc_attr( $emotion ); ?>">
+		<div id="<?php echo esc_attr( $widget_id ); ?>" class="goodsleep-generator" data-phrase-template="<?php echo esc_attr( $settings['phrase_template'] ); ?>" data-loader-template="<?php echo esc_attr( $settings['loader_label'] ); ?>">
 			<div class="goodsleep-generator__surface goodsleep-generator__surface--form" data-state="form">
 				<form class="goodsleep-generator__form">
 					<div class="goodsleep-generator__field-row goodsleep-generator__field-row--email">
 						<div class="goodsleep-generator__field goodsleep-generator__field--email">
-							<input type="email" name="email" placeholder="<?php esc_attr_e( 'Danos tu correo electrónico', 'goodsleep-elementor' ); ?>" required>
+							<input type="email" name="email" placeholder="<?php esc_attr_e( 'Danos tu correo electronico', 'goodsleep-elementor' ); ?>" required>
 						</div>
-						<p class="goodsleep-generator__email-note"><?php esc_html_e( 'donde quieres que te llegue el link con el audio', 'goodsleep-elementor' ); ?></p>
+						<p class="goodsleep-generator__email-note"><?php esc_html_e( 'donde quieres que te llegue el link con el video', 'goodsleep-elementor' ); ?></p>
 					</div>
 					<div class="goodsleep-generator__field">
 						<input type="text" name="name" maxlength="15" placeholder="<?php esc_attr_e( 'Nombre de la persona', 'goodsleep-elementor' ); ?>" required pattern="^\S+$">
@@ -184,11 +167,6 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 						<div class="goodsleep-generator__counter"><span data-char-count>0</span>/500</div>
 					</div>
 					<div class="goodsleep-generator__controls goodsleep-generator__controls--auto" hidden aria-hidden="true">
-						<select name="voice_id" required>
-							<?php foreach ( $allowed_voices as $voice ) : ?>
-								<option value="<?php echo esc_attr( $voice['id'] ); ?>" data-label="<?php echo esc_attr( $voice['label'] ); ?>" <?php selected( ! empty( $default_voice['id'] ) ? $default_voice['id'] : '', $voice['id'] ); ?>><?php echo esc_html( $voice['label'] ); ?></option>
-							<?php endforeach; ?>
-						</select>
 						<select name="track_id" required>
 							<?php foreach ( $allowed_tracks as $track ) : ?>
 								<option value="<?php echo esc_attr( $track['id'] ); ?>" data-label="<?php echo esc_attr( $track['label'] ); ?>" <?php selected( ! empty( $default_track['id'] ) ? $default_track['id'] : '', $track['id'] ); ?>><?php echo esc_html( $track['label'] ); ?></option>
@@ -216,11 +194,11 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 			</div>
 			<div class="goodsleep-generator__surface goodsleep-generator__surface--result" hidden>
 				<div class="goodsleep-generator__result-card goodsleep-story-card goodsleep-generator__result-story-card">
-					<p class="goodsleep-story-card__text goodsleep-generator__result-copy"><?php esc_html_e( 'Gracias por tu historia, se ha publicado correctamente y aquí la tienes para compartir.', 'goodsleep-elementor' ); ?></p>
-					<audio controls preload="metadata" data-result-audio></audio>
+					<p class="goodsleep-story-card__text goodsleep-generator__result-copy"><?php esc_html_e( 'Tu historia ya esta lista en video y aqui la tienes para compartir.', 'goodsleep-elementor' ); ?></p>
+					<video controls preload="metadata" playsinline data-result-video></video>
 					<div class="goodsleep-story-card__actions goodsleep-generator__result-actions">
 						<div class="goodsleep-story-card__action-group">
-							<a class="goodsleep-story-card__action-button goodsleep-generator__icon-action" href="#" download data-download-link data-tooltip="<?php esc_attr_e( 'Descargar audio', 'goodsleep-elementor' ); ?>" aria-label="<?php esc_attr_e( 'Descargar audio', 'goodsleep-elementor' ); ?>">
+							<a class="goodsleep-story-card__action-button goodsleep-generator__icon-action" href="#" download data-download-link data-tooltip="<?php esc_attr_e( 'Descargar video', 'goodsleep-elementor' ); ?>" aria-label="<?php esc_attr_e( 'Descargar video', 'goodsleep-elementor' ); ?>">
 								<span class="goodsleep-story-card__action-icon" aria-hidden="true">
 									<svg viewBox="0 0 16 16"><g fill="currentColor"><path d="M13.02 6 10.2 5.99c-.25 0-.48-.17-.5-.38C9.67 5.37 9.86 5.1 10.13 5.1l2.85.01c.67 0 1.39.55 1.39 1.28v8.23c0 .72-.7 1.28-1.39 1.28H3.04c-.7 0-1.4-.55-1.4-1.28V6.38c0-.73.71-1.28 1.39-1.28l2.63-.01c.25 0 .46.21.47.43 0 .22-.21.46-.47.46H3.12c-.33 0-.63.2-.63.58v7.86c0 .37.28.59.64.59h9.84c.32 0 .54-.27.54-.57v-7.9c0-.25-.18-.54-.47-.54"></path><path d="M7.66.55c0-.28.23-.45.44-.46.18-.01.44.16.44.4v8.49l2.2-2.12c.16-.16.49-.11.62.05.12.14.13.45-.03.6l-2.89 2.83c-.18.18-.5.3-.71.09L4.84 7.54c-.16-.16-.19-.41-.08-.6.08-.16.45-.26.61-.1L7.66 9.1V.55Z"></path></g></svg>
 								</span>

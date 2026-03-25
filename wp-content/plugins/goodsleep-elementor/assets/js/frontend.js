@@ -64,11 +64,60 @@
 		return markup;
 	}
 
+	function buildMediaMarkup( story ) {
+		if ( 'video' === story.mediaType && story.videoUrl ) {
+			return `
+				<div class="goodsleep-story-card__media-wrap" hidden data-video-wrap>
+					<video controls playsinline preload="none" data-video-src="${ escapeHtml( story.videoUrl ) }"></video>
+				</div>
+			`;
+		}
+
+		if ( 'audio' === story.mediaType && story.audioUrl && ! goodsleepElementor.videoPublicOnly ) {
+			return `<audio controls preload="metadata" src="${ escapeHtml( story.audioUrl ) }"></audio>`;
+		}
+
+		return '';
+	}
+
+	function buildPrimaryAction( story ) {
+		if ( 'video' === story.mediaType && story.videoUrl ) {
+			return `
+				<button
+					type="button"
+					class="goodsleep-story-card__action-button"
+					data-action="toggle-video"
+					data-tooltip="Ver video"
+					aria-label="Ver video"
+				>
+					<span class="goodsleep-story-card__action-icon">${ iconDownload }</span>
+					<span class="goodsleep-story-card__action-label">Ver video</span>
+				</button>
+			`;
+		}
+
+		if ( story.downloadUrl ) {
+			return `
+				<a
+					href="${ escapeHtml( story.downloadUrl ) }"
+					class="goodsleep-story-card__action-button"
+					download
+					data-tooltip="${ 'video' === story.mediaType ? 'Descargar video' : 'Descargar audio' }"
+					aria-label="${ 'video' === story.mediaType ? 'Descargar video' : 'Descargar audio' }"
+				>
+					<span class="goodsleep-story-card__action-icon">${ iconDownload }</span>
+					<span class="goodsleep-story-card__action-label">Descargar</span>
+				</a>
+			`;
+		}
+
+		return '';
+	}
+
 	function renderStoryCard( story ) {
 		const title = escapeHtml( story.title || '' );
 		const text = escapeHtml( story.text || '' );
 		const publishedLabel = escapeHtml( story.publishedLabel || '' );
-		const audioMarkup = story.audioUrl ? `<audio controls preload="metadata" src="${ escapeHtml( story.audioUrl ) }"></audio>` : '';
 		const shareUrl = formatWhatsAppUrl( goodsleepElementor.whatsappTemplate, story.title, story.shareUrl || '' );
 		const favoriteLabel = story.favorite ? 'Quitar de favoritos' : 'Agregar a favoritos';
 		const ratingSummary = formatRatingSummary( story );
@@ -80,7 +129,7 @@
 					<time class="goodsleep-story-card__date" datetime="${ escapeHtml( story.createdAt || '' ) }">${ publishedLabel }</time>
 				</div>
 				<p class="goodsleep-story-card__text">${ text }</p>
-				${ audioMarkup }
+				${ buildMediaMarkup( story ) }
 				<div class="goodsleep-story-card__actions">
 					<div class="goodsleep-story-card__action-group">
 						<button
@@ -94,16 +143,7 @@
 							<span class="goodsleep-story-card__action-icon">${ iconFavorite }</span>
 							<span class="goodsleep-story-card__action-label">Favorito</span>
 						</button>
-						<a
-							href="${ escapeHtml( story.downloadUrl || '#' ) }"
-							class="goodsleep-story-card__action-button"
-							download
-							data-tooltip="Descargar audio"
-							aria-label="Descargar audio"
-						>
-							<span class="goodsleep-story-card__action-icon">${ iconDownload }</span>
-							<span class="goodsleep-story-card__action-label">Descargar</span>
-						</a>
+						${ buildPrimaryAction( story ) }
 						<a
 							href="${ escapeHtml( shareUrl ) }"
 							class="goodsleep-story-card__action-button"
@@ -176,33 +216,6 @@
 				window.alert( error.message );
 			}
 		} );
-
-		root.addEventListener( 'mouseover', function( event ) {
-			const button = event.target.closest( '.goodsleep-story-card__moon' );
-			const group = button ? button.closest( '[data-rating-group]' ) : null;
-
-			if ( ! button || ! group || 'true' === group.dataset.readonly ) {
-				return;
-			}
-
-			const rating = Number( button.dataset.rating || 0 );
-
-			group.querySelectorAll( '.goodsleep-story-card__moon' ).forEach( function( item ) {
-				item.classList.toggle( 'is-preview', Number( item.dataset.rating || 0 ) <= rating );
-			} );
-		} );
-
-		root.addEventListener( 'mouseout', function( event ) {
-			const group = event.target.closest( '[data-rating-group]' );
-
-			if ( ! group ) {
-				return;
-			}
-
-			group.querySelectorAll( '.goodsleep-story-card__moon' ).forEach( function( item ) {
-				item.classList.remove( 'is-preview' );
-			} );
-		} );
 	}
 
 	async function requestJson( path, options ) {
@@ -240,6 +253,33 @@
 		window.history.replaceState( null, document.title, window.location.pathname + window.location.search );
 	}
 
+	async function pollStoryStatus( storyId, attempts ) {
+		let remaining = attempts;
+		const interval = Number( goodsleepElementor.pollInterval || 5 ) * 1000;
+
+		while ( remaining > 0 ) {
+			const payload = await requestJson( `stories/${ storyId }/status`, { method: 'GET' } );
+			if ( payload.isReady ) {
+				return payload;
+			}
+
+			if ( payload.error ) {
+				throw new Error( payload.error );
+			}
+
+			remaining -= 1;
+			if ( remaining <= 0 ) {
+				return payload;
+			}
+
+			await new Promise( function( resolve ) {
+				window.setTimeout( resolve, interval );
+			} );
+		}
+
+		return null;
+	}
+
 	function initGenerator( container ) {
 		const formSurface = container.querySelector( '.goodsleep-generator__surface--form' );
 		const loadingSurface = container.querySelector( '.goodsleep-generator__surface--loading' );
@@ -249,12 +289,11 @@
 		const phraseNode = container.querySelector( '[data-dynamic-phrase]' );
 		const charNode = container.querySelector( '[data-char-count]' );
 		const loaderText = container.querySelector( '[data-loader-text]' );
-		const audioNode = container.querySelector( '[data-result-audio]' );
+		const videoNode = container.querySelector( '[data-result-video]' );
 		const downloadLink = container.querySelector( '[data-download-link]' );
 		const shareLink = container.querySelector( '[data-share-link]' );
 		const phraseTemplate = container.dataset.phraseTemplate || '';
 		const loaderTemplate = container.dataset.loaderTemplate || '';
-		const phraseEmotion = container.dataset.phraseEmotion || 'cheerful';
 
 		if ( ! form ) {
 			return;
@@ -267,8 +306,8 @@
 			resultSurface.hidden = true;
 			feedback.textContent = '';
 			loaderText.textContent = '';
-			audioNode.removeAttribute( 'src' );
-			audioNode.load();
+			videoNode.removeAttribute( 'src' );
+			videoNode.load();
 			downloadLink.href = '#';
 			shareLink.href = '#';
 			charNode.textContent = '0';
@@ -306,11 +345,11 @@
 
 			if ( 'email' === field.name ) {
 				if ( ! field.value.trim() ) {
-					return 'Ingresa tu correo electrónico.';
+					return 'Ingresa tu correo electronico.';
 				}
 
 				if ( field.validity.typeMismatch ) {
-					return 'Ingresa un correo electrónico válido.';
+					return 'Ingresa un correo electronico valido.';
 				}
 			}
 
@@ -318,16 +357,12 @@
 				return 'Escribe tu historia.';
 			}
 
-			if ( 'voice_id' === field.name && ! field.value ) {
-				return 'Selecciona una voz.';
-			}
-
 			if ( 'track_id' === field.name && ! field.value ) {
-				return 'Selecciona una música.';
+				return 'Selecciona una musica.';
 			}
 
 			if ( 'accepted_terms' === field.name && ! field.checked ) {
-				return 'Debes aceptar los términos y condiciones.';
+				return 'Debes aceptar los terminos y condiciones.';
 			}
 
 			return '';
@@ -378,9 +413,7 @@
 
 			const formData = new FormData( form );
 			const name = ( formData.get( 'name' ) || '' ).toString().trim();
-			const voiceSelect = form.querySelector( '[name="voice_id"]' );
 			const trackSelect = form.querySelector( '[name="track_id"]' );
-			const voiceLabel = voiceSelect && voiceSelect.selectedOptions[0] ? voiceSelect.selectedOptions[0].dataset.label || voiceSelect.selectedOptions[0].textContent : '';
 			const trackLabel = trackSelect && trackSelect.selectedOptions[0] ? trackSelect.selectedOptions[0].dataset.label || trackSelect.selectedOptions[0].textContent : '';
 
 			formSurface.hidden = true;
@@ -389,34 +422,42 @@
 			syncSurfaceMinHeight();
 
 			try {
-				const payload = await requestJson( 'generate-story', {
+				const created = await requestJson( 'generate-story', {
 					method: 'POST',
 					body: JSON.stringify( {
 						name: name,
 						email: ( formData.get( 'email' ) || '' ).toString(),
 						story_text: ( formData.get( 'story_text' ) || '' ).toString(),
 						phrase_template: phraseTemplate,
-						phrase_emotion: phraseEmotion,
-						voice_id: ( formData.get( 'voice_id' ) || '' ).toString(),
-						voice_label: voiceLabel,
 						track_id: ( formData.get( 'track_id' ) || '' ).toString(),
 						track_label: trackLabel,
 						accepted_terms: !! formData.get( 'accepted_terms' )
 					} )
 				} );
 
-				audioNode.src = payload.audioUrl || '';
-				downloadLink.href = payload.downloadUrl || '#';
-				shareLink.href = formatWhatsAppUrl( goodsleepElementor.whatsappTemplate, name, payload.shareUrl || '' );
+				const resolved = await pollStoryStatus( created.storyId, Number( created.pollAttempts || goodsleepElementor.pollAttempts || 24 ) );
+
+				if ( ! resolved || ! resolved.isReady ) {
+					loadingSurface.hidden = true;
+					formSurface.hidden = false;
+					feedback.textContent = 'Tu video sigue procesandose. Te enviaremos el link por correo cuando este listo.';
+					syncSurfaceMinHeight();
+					return;
+				}
+
+				videoNode.src = resolved.videoUrl || '';
+				videoNode.load();
+				downloadLink.href = resolved.downloadUrl || '#';
+				shareLink.href = formatWhatsAppUrl( goodsleepElementor.whatsappTemplate, name, resolved.shareUrl || '' );
 
 				loadingSurface.hidden = true;
 				resultSurface.hidden = false;
 				syncSurfaceMinHeight();
-				document.dispatchEvent( new CustomEvent( 'goodsleep:story-created', { detail: payload } ) );
+				document.dispatchEvent( new CustomEvent( 'goodsleep:story-created', { detail: resolved } ) );
 			} catch ( error ) {
 				loadingSurface.hidden = true;
 				formSurface.hidden = false;
-				feedback.textContent = sanitizeFeedbackMessage( error.message ) || 'Ocurrio un error al generar el audio.';
+				feedback.textContent = sanitizeFeedbackMessage( error.message ) || 'Ocurrio un error al generar el video.';
 				syncSurfaceMinHeight();
 			}
 		} );
@@ -502,14 +543,12 @@
 		list.addEventListener( 'click', async function( event ) {
 			clearPageHash();
 			const button = event.target.closest( '[data-action]' );
-
 			if ( ! button ) {
 				return;
 			}
 
 			const card = button.closest( '[data-story-id]' );
 			const storyId = card ? card.dataset.storyId : '';
-
 			if ( ! storyId ) {
 				return;
 			}
@@ -525,7 +564,6 @@
 
 				if ( 'vote' === button.dataset.action ) {
 					const rating = Number( button.dataset.rating || 0 );
-
 					const payload = await requestJson( `stories/${ storyId }/vote`, {
 						method: 'POST',
 						body: JSON.stringify( { rating } )
@@ -533,6 +571,23 @@
 
 					syncRatingCard( card, payload );
 					loadStories( true );
+				}
+
+				if ( 'toggle-video' === button.dataset.action ) {
+					const wrap = card.querySelector( '[data-video-wrap]' );
+					const video = wrap ? wrap.querySelector( 'video' ) : null;
+					if ( ! wrap || ! video ) {
+						return;
+					}
+
+					const isHidden = wrap.hidden;
+					if ( isHidden && ! video.getAttribute( 'src' ) ) {
+						video.setAttribute( 'src', video.dataset.videoSrc || '' );
+						video.load();
+					}
+
+					wrap.hidden = ! isHidden;
+					button.querySelector( '.goodsleep-story-card__action-label' ).textContent = isHidden ? 'Ocultar video' : 'Ver video';
 				}
 			} catch ( error ) {
 				window.alert( error.message );

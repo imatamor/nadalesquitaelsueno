@@ -28,7 +28,7 @@ class Goodsleep_Elementor_Settings {
 			'manage_options',
 			'goodsleep-elementor',
 			array( $this, 'render_page' ),
-			'dashicons-format-audio',
+			'dashicons-video-alt3',
 			62
 		);
 	}
@@ -46,12 +46,14 @@ class Goodsleep_Elementor_Settings {
 		);
 
 		add_settings_section( 'goodsleep_api_section', __( 'Credenciales e integraciones', 'goodsleep-elementor' ), '__return_false', 'goodsleep-elementor' );
-		add_settings_section( 'goodsleep_catalog_section', __( 'Catálogos de voces y tracks', 'goodsleep-elementor' ), '__return_false', 'goodsleep-elementor' );
+		add_settings_section( 'goodsleep_video_section', __( 'Configuracion de video', 'goodsleep-elementor' ), '__return_false', 'goodsleep-elementor' );
+		add_settings_section( 'goodsleep_catalog_section', __( 'Tracks y salida publica', 'goodsleep-elementor' ), '__return_false', 'goodsleep-elementor' );
 
-		$this->add_text_field( 'speechify_api_key', __( 'Speechify API Key', 'goodsleep-elementor' ) );
-		$this->add_text_field( 'speechify_base_url', __( 'Speechify Base URL', 'goodsleep-elementor' ) );
-		$this->add_text_field( 'speechify_audio_path', __( 'Speechify Audio Path', 'goodsleep-elementor' ) );
-		$this->add_text_field( 'speechify_voices_path', __( 'Speechify Voices Path', 'goodsleep-elementor' ) );
+		$this->add_text_field( 'openai_api_key', __( 'OpenAI API Key', 'goodsleep-elementor' ) );
+		$this->add_text_field( 'openai_base_url', __( 'OpenAI Base URL', 'goodsleep-elementor' ), 'url' );
+		$this->add_text_field( 'openai_video_model', __( 'Modelo de video', 'goodsleep-elementor' ) );
+		$this->add_text_field( 'openai_video_submit_path', __( 'Ruta de creacion de video', 'goodsleep-elementor' ) );
+		$this->add_text_field( 'openai_video_status_path', __( 'Ruta de consulta de video', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'mailjet_api_key', __( 'Mailjet API Key', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'mailjet_secret_key', __( 'Mailjet Secret Key', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'mailjet_from_email', __( 'Mailjet From Email', 'goodsleep-elementor' ), 'email' );
@@ -59,12 +61,20 @@ class Goodsleep_Elementor_Settings {
 		$this->add_text_field( 'mailjet_reply_to_email', __( 'Reply-To Email', 'goodsleep-elementor' ), 'email' );
 		$this->add_text_field( 'mailjet_reply_to_name', __( 'Reply-To Name', 'goodsleep-elementor' ) );
 		$this->add_textarea_field( 'mailjet_monitor_bcc', __( 'Correos de monitoreo (CCO)', 'goodsleep-elementor' ), 4, 'goodsleep_api_section', __( 'Ingresa uno o varios correos separados por coma o salto de linea.', 'goodsleep-elementor' ) );
-		$this->add_text_field( 'terms_url', __( 'URL de términos global', 'goodsleep-elementor' ), 'url' );
-		$this->add_text_field( 'terms_text', __( 'Texto de términos global', 'goodsleep-elementor' ) );
+		$this->add_text_field( 'terms_url', __( 'URL de terminos global', 'goodsleep-elementor' ), 'url' );
+		$this->add_text_field( 'terms_text', __( 'Texto de terminos global', 'goodsleep-elementor' ) );
 		$this->add_textarea_field( 'whatsapp_share_text', __( 'Texto para compartir por WhatsApp', 'goodsleep-elementor' ), 3 );
 
+		$this->add_text_field( 'video_resolution', __( 'Resolucion por defecto', 'goodsleep-elementor' ), 'text', 'goodsleep_video_section' );
+		$this->add_text_field( 'video_aspect_ratio', __( 'Aspect ratio por defecto', 'goodsleep-elementor' ), 'text', 'goodsleep_video_section' );
+		$this->add_text_field( 'video_duration', __( 'Duracion objetivo (segundos)', 'goodsleep-elementor' ), 'number', 'goodsleep_video_section' );
+		$this->add_text_field( 'video_poll_interval', __( 'Polling frontend (segundos)', 'goodsleep-elementor' ), 'number', 'goodsleep_video_section' );
+		$this->add_text_field( 'video_poll_attempts', __( 'Intentos de polling', 'goodsleep-elementor' ), 'number', 'goodsleep_video_section' );
+		$this->add_textarea_field( 'video_prompt_style', __( 'Prompt base de video', 'goodsleep-elementor' ), 6, 'goodsleep_video_section' );
+		add_settings_field( 'video_music_enabled', __( 'Anadir musica de fondo', 'goodsleep-elementor' ), array( $this, 'render_checkbox_field' ), 'goodsleep-elementor', 'goodsleep_video_section', array( 'key' => 'video_music_enabled', 'label' => __( 'Mezclar track musical con el video final cuando exista track seleccionado.', 'goodsleep-elementor' ) ) );
+		add_settings_field( 'video_public_only', __( 'Ocultar audio legacy en frontend', 'goodsleep-elementor' ), array( $this, 'render_checkbox_field' ), 'goodsleep-elementor', 'goodsleep_catalog_section', array( 'key' => 'video_public_only', 'label' => __( 'Mostrar solo video en frontend para dejar el audio unicamente como respaldo tecnico.', 'goodsleep-elementor' ) ) );
+
 		add_settings_field( 'tracks_catalog', __( 'Tracks manuales', 'goodsleep-elementor' ), array( $this, 'render_tracks_manager' ), 'goodsleep-elementor', 'goodsleep_catalog_section' );
-		add_settings_field( 'voice_whitelist', __( 'Voces habilitadas', 'goodsleep-elementor' ), array( $this, 'render_voice_whitelist' ), 'goodsleep-elementor', 'goodsleep_catalog_section' );
 		add_settings_field( 'track_whitelist', __( 'Tracks habilitados', 'goodsleep-elementor' ), array( $this, 'render_track_whitelist' ), 'goodsleep-elementor', 'goodsleep_catalog_section' );
 	}
 
@@ -105,10 +115,19 @@ class Goodsleep_Elementor_Settings {
 		$sanitized = goodsleep_get_settings();
 		$input     = is_array( $input ) ? $input : array();
 
-		$sanitized['speechify_api_key']      = isset( $input['speechify_api_key'] ) ? sanitize_text_field( $input['speechify_api_key'] ) : '';
-		$sanitized['speechify_base_url']     = isset( $input['speechify_base_url'] ) ? esc_url_raw( $input['speechify_base_url'] ) : '';
-		$sanitized['speechify_audio_path']   = isset( $input['speechify_audio_path'] ) ? sanitize_text_field( $input['speechify_audio_path'] ) : '';
-		$sanitized['speechify_voices_path']  = isset( $input['speechify_voices_path'] ) ? sanitize_text_field( $input['speechify_voices_path'] ) : '';
+		$sanitized['openai_api_key']         = isset( $input['openai_api_key'] ) ? sanitize_text_field( $input['openai_api_key'] ) : '';
+		$sanitized['openai_base_url']        = isset( $input['openai_base_url'] ) ? esc_url_raw( $input['openai_base_url'] ) : '';
+		$sanitized['openai_video_model']     = isset( $input['openai_video_model'] ) ? sanitize_text_field( $input['openai_video_model'] ) : 'sora-2';
+		$sanitized['openai_video_submit_path'] = isset( $input['openai_video_submit_path'] ) ? sanitize_text_field( $input['openai_video_submit_path'] ) : '/videos';
+		$sanitized['openai_video_status_path'] = isset( $input['openai_video_status_path'] ) ? sanitize_text_field( $input['openai_video_status_path'] ) : '/videos/%s';
+		$sanitized['video_resolution']       = isset( $input['video_resolution'] ) ? sanitize_text_field( $input['video_resolution'] ) : '720p';
+		$sanitized['video_aspect_ratio']     = isset( $input['video_aspect_ratio'] ) ? sanitize_text_field( $input['video_aspect_ratio'] ) : '9:16';
+		$sanitized['video_duration']         = isset( $input['video_duration'] ) ? max( 4, min( 12, absint( $input['video_duration'] ) ) ) : 12;
+		$sanitized['video_poll_interval']    = isset( $input['video_poll_interval'] ) ? max( 2, absint( $input['video_poll_interval'] ) ) : 5;
+		$sanitized['video_poll_attempts']    = isset( $input['video_poll_attempts'] ) ? max( 1, absint( $input['video_poll_attempts'] ) ) : 24;
+		$sanitized['video_prompt_style']     = isset( $input['video_prompt_style'] ) ? sanitize_textarea_field( $input['video_prompt_style'] ) : '';
+		$sanitized['video_music_enabled']    = ! empty( $input['video_music_enabled'] ) ? 1 : 0;
+		$sanitized['video_public_only']      = ! empty( $input['video_public_only'] ) ? 1 : 0;
 		$sanitized['mailjet_api_key']        = isset( $input['mailjet_api_key'] ) ? sanitize_text_field( $input['mailjet_api_key'] ) : '';
 		$sanitized['mailjet_secret_key']     = isset( $input['mailjet_secret_key'] ) ? sanitize_text_field( $input['mailjet_secret_key'] ) : '';
 		$sanitized['mailjet_from_email']     = isset( $input['mailjet_from_email'] ) ? goodsleep_normalize_email( $input['mailjet_from_email'] ) : '';
@@ -118,10 +137,8 @@ class Goodsleep_Elementor_Settings {
 		$sanitized['mailjet_monitor_bcc']    = isset( $input['mailjet_monitor_bcc'] ) ? $this->sanitize_email_list_textarea( $input['mailjet_monitor_bcc'] ) : '';
 		$sanitized['terms_url']              = isset( $input['terms_url'] ) ? esc_url_raw( $input['terms_url'] ) : '';
 		$sanitized['terms_text']             = isset( $input['terms_text'] ) ? sanitize_text_field( $input['terms_text'] ) : '';
-		$sanitized['whatsapp_share_text']      = isset( $input['whatsapp_share_text'] ) ? sanitize_textarea_field( $input['whatsapp_share_text'] ) : '';
-		$sanitized['voice_language_whitelist'] = isset( $input['voice_language_whitelist'] ) ? array_values( array_filter( array_map( 'sanitize_text_field', (array) $input['voice_language_whitelist'] ) ) ) : array();
-		$sanitized['voice_whitelist']          = isset( $input['voice_whitelist'] ) ? array_values( array_filter( array_map( 'sanitize_text_field', (array) $input['voice_whitelist'] ) ) ) : array();
-		$sanitized['track_whitelist']          = isset( $input['track_whitelist'] ) ? array_values( array_filter( array_map( 'sanitize_text_field', (array) $input['track_whitelist'] ) ) ) : array();
+		$sanitized['whatsapp_share_text']    = isset( $input['whatsapp_share_text'] ) ? sanitize_textarea_field( $input['whatsapp_share_text'] ) : '';
+		$sanitized['track_whitelist']        = isset( $input['track_whitelist'] ) ? array_values( array_filter( array_map( 'sanitize_text_field', (array) $input['track_whitelist'] ) ) ) : array();
 
 		$tracks_catalog = array();
 		if ( ! empty( $input['tracks_catalog'] ) && is_array( $input['tracks_catalog'] ) ) {
@@ -183,7 +200,7 @@ class Goodsleep_Elementor_Settings {
 		$type  = isset( $args['type'] ) ? $args['type'] : 'text';
 		$value = goodsleep_get_setting( $key, '' );
 		?>
-		<input class="regular-text" type="<?php echo esc_attr( $type ); ?>" name="goodsleep_elementor_settings[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $value ); ?>">
+		<input class="regular-text" type="<?php echo esc_attr( $type ); ?>" name="goodsleep_elementor_settings[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( (string) $value ); ?>">
 		<?php
 	}
 
@@ -206,24 +223,21 @@ class Goodsleep_Elementor_Settings {
 	}
 
 	/**
-	 * Renderiza whitelist de voces.
+	 * Renderiza checkbox.
 	 *
+	 * @param array<string,string> $args Configuracion del campo.
 	 * @return void
 	 */
-	public function render_voice_whitelist() {
-		echo '<p><button type="button" class="button button-secondary" data-goodsleep-sync-voices>' . esc_html__( 'Sincronizar voces desde Speechify', 'goodsleep-elementor' ) . '</button> <span class="description" data-goodsleep-sync-feedback></span></p>';
-
-		$this->render_multicheck_list(
-			'voice_whitelist',
-			goodsleep_get_cached_voices(),
-			(array) goodsleep_get_setting( 'voice_whitelist', array() ),
-			__( 'No hay voces cacheadas todavía. Configura Speechify y sincronízalas por API.', 'goodsleep-elementor' ),
-			array(
-				'show_language_filter' => true,
-				'language_field_name'  => 'voice_language_whitelist',
-				'selected_languages'   => (array) goodsleep_get_setting( 'voice_language_whitelist', array() ),
-			)
-		);
+	public function render_checkbox_field( $args ) {
+		$key   = $args['key'];
+		$value = goodsleep_get_setting( $key, 0 );
+		$label = ! empty( $args['label'] ) ? (string) $args['label'] : '';
+		?>
+		<label>
+			<input type="checkbox" name="goodsleep_elementor_settings[<?php echo esc_attr( $key ); ?>]" value="1" <?php checked( ! empty( $value ) ); ?>>
+			<span><?php echo esc_html( $label ); ?></span>
+		</label>
+		<?php
 	}
 
 	/**
@@ -236,7 +250,7 @@ class Goodsleep_Elementor_Settings {
 			'track_whitelist',
 			goodsleep_get_cached_tracks(),
 			(array) goodsleep_get_setting( 'track_whitelist', array() ),
-			__( 'Añade tracks manuales en el gestor de arriba para habilitarlos aquí.', 'goodsleep-elementor' )
+			__( 'Anade tracks manuales en el gestor de arriba para habilitarlos aqui.', 'goodsleep-elementor' )
 		);
 	}
 
@@ -278,128 +292,45 @@ class Goodsleep_Elementor_Settings {
 		}
 
 		echo '</div>';
-		echo '<p><button type="button" class="button button-secondary" data-add-track>' . esc_html__( 'Añadir track', 'goodsleep-elementor' ) . '</button></p>';
-		echo '<p class="description">' . esc_html__( 'Añade manualmente cada track con nombre y archivo de audio desde la galería de medios.', 'goodsleep-elementor' ) . '</p>';
+		echo '<p><button type="button" class="button button-secondary" data-add-track>' . esc_html__( 'Anadir track', 'goodsleep-elementor' ) . '</button></p>';
+		echo '<p class="description">' . esc_html__( 'Anade manualmente cada track con nombre y archivo de audio desde la galeria de medios.', 'goodsleep-elementor' ) . '</p>';
 		echo '</div>';
 	}
 
 	/**
 	 * Renderiza una picklist con filtro.
 	 *
-	 * @param string              $field_name Nombre del campo.
-	 * @param array<int,array>    $items      Items.
-	 * @param array<int,string>   $selected   Seleccionados.
-	 * @param string              $empty_text Texto vacio.
-	 * @param array<string,mixed> $args       Configuracion de UI.
+	 * @param string            $field_name Nombre del campo.
+	 * @param array<int,array>  $items      Items.
+	 * @param array<int,string> $selected   Seleccionados.
+	 * @param string            $empty_text Texto vacio.
 	 * @return void
 	 */
-	protected function render_multicheck_list( $field_name, $items, $selected, $empty_text, $args = array() ) {
+	protected function render_multicheck_list( $field_name, $items, $selected, $empty_text ) {
 		if ( empty( $items ) ) {
 			echo '<p class="description">' . esc_html( $empty_text ) . '</p>';
 			return;
 		}
 
-		$show_language_filter = ! empty( $args['show_language_filter'] );
-		$languages            = $show_language_filter ? $this->get_picklist_languages( $items ) : array();
-		$language_field_name  = ! empty( $args['language_field_name'] ) ? (string) $args['language_field_name'] : '';
-		$selected_languages   = ! empty( $args['selected_languages'] ) ? array_map( 'strtolower', (array) $args['selected_languages'] ) : array();
-
 		echo '<div class="goodsleep-admin-picklist">';
 		echo '<input type="search" class="goodsleep-admin-picklist__search" placeholder="' . esc_attr__( 'Buscar...', 'goodsleep-elementor' ) . '">';
-
-		if ( $show_language_filter && ! empty( $languages ) ) {
-			echo '<div class="goodsleep-admin-picklist__filters">';
-			echo '<label class="goodsleep-admin-picklist__filter-label" for="goodsleep-language-filter-' . esc_attr( $field_name ) . '">' . esc_html__( 'Idiomas disponibles', 'goodsleep-elementor' ) . '</label>';
-			echo '<div class="goodsleep-admin-picklist__actions">';
-			echo '<button type="button" class="button button-secondary" data-picklist-select-all>' . esc_html__( 'Seleccionar todo', 'goodsleep-elementor' ) . '</button>';
-			echo '<button type="button" class="button-link" data-picklist-clear>' . esc_html__( 'Limpiar selección', 'goodsleep-elementor' ) . '</button>';
-			echo '</div>';
-			echo '<select id="goodsleep-language-filter-' . esc_attr( $field_name ) . '" class="goodsleep-admin-picklist__languages" data-picklist-languages multiple size="' . esc_attr( min( count( $languages ), 8 ) ) . '"';
-
-			if ( '' !== $language_field_name ) {
-				echo ' name="goodsleep_elementor_settings[' . esc_attr( $language_field_name ) . '][]"';
-			}
-
-			echo '>';
-
-			foreach ( $languages as $language ) {
-				echo '<option value="' . esc_attr( $language['value'] ) . '" ' . selected( in_array( $language['value'], $selected_languages, true ), true, false ) . '>' . esc_html( $language['label'] ) . '</option>';
-			}
-
-			echo '</select>';
-			echo '<p class="description">' . esc_html__( 'Si no marcas voces específicas, el frontend usará todas las voces de los idiomas seleccionados. Si no seleccionas idiomas ni voces, se mostrarán todas las voces.', 'goodsleep-elementor' ) . '</p>';
-			echo '</div>';
-		}
-
 		echo '<div class="goodsleep-admin-picklist__items">';
 
 		foreach ( $items as $item ) {
-			$id             = isset( $item['id'] ) ? $item['id'] : '';
-			$label          = isset( $item['label'] ) ? $item['label'] : $id;
-			$language_value = isset( $item['language'] ) && '' !== $item['language'] ? (string) $item['language'] : ( isset( $item['locale'] ) ? (string) $item['locale'] : '' );
-			$language_label = isset( $item['language_label'] ) && '' !== $item['language_label'] ? (string) $item['language_label'] : $language_value;
+			$id    = isset( $item['id'] ) ? $item['id'] : '';
+			$label = isset( $item['label'] ) ? $item['label'] : $id;
 
 			if ( ! $id ) {
 				continue;
 			}
 
-			echo '<label class="goodsleep-admin-picklist__item" data-language="' . esc_attr( strtolower( $language_value ) ) . '" data-search-text="' . esc_attr( trim( $label . ' ' . $language_label . ' ' . $language_value ) ) . '">';
+			echo '<label class="goodsleep-admin-picklist__item" data-search-text="' . esc_attr( trim( $label ) ) . '">';
 			echo '<input type="checkbox" name="goodsleep_elementor_settings[' . esc_attr( $field_name ) . '][]" value="' . esc_attr( $id ) . '" ' . checked( in_array( $id, $selected, true ), true, false ) . '>';
 			echo '<span>' . esc_html( $label ) . '</span>';
-
-			if ( $show_language_filter && '' !== $language_label ) {
-				echo '<small class="goodsleep-admin-picklist__meta">' . esc_html( $language_label ) . '</small>';
-			}
-
 			echo '</label>';
 		}
 
 		echo '</div></div>';
-	}
-
-	/**
-	 * Devuelve los idiomas disponibles de una picklist.
-	 *
-	 * @param array<int,array<string,mixed>> $items Items del catalogo.
-	 * @return array<int,array<string,string>>
-	 */
-	protected function get_picklist_languages( $items ) {
-		$languages = array();
-
-		foreach ( $items as $item ) {
-			$value = '';
-			$label = '';
-
-			if ( ! empty( $item['language'] ) && is_string( $item['language'] ) ) {
-				$value = strtolower( sanitize_text_field( $item['language'] ) );
-			} elseif ( ! empty( $item['locale'] ) && is_string( $item['locale'] ) ) {
-				$value = strtolower( sanitize_text_field( $item['locale'] ) );
-			}
-
-			if ( ! empty( $item['language_label'] ) && is_string( $item['language_label'] ) ) {
-				$label = sanitize_text_field( $item['language_label'] );
-			} elseif ( '' !== $value ) {
-				$label = strtoupper( $value );
-			}
-
-			if ( '' === $value || '' === $label ) {
-				continue;
-			}
-
-			$languages[ $value ] = array(
-				'value' => $value,
-				'label' => $label,
-			);
-		}
-
-		uasort(
-			$languages,
-			static function ( $left, $right ) {
-				return strcasecmp( $left['label'], $right['label'] );
-			}
-		);
-
-		return array_values( $languages );
 	}
 
 	/**
@@ -411,7 +342,8 @@ class Goodsleep_Elementor_Settings {
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Goodsleep Elementor', 'goodsleep-elementor' ); ?></h1>
-			<p><?php esc_html_e( 'Configura integraciones, voces y tracks manuales de la campaña Goodsleep.', 'goodsleep-elementor' ); ?></p>
+			<p><?php esc_html_e( 'Configura OpenAI Sora, correo, video y tracks manuales de la campana Goodsleep.', 'goodsleep-elementor' ); ?></p>
+			<p><strong><?php esc_html_e( 'Backfill de historias legacy:', 'goodsleep-elementor' ); ?></strong> <?php esc_html_e( 'queda preparado por codigo, pero no se ejecuta automaticamente. Debe lanzarse manualmente por WP-CLI cuando el flujo nuevo de video ya este validado.', 'goodsleep-elementor' ); ?></p>
 			<form method="post" action="options.php">
 				<?php settings_fields( 'goodsleep_elementor_settings_group' ); ?>
 				<?php do_settings_sections( 'goodsleep-elementor' ); ?>
