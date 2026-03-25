@@ -19,6 +19,7 @@ function goodsleep_get_settings() {
 		'openai_video_model'      => 'sora-2',
 		'openai_video_submit_path'=> '/videos',
 		'openai_video_status_path'=> '/videos/%s',
+		'openai_video_content_path'=> '/videos/%s/content',
 		'video_resolution'        => '720p',
 		'video_aspect_ratio'      => '9:16',
 		'video_duration'          => 12,

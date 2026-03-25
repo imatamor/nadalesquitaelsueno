@@ -86,6 +86,58 @@ class Goodsleep_Elementor_OpenAI_Video_Client {
 	}
 
 	/**
+	 * Descarga el MP4 final del video completado.
+	 *
+	 * @param string $task_id ID del video.
+	 * @return string|WP_Error
+	 */
+	public function download_video_content( $task_id ) {
+		$api_key = goodsleep_get_setting( 'openai_api_key', '' );
+		$base    = untrailingslashit( goodsleep_get_setting( 'openai_base_url', '' ) );
+		$path    = goodsleep_get_setting( 'openai_video_content_path', '/videos/%s/content' );
+		$url     = $base . sprintf( $path, rawurlencode( (string) $task_id ) );
+
+		if ( '' === $api_key || '' === $url || '' === (string) $task_id ) {
+			return new WP_Error( 'goodsleep_missing_openai_config', __( 'OpenAI Sora no esta configurado.', 'goodsleep-elementor' ) );
+		}
+
+		if ( ! function_exists( 'wp_tempnam' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+
+		$temp_path = wp_tempnam( sanitize_file_name( (string) $task_id . '.mp4' ) );
+		if ( ! $temp_path ) {
+			return new WP_Error( 'goodsleep_video_temp_failed', __( 'No se pudo preparar la descarga del video final.', 'goodsleep-elementor' ) );
+		}
+
+		$response = wp_remote_get(
+			$url,
+			array(
+				'timeout'  => 180,
+				'stream'   => true,
+				'filename' => $temp_path,
+				'headers'  => array(
+					'Authorization' => 'Bearer ' . $api_key,
+					'Accept'        => 'video/mp4',
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			@unlink( $temp_path );
+			return $response;
+		}
+
+		$status_code = (int) wp_remote_retrieve_response_code( $response );
+		if ( $status_code >= 400 || ! file_exists( $temp_path ) || 0 === filesize( $temp_path ) ) {
+			@unlink( $temp_path );
+			return new WP_Error( 'goodsleep_openai_video_content_failed', __( 'OpenAI no devolvio un archivo MP4 utilizable.', 'goodsleep-elementor' ), array( 'status' => 502, 'provider_status' => $status_code ) );
+		}
+
+		return $temp_path;
+	}
+
+	/**
 	 * Extrae el ID del video.
 	 *
 	 * @param array<string,mixed> $payload Respuesta.

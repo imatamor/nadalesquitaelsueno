@@ -228,8 +228,17 @@ class Goodsleep_Elementor_Story_Video_Service {
 			return new WP_Error( 'goodsleep_generation_failed', __( 'La tarea de Sora fallo durante la generacion.', 'goodsleep-elementor' ) );
 		}
 
-		$video_url = $this->provider_client->extract_video_url( $task );
-		if ( '' === $video_url ) {
+		$video_url  = $this->provider_client->extract_video_url( $task );
+		$video_path = '';
+
+		if ( '' === $video_url && 'completed' === $status ) {
+			$downloaded_video = $this->provider_client->download_video_content( $task_id );
+			if ( ! is_wp_error( $downloaded_video ) ) {
+				$video_path = $downloaded_video;
+			}
+		}
+
+		if ( '' === $video_url && '' === $video_path ) {
 			update_post_meta( $post_id, '_goodsleep_story_generation_status', 'failed' );
 			update_post_meta( $post_id, '_goodsleep_story_generation_error', __( 'Sora no devolvio una URL de video utilizable.', 'goodsleep-elementor' ) );
 			return new WP_Error( 'goodsleep_video_missing', __( 'Sora no devolvio una URL de video utilizable.', 'goodsleep-elementor' ) );
@@ -241,6 +250,7 @@ class Goodsleep_Elementor_Story_Video_Service {
 		$finalized = $this->video_processor->finalize_video(
 			array(
 				'video_url' => $video_url,
+				'video_path' => $video_path,
 			),
 			$track ? $track : array(),
 			$base_name
