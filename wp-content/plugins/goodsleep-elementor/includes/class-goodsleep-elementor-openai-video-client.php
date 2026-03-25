@@ -25,6 +25,7 @@ class Goodsleep_Elementor_OpenAI_Video_Client {
 		$model    = ! empty( $payload['model'] ) ? sanitize_text_field( (string) $payload['model'] ) : sanitize_text_field( (string) goodsleep_get_setting( 'openai_video_model', 'sora-2' ) );
 		$prompt   = trim( (string) $payload['prompt'] );
 		$duration = max( 1, (int) $payload['duration'] );
+		$seconds  = (string) $duration;
 		$size     = ! empty( $payload['size'] ) ? sanitize_text_field( (string) $payload['size'] ) : '720x1280';
 
 		if ( '' === $model || '' === $prompt ) {
@@ -35,7 +36,7 @@ class Goodsleep_Elementor_OpenAI_Video_Client {
 			'model'   => $model,
 			'prompt'  => $prompt,
 			'size'    => $size,
-			'seconds' => $duration,
+			'seconds' => $seconds,
 		);
 
 		$response = wp_remote_post(
