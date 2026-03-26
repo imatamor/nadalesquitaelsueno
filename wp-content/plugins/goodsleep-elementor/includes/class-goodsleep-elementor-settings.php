@@ -52,6 +52,7 @@ class Goodsleep_Elementor_Settings {
 		$this->add_text_field( 'openai_api_key', __( 'OpenAI API Key', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'openai_base_url', __( 'OpenAI Base URL', 'goodsleep-elementor' ), 'url' );
 		$this->add_text_field( 'openai_video_model', __( 'Modelo de video', 'goodsleep-elementor' ) );
+		$this->add_text_field( 'openai_webhook_secret', __( 'OpenAI Webhook Secret', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'openai_video_submit_path', __( 'Ruta de creacion de video', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'openai_video_remix_path', __( 'Ruta de remix de video', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'openai_video_status_path', __( 'Ruta de consulta de video', 'goodsleep-elementor' ) );
@@ -122,6 +123,7 @@ class Goodsleep_Elementor_Settings {
 		$sanitized['openai_api_key']         = isset( $input['openai_api_key'] ) ? sanitize_text_field( $input['openai_api_key'] ) : '';
 		$sanitized['openai_base_url']        = isset( $input['openai_base_url'] ) ? esc_url_raw( $input['openai_base_url'] ) : '';
 		$sanitized['openai_video_model']     = isset( $input['openai_video_model'] ) ? sanitize_text_field( $input['openai_video_model'] ) : 'sora-2';
+		$sanitized['openai_webhook_secret']  = isset( $input['openai_webhook_secret'] ) ? sanitize_text_field( $input['openai_webhook_secret'] ) : '';
 		$sanitized['openai_video_submit_path'] = isset( $input['openai_video_submit_path'] ) ? sanitize_text_field( $input['openai_video_submit_path'] ) : '/videos';
 		$sanitized['openai_video_remix_path'] = isset( $input['openai_video_remix_path'] ) ? sanitize_text_field( $input['openai_video_remix_path'] ) : '/videos/%s/remix';
 		$sanitized['openai_video_status_path'] = isset( $input['openai_video_status_path'] ) ? sanitize_text_field( $input['openai_video_status_path'] ) : '/videos/%s';

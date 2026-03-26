@@ -90,6 +90,16 @@ class Goodsleep_Elementor_REST_Controller {
 				'permission_callback' => '__return_true',
 			)
 		);
+
+		register_rest_route(
+			'goodsleep/v1',
+			'/openai-webhook',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'handle_openai_webhook' ),
+				'permission_callback' => '__return_true',
+			)
+		);
 	}
 
 	/**
@@ -143,6 +153,64 @@ class Goodsleep_Elementor_REST_Controller {
 		}
 
 		return rest_ensure_response( $this->video_service->build_status_payload( $story_id ) );
+	}
+
+	/**
+	 * Recibe eventos webhook de OpenAI para avanzar el pipeline de video.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function handle_openai_webhook( WP_REST_Request $request ) {
+		$raw_body = (string) $request->get_body();
+		$secret   = (string) goodsleep_get_setting( 'openai_webhook_secret', '' );
+
+		if ( '' === trim( $secret ) ) {
+			return new WP_Error( 'goodsleep_missing_webhook_secret', __( 'El webhook de OpenAI no tiene secret configurado.', 'goodsleep-elementor' ), array( 'status' => 500 ) );
+		}
+
+		$signature = $this->extract_webhook_signature( $request );
+		$event_id  = sanitize_text_field( (string) $request->get_header( 'webhook-id' ) );
+		$timestamp = sanitize_text_field( (string) $request->get_header( 'webhook-timestamp' ) );
+
+		if ( ! $this->is_valid_openai_webhook_signature( $raw_body, $event_id, $timestamp, $signature, $secret ) ) {
+			return new WP_Error( 'goodsleep_invalid_webhook_signature', __( 'La firma del webhook de OpenAI no es valida.', 'goodsleep-elementor' ), array( 'status' => 401 ) );
+		}
+
+		$payload = json_decode( $raw_body, true );
+		if ( ! is_array( $payload ) ) {
+			return new WP_Error( 'goodsleep_invalid_webhook_payload', __( 'El webhook de OpenAI llego con un payload invalido.', 'goodsleep-elementor' ), array( 'status' => 400 ) );
+		}
+
+		$task_id    = $this->extract_webhook_task_id( $payload );
+		$event_type = isset( $payload['type'] ) ? sanitize_text_field( (string) $payload['type'] ) : '';
+		$story_id   = $this->video_service->find_story_id_by_task_id( $task_id );
+
+		if ( $story_id <= 0 ) {
+			return rest_ensure_response(
+				array(
+					'ok'      => true,
+					'ignored' => true,
+					'reason'  => 'story_not_found',
+				)
+			);
+		}
+
+		if ( $this->is_failed_webhook_event( $event_type ) ) {
+			$message = $this->extract_webhook_error_message( $payload );
+			$this->video_service->mark_story_failed( $story_id, $message ? $message : __( 'OpenAI reporto un error en la generacion del video.', 'goodsleep-elementor' ) );
+		} elseif ( $this->is_completed_webhook_event( $event_type ) ) {
+			$this->video_service->process_story( $story_id );
+		}
+
+		return rest_ensure_response(
+			array(
+				'ok'        => true,
+				'storyId'   => $story_id,
+				'taskId'    => $task_id,
+				'eventType' => $event_type,
+			)
+		);
 	}
 
 	/**
@@ -234,6 +302,101 @@ class Goodsleep_Elementor_REST_Controller {
 				'page'     => $page,
 			)
 		);
+	}
+
+	/**
+	 * Valida la firma del webhook usando el formato estandar id.timestamp.body.
+	 *
+	 * @param string $body      Cuerpo crudo.
+	 * @param string $event_id  Webhook id.
+	 * @param string $timestamp Timestamp.
+	 * @param string $signature Firma v1.
+	 * @param string $secret    Secret configurado.
+	 * @return bool
+	 */
+	protected function is_valid_openai_webhook_signature( $body, $event_id, $timestamp, $signature, $secret ) {
+		if ( '' === $body || '' === $event_id || '' === $timestamp || '' === $signature || '' === $secret ) {
+			return false;
+		}
+
+		$signed_payload = $event_id . '.' . $timestamp . '.' . $body;
+		$expected       = base64_encode( hash_hmac( 'sha256', $signed_payload, $secret, true ) );
+
+		return hash_equals( $expected, $signature );
+	}
+
+	/**
+	 * Extrae la firma v1 del header standard webhooks.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return string
+	 */
+	protected function extract_webhook_signature( WP_REST_Request $request ) {
+		$header = (string) $request->get_header( 'webhook-signature' );
+
+		if ( preg_match( '/v1[,=]([A-Za-z0-9+\/=_-]+)/', $header, $matches ) ) {
+			return sanitize_text_field( $matches[1] );
+		}
+
+		return sanitize_text_field( trim( $header ) );
+	}
+
+	/**
+	 * Extrae el task id desde el payload del webhook.
+	 *
+	 * @param array<string,mixed> $payload Evento.
+	 * @return string
+	 */
+	protected function extract_webhook_task_id( $payload ) {
+		if ( ! empty( $payload['data']['id'] ) && is_string( $payload['data']['id'] ) ) {
+			return sanitize_text_field( $payload['data']['id'] );
+		}
+
+		if ( ! empty( $payload['data']['object']['id'] ) && is_string( $payload['data']['object']['id'] ) ) {
+			return sanitize_text_field( $payload['data']['object']['id'] );
+		}
+
+		return '';
+	}
+
+	/**
+	 * Determina si un evento reporta completion.
+	 *
+	 * @param string $event_type Tipo.
+	 * @return bool
+	 */
+	protected function is_completed_webhook_event( $event_type ) {
+		return false !== strpos( $event_type, 'completed' );
+	}
+
+	/**
+	 * Determina si un evento reporta falla.
+	 *
+	 * @param string $event_type Tipo.
+	 * @return bool
+	 */
+	protected function is_failed_webhook_event( $event_type ) {
+		return false !== strpos( $event_type, 'failed' ) || false !== strpos( $event_type, 'error' ) || false !== strpos( $event_type, 'cancel' );
+	}
+
+	/**
+	 * Extrae mensaje de error del webhook.
+	 *
+	 * @param array<string,mixed> $payload Evento.
+	 * @return string
+	 */
+	protected function extract_webhook_error_message( $payload ) {
+		foreach ( array( 'message', 'error', 'detail' ) as $key ) {
+			if ( ! empty( $payload['data'][ $key ] ) && is_string( $payload['data'][ $key ] ) ) {
+				return sanitize_text_field( $payload['data'][ $key ] );
+			}
+		}
+
+		if ( ! empty( $payload['data']['error']['message'] ) && is_string( $payload['data']['error']['message'] ) ) {
+			return sanitize_text_field( $payload['data']['error']['message'] );
+		}
+
+		return '';
 	}
 
 	/**

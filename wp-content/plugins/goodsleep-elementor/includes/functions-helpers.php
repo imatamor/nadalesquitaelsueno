@@ -21,6 +21,7 @@ function goodsleep_get_settings() {
 		'openai_video_remix_path' => '/videos/%s/remix',
 		'openai_video_status_path'=> '/videos/%s',
 		'openai_video_content_path'=> '/videos/%s/content',
+		'openai_webhook_secret'   => '',
 		'video_resolution'        => '720p',
 		'video_aspect_ratio'      => '9:16',
 		'video_duration'          => 12,
@@ -862,7 +863,7 @@ function goodsleep_build_video_clip_prompt( $story_segment, $story_name = '', $c
 		array(
 			$style,
 			$clip_count > 1 ? sprintf( 'Este es el clip %1$d de %2$d de una misma historia.', $clip_index + 1, $clip_count ) : '',
-			! $is_final_clip ? 'No cierres todavia la historia. No incluyas aun la frase final obligatoria ni el plano final de la persona B durmiendo; ese cierre pertenece exclusivamente al ultimo clip.' : '',
+			! $is_final_clip ? 'No cierres todavia la historia. No incluyas aun la frase final obligatoria ni el plano final de la persona B durmiendo; ese cierre pertenece exclusivamente al ultimo clip. Desarrolla esta parte con un ritmo pausado y respirado, dejando espacio para acciones y reacciones visuales, sin comprimir toda la narracion en estos 12 segundos. No muestres todavia el producto como packshot final ni como foco principal del encuadre.' : 'Continua exactamente desde el final del clip anterior y usa este clip para resolver con calma la segunda mitad del relato. Mantener ritmo pausado, dejando que las acciones respiren y reservando el cierre para los ultimos segundos. Si aparece el producto, debe verse como un elemento secundario integrado a la escena final, en segundo plano o plano medio secundario, nunca en primerisimo primer plano ni ocupando todo el encuadre.',
 			$clip_addition,
 			'' !== $story_name && $is_final_clip ? 'En el plano final, la persona B, identificada como ' . $story_name . ', debe aparecer durmiendo placidamente, en calma absoluta, como si nada le afectara.' : '',
 			'' !== $story_name ? 'Personaje B, quien provoca el conflicto y a quien corresponde la frase final: ' . $story_name . '.' : '',

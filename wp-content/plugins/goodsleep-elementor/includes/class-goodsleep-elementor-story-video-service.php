@@ -139,14 +139,17 @@ class Goodsleep_Elementor_Story_Video_Service {
 
 		$primary_story_text = '' !== trim( $story_text ) ? $story_text : $combined;
 		$clip_count         = goodsleep_should_use_two_video_clips( $primary_story_text ) ? 2 : 1;
-		$scene_count       = goodsleep_estimate_scene_count( $combined );
-		$task_ids          = array();
-		$task_payloads     = array();
-		$clip_prompts      = array();
-		$product_reference = goodsleep_get_video_product_reference();
+		$story_segments     = goodsleep_split_story_for_video_clips( $primary_story_text, $clip_count );
+		$story_segments     = array_values( array_filter( array_map( 'trim', $story_segments ) ) );
+		$clip_count         = max( 1, count( $story_segments ) );
+		$scene_count        = goodsleep_estimate_scene_count( $combined );
+		$task_ids           = array();
+		$task_payloads      = array();
+		$clip_prompts       = array();
+		$product_reference  = goodsleep_get_video_product_reference();
 
-		for ( $clip_index = 0; $clip_index < $clip_count; $clip_index++ ) {
-			$clip_prompts[] = goodsleep_build_video_clip_prompt( $primary_story_text, $story_name, $closing_phrase, $clip_index, $clip_count );
+		foreach ( $story_segments as $clip_index => $story_segment ) {
+			$clip_prompts[] = goodsleep_build_video_clip_prompt( $story_segment, $story_name, $closing_phrase, $clip_index, $clip_count );
 		}
 
 		$initial_task = $this->provider_client->create_video_task(
@@ -155,7 +158,7 @@ class Goodsleep_Elementor_Story_Video_Service {
 				'prompt'          => $clip_prompts[0],
 				'duration'        => (int) goodsleep_get_setting( 'video_duration', 12 ),
 				'size'            => $this->resolve_video_size(),
-				'input_reference' => $product_reference,
+				'input_reference' => 1 === $clip_count ? $product_reference : array(),
 			)
 		);
 
@@ -585,5 +588,60 @@ class Goodsleep_Elementor_Story_Video_Service {
 		}
 
 		return '720x1280';
+	}
+
+	/**
+	 * Busca la historia asociada a un task de OpenAI.
+	 *
+	 * @param string $task_id ID remoto.
+	 * @return int
+	 */
+	public function find_story_id_by_task_id( $task_id ) {
+		$task_id = sanitize_text_field( (string) $task_id );
+
+		if ( '' === $task_id ) {
+			return 0;
+		}
+
+		$query = new WP_Query(
+			array(
+				'post_type'      => 'goodsleep_story',
+				'post_status'    => array( 'draft', 'publish', 'private' ),
+				'posts_per_page' => 1,
+				'fields'         => 'ids',
+				'meta_query'     => array(
+					'relation' => 'OR',
+					array(
+						'key'   => '_goodsleep_story_task_id',
+						'value' => $task_id,
+					),
+					array(
+						'key'     => '_goodsleep_story_task_ids',
+						'value'   => $task_id,
+						'compare' => 'LIKE',
+					),
+				),
+			)
+		);
+
+		return ! empty( $query->posts[0] ) ? (int) $query->posts[0] : 0;
+	}
+
+	/**
+	 * Marca una historia como fallida desde un evento externo.
+	 *
+	 * @param int    $post_id  ID historia.
+	 * @param string $message  Mensaje de error.
+	 * @return void
+	 */
+	public function mark_story_failed( $post_id, $message ) {
+		$post_id = (int) $post_id;
+
+		if ( $post_id <= 0 ) {
+			return;
+		}
+
+		update_post_meta( $post_id, '_goodsleep_story_generation_status', 'failed' );
+		update_post_meta( $post_id, '_goodsleep_story_generation_error', sanitize_text_field( (string) $message ) );
 	}
 }
