@@ -27,6 +27,7 @@ class Goodsleep_Elementor_OpenAI_Video_Client {
 		$duration = max( 1, (int) $payload['duration'] );
 		$seconds  = (string) $duration;
 		$size     = ! empty( $payload['size'] ) ? sanitize_text_field( (string) $payload['size'] ) : '720x1280';
+		$input_reference = ! empty( $payload['input_reference'] ) && is_array( $payload['input_reference'] ) ? $payload['input_reference'] : array();
 
 		if ( '' === $model || '' === $prompt ) {
 			return new WP_Error( 'goodsleep_invalid_openai_payload', __( 'Faltan datos para crear el video en Sora.', 'goodsleep-elementor' ) );
@@ -38,6 +39,10 @@ class Goodsleep_Elementor_OpenAI_Video_Client {
 			'size'    => $size,
 			'seconds' => $seconds,
 		);
+
+		if ( ! empty( $input_reference['path'] ) ) {
+			return $this->create_video_task_with_reference( $url, $api_key, $request_body, $input_reference );
+		}
 
 		$response = wp_remote_post(
 			$url,
@@ -53,6 +58,73 @@ class Goodsleep_Elementor_OpenAI_Video_Client {
 		);
 
 		return $this->decode_response( $response, 'goodsleep_openai_video_create_failed', __( 'OpenAI devolvio un error al crear el video.', 'goodsleep-elementor' ) );
+	}
+
+	/**
+	 * Crea una tarea usando multipart cuando existe una imagen de referencia.
+	 *
+	 * @param string              $url             Endpoint.
+	 * @param string              $api_key         API key.
+	 * @param array<string,mixed> $request_body    Campos base.
+	 * @param array<string,mixed> $input_reference Referencia visual.
+	 * @return array<string,mixed>|WP_Error
+	 */
+	protected function create_video_task_with_reference( $url, $api_key, $request_body, $input_reference ) {
+		$file_path = ! empty( $input_reference['path'] ) ? (string) $input_reference['path'] : '';
+		$mime_type = ! empty( $input_reference['mime_type'] ) ? (string) $input_reference['mime_type'] : 'image/jpeg';
+
+		if ( '' === $file_path || ! file_exists( $file_path ) ) {
+			return new WP_Error( 'goodsleep_invalid_video_reference', __( 'La imagen de referencia del producto no es valida.', 'goodsleep-elementor' ) );
+		}
+
+		if ( ! function_exists( 'curl_init' ) || ! class_exists( 'CURLFile' ) ) {
+			return new WP_Error( 'goodsleep_missing_curl_reference', __( 'El servidor no puede enviar imagenes de referencia a Sora porque CURL no esta disponible.', 'goodsleep-elementor' ) );
+		}
+
+		$curl_file = curl_file_create( $file_path, $mime_type, wp_basename( $file_path ) );
+		$multipart = array_merge(
+			$request_body,
+			array(
+				'input_reference' => $curl_file,
+			)
+		);
+
+		$ch = curl_init( $url );
+
+		curl_setopt_array(
+			$ch,
+			array(
+				CURLOPT_POST           => true,
+				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_TIMEOUT        => 60,
+				CURLOPT_HTTPHEADER     => array(
+					'Authorization: Bearer ' . $api_key,
+					'Accept: application/json',
+				),
+				CURLOPT_POSTFIELDS     => $multipart,
+			)
+		);
+
+		$body       = curl_exec( $ch );
+		$curl_error = curl_error( $ch );
+		$status     = (int) curl_getinfo( $ch, CURLINFO_RESPONSE_CODE );
+		curl_close( $ch );
+
+		if ( false === $body ) {
+			return new WP_Error( 'goodsleep_openai_video_create_failed', $curl_error ? $curl_error : __( 'No se pudo conectar con OpenAI.', 'goodsleep-elementor' ) );
+		}
+
+		$decoded = json_decode( (string) $body, true );
+
+		if ( $status >= 400 ) {
+			return new WP_Error( 'goodsleep_openai_video_create_failed', $this->extract_error_message( $decoded, __( 'OpenAI devolvio un error al crear el video.', 'goodsleep-elementor' ) ), array( 'status' => 502, 'provider_status' => $status ) );
+		}
+
+		if ( ! is_array( $decoded ) ) {
+			return new WP_Error( 'goodsleep_openai_video_create_failed', __( 'OpenAI devolvio una respuesta invalida al crear el video.', 'goodsleep-elementor' ) );
+		}
+
+		return $decoded;
 	}
 
 	/**

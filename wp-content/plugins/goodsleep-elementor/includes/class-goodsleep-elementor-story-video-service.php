@@ -139,23 +139,23 @@ class Goodsleep_Elementor_Story_Video_Service {
 
 		$primary_story_text = '' !== trim( $story_text ) ? $story_text : $combined;
 		$clip_count         = goodsleep_should_use_two_video_clips( $primary_story_text ) ? 2 : 1;
-		$story_segments     = goodsleep_split_story_for_video_clips( $primary_story_text, $clip_count );
-		$story_segments     = array_values( array_filter( array_map( 'trim', $story_segments ) ) );
-		$clip_count         = max( 1, count( $story_segments ) );
 		$scene_count        = goodsleep_estimate_scene_count( $combined );
 		$task_ids           = array();
 		$task_payloads      = array();
 		$clip_prompts       = array();
+		$product_reference  = goodsleep_get_video_product_reference();
 
-		foreach ( $story_segments as $clip_index => $story_segment ) {
-			$clip_prompt  = goodsleep_build_video_clip_prompt( $story_segment, $story_name, $closing_phrase, $clip_index, $clip_count );
+		for ( $clip_index = 0; $clip_index < $clip_count; $clip_index++ ) {
+			$is_final_clip = $clip_index >= ( $clip_count - 1 );
+			$clip_prompt   = goodsleep_build_video_clip_prompt( $primary_story_text, $story_name, $closing_phrase, $clip_index, $clip_count );
 			$clip_prompts[] = $clip_prompt;
 			$task = $this->provider_client->create_video_task(
 				array(
-					'model'    => goodsleep_get_setting( 'openai_video_model', 'sora-2' ),
-					'prompt'   => $clip_prompt,
-					'duration' => (int) goodsleep_get_setting( 'video_duration', 12 ),
-					'size'     => $this->resolve_video_size(),
+					'model'           => goodsleep_get_setting( 'openai_video_model', 'sora-2' ),
+					'prompt'          => $clip_prompt,
+					'duration'        => (int) goodsleep_get_setting( 'video_duration', 12 ),
+					'size'            => $this->resolve_video_size(),
+					'input_reference' => $is_final_clip ? $product_reference : array(),
 				)
 			);
 

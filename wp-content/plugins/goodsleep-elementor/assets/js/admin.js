@@ -92,6 +92,62 @@ document.addEventListener('DOMContentLoaded', function() {
 		reindexRows();
 	});
 
+	document.querySelectorAll('[data-goodsleep-media-field]').forEach(function(field) {
+		var selectButton = field.querySelector('[data-select-media]');
+		var clearButton = field.querySelector('[data-clear-media]');
+		var idInput = field.querySelector('[data-media-id]');
+		var urlInput = field.querySelector('[data-media-url]');
+
+		function syncClearState() {
+			if (clearButton) {
+				clearButton.disabled = !urlInput || !urlInput.value;
+			}
+		}
+
+		if (selectButton && window.wp && wp.media) {
+			selectButton.addEventListener('click', function() {
+				var frame = wp.media({
+					title: goodsleepAdmin.imageTitle || 'Seleccionar imagen del producto',
+					button: { text: goodsleepAdmin.imageButton || 'Usar esta imagen' },
+					multiple: false,
+					library: { type: ['image'] }
+				});
+
+				frame.on('select', function() {
+					var attachment = frame.state().get('selection').first().toJSON();
+
+					if (idInput) {
+						idInput.value = attachment.id || '';
+					}
+
+					if (urlInput) {
+						urlInput.value = attachment.url || '';
+					}
+
+					syncClearState();
+				});
+
+				frame.open();
+			});
+		}
+
+		if (clearButton) {
+			clearButton.addEventListener('click', function() {
+				if (idInput) {
+					idInput.value = '';
+				}
+
+				if (urlInput) {
+					urlInput.value = '';
+				}
+
+				syncClearState();
+			});
+		}
+
+		syncClearState();
+	});
+
 	document.querySelectorAll('.goodsleep-admin-picklist').forEach(function(picklist) {
 		var search = picklist.querySelector('.goodsleep-admin-picklist__search');
 		var languageFilter = picklist.querySelector('[data-picklist-languages]');

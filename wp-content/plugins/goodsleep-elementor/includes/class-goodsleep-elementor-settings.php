@@ -71,6 +71,9 @@ class Goodsleep_Elementor_Settings {
 		$this->add_text_field( 'video_poll_interval', __( 'Polling frontend (segundos)', 'goodsleep-elementor' ), 'number', 'goodsleep_video_section' );
 		$this->add_text_field( 'video_poll_attempts', __( 'Intentos de polling', 'goodsleep-elementor' ), 'number', 'goodsleep_video_section' );
 		$this->add_textarea_field( 'video_prompt_style', __( 'Prompt base de video', 'goodsleep-elementor' ), 6, 'goodsleep_video_section' );
+		$this->add_textarea_field( 'video_clip_1_prompt_addition', __( 'Prompt adicional clip 1', 'goodsleep-elementor' ), 4, 'goodsleep_video_section' );
+		$this->add_textarea_field( 'video_clip_2_prompt_addition', __( 'Prompt adicional clip 2', 'goodsleep-elementor' ), 4, 'goodsleep_video_section' );
+		add_settings_field( 'video_product_reference', __( 'Imagen de referencia del producto', 'goodsleep-elementor' ), array( $this, 'render_media_reference_field' ), 'goodsleep-elementor', 'goodsleep_video_section', array( 'key' => 'video_product_reference' ) );
 		add_settings_field( 'video_music_enabled', __( 'Anadir musica de fondo', 'goodsleep-elementor' ), array( $this, 'render_checkbox_field' ), 'goodsleep-elementor', 'goodsleep_video_section', array( 'key' => 'video_music_enabled', 'label' => __( 'Mezclar track musical con el video final cuando exista track seleccionado.', 'goodsleep-elementor' ) ) );
 		add_settings_field( 'video_public_only', __( 'Ocultar audio legacy en frontend', 'goodsleep-elementor' ), array( $this, 'render_checkbox_field' ), 'goodsleep-elementor', 'goodsleep_catalog_section', array( 'key' => 'video_public_only', 'label' => __( 'Mostrar solo video en frontend para dejar el audio unicamente como respaldo tecnico.', 'goodsleep-elementor' ) ) );
 
@@ -126,6 +129,9 @@ class Goodsleep_Elementor_Settings {
 		$sanitized['video_poll_interval']    = isset( $input['video_poll_interval'] ) ? max( 2, absint( $input['video_poll_interval'] ) ) : 5;
 		$sanitized['video_poll_attempts']    = isset( $input['video_poll_attempts'] ) ? max( 1, absint( $input['video_poll_attempts'] ) ) : 24;
 		$sanitized['video_prompt_style']     = isset( $input['video_prompt_style'] ) ? sanitize_textarea_field( $input['video_prompt_style'] ) : '';
+		$sanitized['video_clip_1_prompt_addition'] = isset( $input['video_clip_1_prompt_addition'] ) ? sanitize_textarea_field( $input['video_clip_1_prompt_addition'] ) : '';
+		$sanitized['video_clip_2_prompt_addition'] = isset( $input['video_clip_2_prompt_addition'] ) ? sanitize_textarea_field( $input['video_clip_2_prompt_addition'] ) : '';
+		$sanitized['video_product_reference'] = $this->sanitize_media_reference( isset( $input['video_product_reference'] ) ? $input['video_product_reference'] : array() );
 		$sanitized['video_music_enabled']    = ! empty( $input['video_music_enabled'] ) ? 1 : 0;
 		$sanitized['video_public_only']      = ! empty( $input['video_public_only'] ) ? 1 : 0;
 		$sanitized['mailjet_api_key']        = isset( $input['mailjet_api_key'] ) ? sanitize_text_field( $input['mailjet_api_key'] ) : '';
@@ -190,6 +196,21 @@ class Goodsleep_Elementor_Settings {
 	}
 
 	/**
+	 * Sanitiza una referencia de medios del admin.
+	 *
+	 * @param array<string,mixed> $input Datos del campo.
+	 * @return array<string,mixed>
+	 */
+	protected function sanitize_media_reference( $input ) {
+		$input = is_array( $input ) ? $input : array();
+
+		return array(
+			'attachment_id' => ! empty( $input['attachment_id'] ) ? absint( $input['attachment_id'] ) : 0,
+			'url'           => ! empty( $input['url'] ) ? esc_url_raw( (string) $input['url'] ) : '',
+		);
+	}
+
+	/**
 	 * Renderiza text field.
 	 *
 	 * @param array<string,string> $args Args.
@@ -237,6 +258,31 @@ class Goodsleep_Elementor_Settings {
 			<input type="checkbox" name="goodsleep_elementor_settings[<?php echo esc_attr( $key ); ?>]" value="1" <?php checked( ! empty( $value ) ); ?>>
 			<span><?php echo esc_html( $label ); ?></span>
 		</label>
+		<?php
+	}
+
+	/**
+	 * Renderiza un selector de imagen de referencia.
+	 *
+	 * @param array<string,string> $args Args.
+	 * @return void
+	 */
+	public function render_media_reference_field( $args ) {
+		$key   = $args['key'];
+		$value = goodsleep_get_setting( $key, array() );
+		$value = is_array( $value ) ? $value : array();
+		$url   = ! empty( $value['url'] ) ? (string) $value['url'] : '';
+		$id    = ! empty( $value['attachment_id'] ) ? (int) $value['attachment_id'] : 0;
+		?>
+		<div class="goodsleep-admin-media-field" data-goodsleep-media-field>
+			<div class="goodsleep-admin-media-field__controls">
+				<input type="hidden" name="goodsleep_elementor_settings[<?php echo esc_attr( $key ); ?>][attachment_id]" value="<?php echo esc_attr( $id ); ?>" data-media-id>
+				<input type="text" class="regular-text goodsleep-admin-media-field__url" name="goodsleep_elementor_settings[<?php echo esc_attr( $key ); ?>][url]" value="<?php echo esc_attr( $url ); ?>" readonly data-media-url>
+				<button type="button" class="button" data-select-media><?php esc_html_e( 'Seleccionar imagen', 'goodsleep-elementor' ); ?></button>
+				<button type="button" class="button-link-delete" data-clear-media <?php disabled( '' === $url ); ?>><?php esc_html_e( 'Quitar', 'goodsleep-elementor' ); ?></button>
+			</div>
+			<p class="description"><?php esc_html_e( 'Usa una imagen real del producto desde la galeria de medios para enviarla como referencia visual al clip final.', 'goodsleep-elementor' ); ?></p>
+		</div>
 		<?php
 	}
 

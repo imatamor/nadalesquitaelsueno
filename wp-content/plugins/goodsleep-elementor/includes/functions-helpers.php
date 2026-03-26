@@ -26,6 +26,12 @@ function goodsleep_get_settings() {
 		'video_poll_interval'     => 5,
 		'video_poll_attempts'     => 24,
 		'video_prompt_style'      => goodsleep_get_default_video_prompt_style(),
+		'video_clip_1_prompt_addition' => '',
+		'video_clip_2_prompt_addition' => '',
+		'video_product_reference' => array(
+			'attachment_id' => 0,
+			'url'           => '',
+		),
 		'video_music_enabled'     => 1,
 		'video_public_only'       => 0,
 		'mailjet_api_key'         => '',
@@ -150,6 +156,49 @@ function goodsleep_render_video_prompt_template( $template, $closing_phrase = ''
 		array( '[FRASE_FINAL]' ),
 		array( $closing_phrase ),
 		$template
+	);
+}
+
+/**
+ * Devuelve instrucciones adicionales por clip.
+ *
+ * @param int $clip_index Posicion del clip.
+ * @param int $clip_count Total de clips.
+ * @return string
+ */
+function goodsleep_get_video_clip_prompt_addition( $clip_index, $clip_count ) {
+	$clip_index = max( 0, (int) $clip_index );
+	$clip_count = max( 1, (int) $clip_count );
+
+	if ( 1 === $clip_count || $clip_index >= ( $clip_count - 1 ) ) {
+		return trim( (string) goodsleep_get_setting( 'video_clip_2_prompt_addition', '' ) );
+	}
+
+	return trim( (string) goodsleep_get_setting( 'video_clip_1_prompt_addition', '' ) );
+}
+
+/**
+ * Devuelve la referencia de producto configurada para Sora.
+ *
+ * @return array<string,mixed>
+ */
+function goodsleep_get_video_product_reference() {
+	$reference = goodsleep_get_setting( 'video_product_reference', array() );
+	$reference = is_array( $reference ) ? $reference : array();
+	$file_id   = ! empty( $reference['attachment_id'] ) ? absint( $reference['attachment_id'] ) : 0;
+	$url       = ! empty( $reference['url'] ) ? esc_url_raw( (string) $reference['url'] ) : '';
+	$path      = $file_id ? get_attached_file( $file_id ) : '';
+	$mime_type = $file_id ? get_post_mime_type( $file_id ) : '';
+
+	if ( ! $path || ! file_exists( $path ) ) {
+		$path = '';
+	}
+
+	return array(
+		'attachment_id' => $file_id,
+		'url'           => $url,
+		'path'          => $path,
+		'mime_type'     => $mime_type ? $mime_type : 'image/jpeg',
 	);
 }
 
@@ -806,12 +855,14 @@ function goodsleep_build_video_clip_prompt( $story_segment, $story_name = '', $c
 	$clip_count    = max( 1, (int) $clip_count );
 	$is_final_clip = $clip_index >= ( $clip_count - 1 );
 	$style         = goodsleep_render_video_prompt_template( (string) goodsleep_get_setting( 'video_prompt_style', '' ), $is_final_clip ? $closing_phrase : '' );
+	$clip_addition = goodsleep_get_video_clip_prompt_addition( $clip_index, $clip_count );
 
 	$parts = array_filter(
 		array(
 			$style,
 			$clip_count > 1 ? sprintf( 'Este es el clip %1$d de %2$d de una misma historia.', $clip_index + 1, $clip_count ) : '',
 			! $is_final_clip ? 'No cierres todavia la historia. No incluyas aun la frase final obligatoria ni el plano final de la persona B durmiendo; ese cierre pertenece exclusivamente al ultimo clip.' : '',
+			$clip_addition,
 			'' !== $story_name && $is_final_clip ? 'En el plano final, la persona B, identificada como ' . $story_name . ', debe aparecer durmiendo placidamente, en calma absoluta, como si nada le afectara.' : '',
 			'' !== $story_name ? 'Personaje B, quien provoca el conflicto y a quien corresponde la frase final: ' . $story_name . '.' : '',
 			'' !== $story_segment ? 'La narracion completa en espanol latino debe seguir esta historia: ' . $story_segment : '',

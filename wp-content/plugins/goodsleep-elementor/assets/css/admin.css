@@ -106,8 +106,28 @@
   white-space: nowrap;
 }
 
+.goodsleep-admin-media-field {
+  max-width: 820px;
+}
+
+.goodsleep-admin-media-field__controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.goodsleep-admin-media-field__url {
+  width: 100%;
+  max-width: none;
+}
+
 @media (max-width: 782px) {
   .goodsleep-admin-track-row {
+    grid-template-columns: 1fr;
+  }
+
+  .goodsleep-admin-media-field__controls {
     grid-template-columns: 1fr;
   }
 }
