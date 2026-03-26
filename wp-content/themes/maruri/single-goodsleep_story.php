@@ -89,7 +89,7 @@ while ( have_posts() ) :
 							<?php if ( 'video' === $media['type'] && ! empty( $media['url'] ) ) : ?>
 								<button type="button" class="goodsleep-story-card__action-button" data-action="view-video" data-video-url="<?php echo esc_url( $media['url'] ); ?>" data-tooltip="<?php esc_attr_e( 'Ver video', 'maruri' ); ?>" aria-label="<?php esc_attr_e( 'Ver video', 'maruri' ); ?>">
 									<span class="goodsleep-story-card__action-icon" aria-hidden="true">
-										<svg viewBox="0 0 16 16"><path fill="currentColor" d="M4.2 2.54c0-.78.84-1.27 1.52-.88l6.27 3.63c.68.39.68 1.37 0 1.76L5.72 10.68c-.68.39-1.52-.1-1.52-.88V2.54Z"></path><path fill="none" stroke="currentColor" d="M8 15.25A7.25 7.25 0 1 0 8 .75a7.25 7.25 0 0 0 0 14.5Z"></path></svg>
+										<svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M3,22.0000002 L21,12 L3,2 L3,22.0000002 Z M5,19 L17.5999998,11.9999999 L5,5 L5,19 Z M7,16 L14.1999999,12 L7,8 L7,16 Z M9,13 L10.8,12 L9,11 L9,13 Z"/></svg>
 									</span>
 									<span class="goodsleep-story-card__action-label"><?php esc_html_e( 'Ver video', 'maruri' ); ?></span>
 								</button>
