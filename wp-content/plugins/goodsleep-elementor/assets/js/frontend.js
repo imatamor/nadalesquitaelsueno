@@ -317,8 +317,12 @@
 			videoNode.hidden = true;
 			videoNode.removeAttribute( 'src' );
 			videoNode.load();
-			downloadLink.href = '#';
-			shareLink.href = '#';
+			if ( downloadLink ) {
+				downloadLink.href = '#';
+			}
+			if ( shareLink ) {
+				shareLink.href = '#';
+			}
 			charNode.textContent = '0';
 			phraseNode.textContent = phraseTemplate ? phraseTemplate.replace( '%s', '' ) : '';
 		}

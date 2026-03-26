@@ -199,22 +199,6 @@ class Goodsleep_Historia_Generator_Widget extends \Elementor\Widget_Base {
 				<div class="goodsleep-generator__result-card goodsleep-story-card goodsleep-generator__result-story-card">
 					<p class="goodsleep-story-card__text goodsleep-generator__result-copy" data-result-copy><?php esc_html_e( 'Tu video se esta procesando. Te enviaremos el link por correo cuando este listo.', 'goodsleep-elementor' ); ?></p>
 					<video controls preload="metadata" playsinline data-result-video hidden></video>
-					<div class="goodsleep-story-card__actions goodsleep-generator__result-actions" data-result-actions hidden>
-						<div class="goodsleep-story-card__action-group">
-							<a class="goodsleep-story-card__action-button goodsleep-generator__icon-action" href="#" download data-download-link data-tooltip="<?php esc_attr_e( 'Descargar video', 'goodsleep-elementor' ); ?>" aria-label="<?php esc_attr_e( 'Descargar video', 'goodsleep-elementor' ); ?>">
-								<span class="goodsleep-story-card__action-icon" aria-hidden="true">
-									<svg viewBox="0 0 16 16"><g fill="currentColor"><path d="M13.02 6 10.2 5.99c-.25 0-.48-.17-.5-.38C9.67 5.37 9.86 5.1 10.13 5.1l2.85.01c.67 0 1.39.55 1.39 1.28v8.23c0 .72-.7 1.28-1.39 1.28H3.04c-.7 0-1.4-.55-1.4-1.28V6.38c0-.73.71-1.28 1.39-1.28l2.63-.01c.25 0 .46.21.47.43 0 .22-.21.46-.47.46H3.12c-.33 0-.63.2-.63.58v7.86c0 .37.28.59.64.59h9.84c.32 0 .54-.27.54-.57v-7.9c0-.25-.18-.54-.47-.54"></path><path d="M7.66.55c0-.28.23-.45.44-.46.18-.01.44.16.44.4v8.49l2.2-2.12c.16-.16.49-.11.62.05.12.14.13.45-.03.6l-2.89 2.83c-.18.18-.5.3-.71.09L4.84 7.54c-.16-.16-.19-.41-.08-.6.08-.16.45-.26.61-.1L7.66 9.1V.55Z"></path></g></svg>
-								</span>
-								<span class="goodsleep-story-card__action-label"><?php esc_html_e( 'Descargar', 'goodsleep-elementor' ); ?></span>
-							</a>
-							<a class="goodsleep-story-card__action-button goodsleep-generator__icon-action" href="#" target="_blank" rel="noopener noreferrer" data-share-link data-tooltip="<?php esc_attr_e( 'Compartir historia', 'goodsleep-elementor' ); ?>" aria-label="<?php esc_attr_e( 'Compartir historia', 'goodsleep-elementor' ); ?>">
-								<span class="goodsleep-story-card__action-icon" aria-hidden="true">
-									<svg viewBox="0 0 16 16"><g fill="currentColor"><path d="M13.02 6 10.2 5.99c-.25 0-.48-.17-.5-.38-.03-.24.16-.51.43-.51l2.85.01c.67 0 1.39.55 1.39 1.28v8.23c0 .72-.7 1.28-1.39 1.28H3.04c-.7 0-1.4-.55-1.4-1.28V6.38c0-.73.71-1.28 1.39-1.28l2.63-.01c.25 0 .46.21.47.43 0 .22-.21.46-.47.46H3.12c-.33 0-.63.2-.63.58v7.86c0 .37.28.59.64.59h9.84c.32 0 .54-.27.54-.57v-7.9c0-.25-.18-.54-.47-.54"></path><path d="M8.48 10.08c0 .28-.23.45-.44.46-.18.01-.44-.16-.44-.4V1.65L5.4 3.77c-.16.16-.49.11-.62-.05-.12-.14-.13-.45.03-.6L7.7.29c.18-.18.5-.3.71-.09l2.89 2.89c.16.16.19.41.08.6-.08.16-.45.26-.61.1L8.48 1.53v8.55Z"></path></g></svg>
-								</span>
-								<span class="goodsleep-story-card__action-label"><?php esc_html_e( 'Compartir', 'goodsleep-elementor' ); ?></span>
-							</a>
-						</div>
-					</div>
 					<div class="goodsleep-generator__result-cta-wrap">
 						<a class="goodsleep-generator__action goodsleep-generator__action--result-cta" href="<?php echo esc_url( $result_cta_url ); ?>"<?php echo ! empty( $settings['result_cta_url']['is_external'] ) ? ' target="_blank" rel="noopener noreferrer"' : ''; ?> data-result-cta><?php echo esc_html( $settings['result_cta_label'] ); ?></a>
 					</div>

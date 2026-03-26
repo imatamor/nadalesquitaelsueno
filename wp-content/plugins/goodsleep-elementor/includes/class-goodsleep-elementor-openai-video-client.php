@@ -264,7 +264,6 @@ class Goodsleep_Elementor_OpenAI_Video_Client {
 		$base    = untrailingslashit( goodsleep_get_setting( 'openai_base_url', '' ) );
 		$path    = goodsleep_get_setting( 'openai_video_remix_path', '/videos/%s/remix' );
 		$url     = $base . sprintf( $path, rawurlencode( (string) $video_id ) );
-		$model   = ! empty( $payload['model'] ) ? sanitize_text_field( (string) $payload['model'] ) : sanitize_text_field( (string) goodsleep_get_setting( 'openai_video_model', 'sora-2' ) );
 		$prompt  = trim( (string) $payload['prompt'] );
 
 		if ( '' === $api_key || '' === $url || '' === (string) $video_id || '' === $prompt ) {
@@ -282,7 +281,6 @@ class Goodsleep_Elementor_OpenAI_Video_Client {
 				),
 				'body'    => wp_json_encode(
 					array(
-						'model'  => $model,
 						'prompt' => $prompt,
 					)
 				),
