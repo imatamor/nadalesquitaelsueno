@@ -122,12 +122,13 @@ class Goodsleep_Elementor_Share_Router {
 		echo '<article class="goodsleep-story-card goodsleep-story-single__card" data-story-detail data-story-id="' . esc_attr( $story->ID ) . '">';
 		echo '<div class="goodsleep-story-card__topline"><span class="goodsleep-story-card__title">' . esc_html( $story_name ) . '</span><time class="goodsleep-story-card__date" datetime="' . esc_attr( get_the_date( DATE_ATOM, $story ) ) . '">' . esc_html( $published_label ) . '</time></div>';
 		echo '<div class="goodsleep-story-card__text">' . wp_kses_post( wpautop( $story->post_content ) ) . '</div>';
-		if ( 'video' === $media['type'] && ! empty( $media['url'] ) ) {
-			echo '<div class="goodsleep-story-share__player"><video controls playsinline preload="metadata" src="' . esc_url( $media['url'] ) . '"></video></div>';
-		} elseif ( 'audio' === $media['type'] && ! empty( $media['url'] ) ) {
+		if ( 'audio' === $media['type'] && ! empty( $media['url'] ) ) {
 			echo '<div class="goodsleep-story-share__player"><audio controls preload="metadata" src="' . esc_url( $media['url'] ) . '"></audio></div>';
 		}
 		echo '<div class="goodsleep-story-card__actions"><div class="goodsleep-story-card__action-group">';
+		if ( 'video' === $media['type'] && ! empty( $media['url'] ) ) {
+			echo '<button type="button" class="goodsleep-story-card__action-button" data-action="view-video" data-video-url="' . esc_url( $media['url'] ) . '" data-tooltip="' . esc_attr__( 'Ver video', 'goodsleep-elementor' ) . '" aria-label="' . esc_attr__( 'Ver video', 'goodsleep-elementor' ) . '"><span class="goodsleep-story-card__action-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M4.2 2.54c0-.78.84-1.27 1.52-.88l6.27 3.63c.68.39.68 1.37 0 1.76L5.72 10.68c-.68.39-1.52-.1-1.52-.88V2.54Z"></path><path fill="none" stroke="currentColor" d="M8 15.25A7.25 7.25 0 1 0 8 .75a7.25 7.25 0 0 0 0 14.5Z"></path></svg></span><span class="goodsleep-story-card__action-label">' . esc_html__( 'Ver video', 'goodsleep-elementor' ) . '</span></button>';
+		}
 		if ( ! empty( $media['download_url'] ) ) {
 			echo '<a class="goodsleep-story-card__action-button" href="' . esc_url( $media['download_url'] ) . '" download data-tooltip="' . esc_attr( $download_tooltip ) . '" aria-label="' . esc_attr( $download_tooltip ) . '"><span class="goodsleep-story-card__action-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><g fill="currentColor"><path d="M13.02 6 10.2 5.99c-.25 0-.48-.17-.5-.38C9.67 5.37 9.86 5.1 10.13 5.1l2.85.01c.67 0 1.39.55 1.39 1.28v8.23c0 .72-.7 1.28-1.39 1.28H3.04c-.7 0-1.4-.55-1.4-1.28V6.38c0-.73.71-1.28 1.39-1.28l2.63-.01c.25 0 .46.21.47.43 0 .22-.21.46-.47.46H3.12c-.33 0-.63.2-.63.58v7.86c0 .37.28.59.64.59h9.84c.32 0 .54-.27.54-.57v-7.9c0-.25-.18-.54-.47-.54"></path><path d="M7.66.55c0-.28.23-.45.44-.46.18-.01.44.16.44.4v8.49l2.2-2.12c.16-.16.49-.11.62.05.12.14.13.45-.03.6l-2.89 2.83c-.18.18-.5.3-.71.09L4.84 7.54c-.16-.16-.19-.41-.08-.6.08-.16.45-.26.61-.1L7.66 9.1V.55Z"></path></g></svg></span><span class="goodsleep-story-card__action-label">' . esc_html__( 'Descargar', 'goodsleep-elementor' ) . '</span></a>';
 		}

@@ -78,11 +78,7 @@ while ( have_posts() ) :
 						<?php echo wp_kses_post( wpautop( get_the_content() ) ); ?>
 					</div>
 
-					<?php if ( 'video' === $media['type'] && ! empty( $media['url'] ) ) : ?>
-						<div class="goodsleep-story-share__player">
-							<video controls playsinline preload="metadata" src="<?php echo esc_url( $media['url'] ); ?>"></video>
-						</div>
-					<?php elseif ( 'audio' === $media['type'] && ! empty( $media['url'] ) ) : ?>
+					<?php if ( 'audio' === $media['type'] && ! empty( $media['url'] ) ) : ?>
 						<div class="goodsleep-story-share__player">
 							<audio controls preload="metadata" src="<?php echo esc_url( $media['url'] ); ?>"></audio>
 						</div>
@@ -90,6 +86,15 @@ while ( have_posts() ) :
 
 					<div class="goodsleep-story-card__actions">
 						<div class="goodsleep-story-card__action-group">
+							<?php if ( 'video' === $media['type'] && ! empty( $media['url'] ) ) : ?>
+								<button type="button" class="goodsleep-story-card__action-button" data-action="view-video" data-video-url="<?php echo esc_url( $media['url'] ); ?>" data-tooltip="<?php esc_attr_e( 'Ver video', 'maruri' ); ?>" aria-label="<?php esc_attr_e( 'Ver video', 'maruri' ); ?>">
+									<span class="goodsleep-story-card__action-icon" aria-hidden="true">
+										<svg viewBox="0 0 16 16"><path fill="currentColor" d="M4.2 2.54c0-.78.84-1.27 1.52-.88l6.27 3.63c.68.39.68 1.37 0 1.76L5.72 10.68c-.68.39-1.52-.1-1.52-.88V2.54Z"></path><path fill="none" stroke="currentColor" d="M8 15.25A7.25 7.25 0 1 0 8 .75a7.25 7.25 0 0 0 0 14.5Z"></path></svg>
+									</span>
+									<span class="goodsleep-story-card__action-label"><?php esc_html_e( 'Ver video', 'maruri' ); ?></span>
+								</button>
+							<?php endif; ?>
+
 							<?php if ( ! empty( $media['download_url'] ) ) : ?>
 								<a class="goodsleep-story-card__action-button" href="<?php echo esc_url( $media['download_url'] ); ?>" download data-tooltip="<?php echo esc_attr( $download_tooltip ); ?>" aria-label="<?php echo esc_attr( $download_tooltip ); ?>">
 									<span class="goodsleep-story-card__action-icon" aria-hidden="true">
