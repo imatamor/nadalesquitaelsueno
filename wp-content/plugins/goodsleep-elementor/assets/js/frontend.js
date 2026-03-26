@@ -66,11 +66,7 @@
 
 	function buildMediaMarkup( story ) {
 		if ( 'video' === story.mediaType && story.videoUrl ) {
-			return `
-				<div class="goodsleep-story-card__media-wrap" hidden data-video-wrap>
-					<video controls playsinline preload="none" data-video-src="${ escapeHtml( story.videoUrl ) }"></video>
-				</div>
-			`;
+			return '';
 		}
 
 		if ( 'audio' === story.mediaType && story.audioUrl && ! goodsleepElementor.videoPublicOnly ) {
@@ -80,13 +76,14 @@
 		return '';
 	}
 
-	function buildPrimaryAction( story ) {
+	function buildVideoAction( story ) {
 		if ( 'video' === story.mediaType && story.videoUrl ) {
 			return `
 				<button
 					type="button"
 					class="goodsleep-story-card__action-button"
-					data-action="toggle-video"
+					data-action="view-video"
+					data-video-url="${ escapeHtml( story.videoUrl ) }"
 					data-tooltip="Ver video"
 					aria-label="Ver video"
 				>
@@ -96,6 +93,10 @@
 			`;
 		}
 
+		return '';
+	}
+
+	function buildDownloadAction( story ) {
 		if ( story.downloadUrl ) {
 			return `
 				<a
@@ -112,6 +113,65 @@
 		}
 
 		return '';
+	}
+
+	function ensureVideoModal() {
+		let modal = document.querySelector( '[data-story-video-modal]' );
+		if ( modal ) {
+			return modal;
+		}
+
+		document.body.insertAdjacentHTML(
+			'beforeend',
+			`
+				<div class="goodsleep-video-modal" data-story-video-modal hidden>
+					<div class="goodsleep-video-modal__backdrop" data-video-modal-close></div>
+					<div class="goodsleep-video-modal__dialog" role="dialog" aria-modal="true" aria-label="Video de la historia">
+						<button type="button" class="goodsleep-video-modal__close" data-video-modal-close aria-label="Cerrar video">×</button>
+						<div class="goodsleep-video-modal__media">
+							<video controls playsinline preload="metadata" data-video-modal-player></video>
+						</div>
+					</div>
+				</div>
+			`
+		);
+
+		modal = document.querySelector( '[data-story-video-modal]' );
+		return modal;
+	}
+
+	function closeVideoModal() {
+		const modal = document.querySelector( '[data-story-video-modal]' );
+		const player = modal ? modal.querySelector( '[data-video-modal-player]' ) : null;
+
+		if ( ! modal || modal.hidden ) {
+			return;
+		}
+
+		modal.hidden = true;
+
+		if ( player ) {
+			player.pause();
+			player.removeAttribute( 'src' );
+			player.load();
+		}
+	}
+
+	function openVideoModal( videoUrl ) {
+		if ( ! videoUrl ) {
+			return;
+		}
+
+		const modal = ensureVideoModal();
+		const player = modal ? modal.querySelector( '[data-video-modal-player]' ) : null;
+
+		if ( ! modal || ! player ) {
+			return;
+		}
+
+		player.setAttribute( 'src', videoUrl );
+		player.load();
+		modal.hidden = false;
 	}
 
 	function renderStoryCard( story ) {
@@ -143,7 +203,8 @@
 							<span class="goodsleep-story-card__action-icon">${ iconFavorite }</span>
 							<span class="goodsleep-story-card__action-label">Favorito</span>
 						</button>
-						${ buildPrimaryAction( story ) }
+						${ buildVideoAction( story ) }
+						${ buildDownloadAction( story ) }
 						<a
 							href="${ escapeHtml( shareUrl ) }"
 							class="goodsleep-story-card__action-button"
@@ -578,21 +639,8 @@
 					loadStories( true );
 				}
 
-				if ( 'toggle-video' === button.dataset.action ) {
-					const wrap = card.querySelector( '[data-video-wrap]' );
-					const video = wrap ? wrap.querySelector( 'video' ) : null;
-					if ( ! wrap || ! video ) {
-						return;
-					}
-
-					const isHidden = wrap.hidden;
-					if ( isHidden && ! video.getAttribute( 'src' ) ) {
-						video.setAttribute( 'src', video.dataset.videoSrc || '' );
-						video.load();
-					}
-
-					wrap.hidden = ! isHidden;
-					button.querySelector( '.goodsleep-story-card__action-label' ).textContent = isHidden ? 'Ocultar video' : 'Ver video';
+				if ( 'view-video' === button.dataset.action ) {
+					openVideoModal( button.dataset.videoUrl || '' );
 				}
 			} catch ( error ) {
 				window.alert( error.message );
@@ -623,6 +671,7 @@
 	}
 
 	document.addEventListener( 'DOMContentLoaded', function() {
+		ensureVideoModal();
 		document.querySelectorAll( '.goodsleep-generator' ).forEach( initGenerator );
 		document.querySelectorAll( '.goodsleep-stories' ).forEach( initStories );
 		document.querySelectorAll( '[data-story-detail]' ).forEach( bindRatingInteractions );
@@ -632,5 +681,17 @@
 		storiesWidgets.forEach( function( widget ) {
 			widget.reload();
 		} );
+	} );
+
+	document.addEventListener( 'click', function( event ) {
+		if ( event.target.closest( '[data-video-modal-close]' ) ) {
+			closeVideoModal();
+		}
+	} );
+
+	document.addEventListener( 'keydown', function( event ) {
+		if ( 'Escape' === event.key ) {
+			closeVideoModal();
+		}
 	} );
 }() );
