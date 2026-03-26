@@ -321,13 +321,16 @@ class Goodsleep_Elementor_REST_Controller {
 			return false;
 		}
 
-		$normalized_secret = $this->normalize_openai_webhook_secret( $secret );
 		$signed_payload = $event_id . '.' . $timestamp . '.' . $body;
-		$expected       = base64_encode( hash_hmac( 'sha256', $signed_payload, $normalized_secret, true ) );
+		$candidate_secrets = $this->get_openai_webhook_secret_candidates( $secret );
 
-		foreach ( $signatures as $signature ) {
-			if ( hash_equals( $expected, $signature ) ) {
-				return true;
+		foreach ( $candidate_secrets as $candidate_secret ) {
+			$expected = base64_encode( hash_hmac( 'sha256', $signed_payload, $candidate_secret, true ) );
+
+			foreach ( $signatures as $signature ) {
+				if ( hash_equals( $expected, $signature ) ) {
+					return true;
+				}
 			}
 		}
 
@@ -363,21 +366,28 @@ class Goodsleep_Elementor_REST_Controller {
 	 * @param string $secret Secret configurado.
 	 * @return string
 	 */
-	protected function normalize_openai_webhook_secret( $secret ) {
+	protected function get_openai_webhook_secret_candidates( $secret ) {
 		$secret = trim( (string) $secret );
+		$candidates = array();
 
 		if ( 0 === strpos( $secret, 'whsec_' ) ) {
 			$encoded = substr( $secret, 6 );
-			$decoded = base64_decode( strtr( $encoded, '-_', '+/' ), true );
+			$candidates[] = $encoded;
 
+			$decoded = base64_decode( $encoded, true );
 			if ( false !== $decoded && '' !== $decoded ) {
-				return $decoded;
+				$candidates[] = $decoded;
 			}
 
-			return $encoded;
+			$decoded = base64_decode( strtr( $encoded, '-_', '+/' ), true );
+			if ( false !== $decoded && '' !== $decoded ) {
+				$candidates[] = $decoded;
+			}
+		} else {
+			$candidates[] = $secret;
 		}
 
-		return $secret;
+		return array_values( array_unique( array_filter( $candidates, 'strlen' ) ) );
 	}
 
 	/**
