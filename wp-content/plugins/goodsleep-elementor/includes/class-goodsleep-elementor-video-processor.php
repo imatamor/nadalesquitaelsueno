@@ -155,37 +155,32 @@ class Goodsleep_Elementor_Video_Processor {
 			return new WP_Error( 'goodsleep_concat_unavailable', __( 'No se pudo unir los clips porque ffmpeg no esta disponible.', 'goodsleep-elementor' ) );
 		}
 
-		$list_path = $this->create_temp_file_path( $base_name . '-concat.txt' );
-		if ( ! $list_path ) {
-			return new WP_Error( 'goodsleep_video_temp_failed', __( 'No se pudo preparar la lista de clips.', 'goodsleep-elementor' ) );
-		}
-
-		$list_content = '';
-		foreach ( $clip_paths as $clip_path ) {
-			$list_content .= "file '" . str_replace( "'", "'\\''", $clip_path ) . "'\n";
-		}
-
-		if ( false === file_put_contents( $list_path, $list_content ) ) {
-			@unlink( $list_path );
-			return new WP_Error( 'goodsleep_video_write_failed', __( 'No se pudo preparar la lista de clips para ffmpeg.', 'goodsleep-elementor' ) );
-		}
-
 		$output_path = $this->create_temp_file_path( $base_name . '-merged.mp4' );
 		if ( ! $output_path ) {
-			@unlink( $list_path );
 			return new WP_Error( 'goodsleep_video_temp_failed', __( 'No se pudo preparar el video concatenado.', 'goodsleep-elementor' ) );
 		}
 
+		$input_segments = array();
+		foreach ( $clip_paths as $clip_path ) {
+			$input_segments[] = '-i ' . escapeshellarg( $clip_path );
+		}
+
+		$filter_inputs = array();
+		for ( $index = 0; $index < count( $clip_paths ); $index++ ) {
+			$filter_inputs[] = '[' . $index . ':v:0][' . $index . ':a:0]';
+		}
+
+		$concat_filter = implode( '', $filter_inputs ) . 'concat=n=' . count( $clip_paths ) . ':v=1:a=1[v][a]';
 		$concat_command = sprintf(
-			'ffmpeg -y -f concat -safe 0 -i %1$s -c:v libx264 -preset veryfast -crf 20 -c:a aac -movflags +faststart %2$s 2>&1',
-			escapeshellarg( $list_path ),
+			'ffmpeg -y %1$s -filter_complex %2$s -map "[v]" -map "[a]" -c:v libx264 -preset veryfast -crf 20 -c:a aac -movflags +faststart %3$s 2>&1',
+			implode( ' ', $input_segments ),
+			escapeshellarg( $concat_filter ),
 			escapeshellarg( $output_path )
 		);
 
 		$command_output = array();
 		$command_code   = 0;
 		exec( $concat_command, $command_output, $command_code );
-		@unlink( $list_path );
 
 		if ( 0 !== $command_code || ! file_exists( $output_path ) || 0 === filesize( $output_path ) ) {
 			@unlink( $output_path );
