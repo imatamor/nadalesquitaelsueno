@@ -169,11 +169,11 @@ class Goodsleep_Elementor_REST_Controller {
 			return new WP_Error( 'goodsleep_missing_webhook_secret', __( 'El webhook de OpenAI no tiene secret configurado.', 'goodsleep-elementor' ), array( 'status' => 500 ) );
 		}
 
-		$signature = $this->extract_webhook_signature( $request );
+		$signatures = $this->extract_webhook_signatures( $request );
 		$event_id  = sanitize_text_field( (string) $request->get_header( 'webhook-id' ) );
 		$timestamp = sanitize_text_field( (string) $request->get_header( 'webhook-timestamp' ) );
 
-		if ( ! $this->is_valid_openai_webhook_signature( $raw_body, $event_id, $timestamp, $signature, $secret ) ) {
+		if ( ! $this->is_valid_openai_webhook_signature( $raw_body, $event_id, $timestamp, $signatures, $secret ) ) {
 			return new WP_Error( 'goodsleep_invalid_webhook_signature', __( 'La firma del webhook de OpenAI no es valida.', 'goodsleep-elementor' ), array( 'status' => 401 ) );
 		}
 
@@ -310,35 +310,74 @@ class Goodsleep_Elementor_REST_Controller {
 	 * @param string $body      Cuerpo crudo.
 	 * @param string $event_id  Webhook id.
 	 * @param string $timestamp Timestamp.
-	 * @param string $signature Firma v1.
+	 * @param array<int,string> $signatures Firmas v1.
 	 * @param string $secret    Secret configurado.
 	 * @return bool
 	 */
-	protected function is_valid_openai_webhook_signature( $body, $event_id, $timestamp, $signature, $secret ) {
-		if ( '' === $body || '' === $event_id || '' === $timestamp || '' === $signature || '' === $secret ) {
+	protected function is_valid_openai_webhook_signature( $body, $event_id, $timestamp, $signatures, $secret ) {
+		$signatures = is_array( $signatures ) ? array_values( array_filter( array_map( 'strval', $signatures ) ) ) : array();
+
+		if ( '' === $body || '' === $event_id || '' === $timestamp || empty( $signatures ) || '' === $secret ) {
 			return false;
 		}
 
+		$normalized_secret = $this->normalize_openai_webhook_secret( $secret );
 		$signed_payload = $event_id . '.' . $timestamp . '.' . $body;
-		$expected       = base64_encode( hash_hmac( 'sha256', $signed_payload, $secret, true ) );
+		$expected       = base64_encode( hash_hmac( 'sha256', $signed_payload, $normalized_secret, true ) );
 
-		return hash_equals( $expected, $signature );
+		foreach ( $signatures as $signature ) {
+			if ( hash_equals( $expected, $signature ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
-	 * Extrae la firma v1 del header standard webhooks.
+	 * Extrae todas las firmas v1 del header standard webhooks.
 	 *
 	 * @param WP_REST_Request $request Request.
-	 * @return string
+	 * @return array<int,string>
 	 */
-	protected function extract_webhook_signature( WP_REST_Request $request ) {
+	protected function extract_webhook_signatures( WP_REST_Request $request ) {
 		$header = (string) $request->get_header( 'webhook-signature' );
+		$signatures = array();
 
-		if ( preg_match( '/v1[,=]([A-Za-z0-9+\/=_-]+)/', $header, $matches ) ) {
-			return sanitize_text_field( $matches[1] );
+		if ( preg_match_all( '/v1[,=]([A-Za-z0-9+\/=_-]+)/', $header, $matches ) && ! empty( $matches[1] ) ) {
+			foreach ( $matches[1] as $signature ) {
+				$signatures[] = sanitize_text_field( (string) $signature );
+			}
 		}
 
-		return sanitize_text_field( trim( $header ) );
+		if ( empty( $signatures ) && '' !== trim( $header ) ) {
+			$signatures[] = sanitize_text_field( trim( $header ) );
+		}
+
+		return array_values( array_unique( array_filter( $signatures ) ) );
+	}
+
+	/**
+	 * Normaliza el secret del webhook de OpenAI.
+	 *
+	 * @param string $secret Secret configurado.
+	 * @return string
+	 */
+	protected function normalize_openai_webhook_secret( $secret ) {
+		$secret = trim( (string) $secret );
+
+		if ( 0 === strpos( $secret, 'whsec_' ) ) {
+			$encoded = substr( $secret, 6 );
+			$decoded = base64_decode( strtr( $encoded, '-_', '+/' ), true );
+
+			if ( false !== $decoded && '' !== $decoded ) {
+				return $decoded;
+			}
+
+			return $encoded;
+		}
+
+		return $secret;
 	}
 
 	/**
