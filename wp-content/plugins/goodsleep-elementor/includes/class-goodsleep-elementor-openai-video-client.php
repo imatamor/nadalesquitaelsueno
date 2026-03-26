@@ -183,6 +183,10 @@ class Goodsleep_Elementor_OpenAI_Video_Client {
 			return new WP_Error( 'goodsleep_invalid_video_reference', __( 'No se pudo ajustar la imagen de referencia al tamano requerido por Sora.', 'goodsleep-elementor' ) );
 		}
 
+		if ( ! function_exists( 'wp_tempnam' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+
 		$temp_path = wp_tempnam( 'goodsleep-reference-' . $dimensions['width'] . 'x' . $dimensions['height'] . '.png' );
 		if ( ! $temp_path ) {
 			return new WP_Error( 'goodsleep_invalid_video_reference', __( 'No se pudo preparar un archivo temporal para la imagen de referencia.', 'goodsleep-elementor' ) );
