@@ -290,6 +290,8 @@
 		const charNode = container.querySelector( '[data-char-count]' );
 		const loaderText = container.querySelector( '[data-loader-text]' );
 		const videoNode = container.querySelector( '[data-result-video]' );
+		const resultCopy = container.querySelector( '[data-result-copy]' );
+		const resultActions = container.querySelector( '[data-result-actions]' );
 		const downloadLink = container.querySelector( '[data-download-link]' );
 		const shareLink = container.querySelector( '[data-share-link]' );
 		const phraseTemplate = container.dataset.phraseTemplate || '';
@@ -306,6 +308,13 @@
 			resultSurface.hidden = true;
 			feedback.textContent = '';
 			loaderText.textContent = '';
+			if ( resultCopy ) {
+				resultCopy.textContent = 'Tu video se esta procesando. Te enviaremos el link por correo cuando este listo.';
+			}
+			if ( resultActions ) {
+				resultActions.hidden = true;
+			}
+			videoNode.hidden = true;
 			videoNode.removeAttribute( 'src' );
 			videoNode.load();
 			downloadLink.href = '#';
@@ -435,25 +444,17 @@
 					} )
 				} );
 
-				const resolved = await pollStoryStatus( created.storyId, Number( created.pollAttempts || goodsleepElementor.pollAttempts || 24 ) );
-
-				if ( ! resolved || ! resolved.isReady ) {
-					loadingSurface.hidden = true;
-					formSurface.hidden = false;
-					feedback.textContent = 'Tu video sigue procesandose. Te enviaremos el link por correo cuando este listo.';
-					syncSurfaceMinHeight();
-					return;
-				}
-
-				videoNode.src = resolved.videoUrl || '';
-				videoNode.load();
-				downloadLink.href = resolved.downloadUrl || '#';
-				shareLink.href = formatWhatsAppUrl( goodsleepElementor.whatsappTemplate, name, resolved.shareUrl || '' );
-
 				loadingSurface.hidden = true;
 				resultSurface.hidden = false;
+				if ( resultCopy ) {
+					resultCopy.textContent = 'Tu video se esta procesando. Te enviaremos el link por correo cuando este listo.';
+				}
+				if ( resultActions ) {
+					resultActions.hidden = true;
+				}
+				videoNode.hidden = true;
+				document.dispatchEvent( new CustomEvent( 'goodsleep:story-created', { detail: created } ) );
 				syncSurfaceMinHeight();
-				document.dispatchEvent( new CustomEvent( 'goodsleep:story-created', { detail: resolved } ) );
 			} catch ( error ) {
 				loadingSurface.hidden = true;
 				formSurface.hidden = false;
