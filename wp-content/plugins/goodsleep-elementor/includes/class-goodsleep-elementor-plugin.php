@@ -141,6 +141,8 @@ class Goodsleep_Elementor_Plugin {
 				'nonce'            => wp_create_nonce( 'wp_rest' ),
 				'trackTitle'       => __( 'Seleccionar track de audio', 'goodsleep-elementor' ),
 				'trackButton'      => __( 'Usar este audio', 'goodsleep-elementor' ),
+				'imageTitle'       => __( 'Seleccionar imagen del producto', 'goodsleep-elementor' ),
+				'imageButton'      => __( 'Usar esta imagen', 'goodsleep-elementor' ),
 				'addTrackLabel'    => __( 'Añadir track', 'goodsleep-elementor' ),
 				'removeTrackLabel'   => __( 'Eliminar', 'goodsleep-elementor' ),
 				'confirmRemoveTrack' => __( '¿Realmente deseas eliminar este track?', 'goodsleep-elementor' ),

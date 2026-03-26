@@ -104,8 +104,13 @@ document.addEventListener('DOMContentLoaded', function() {
 			}
 		}
 
-		if (selectButton && window.wp && wp.media) {
+		if (selectButton) {
 			selectButton.addEventListener('click', function() {
+				if (!(window.wp && wp.media)) {
+					window.alert('No se pudo cargar la galeria de medios. Recarga la pagina e intentalo de nuevo.');
+					return;
+				}
+
 				var frame = wp.media({
 					title: goodsleepAdmin.imageTitle || 'Seleccionar imagen del producto',
 					button: { text: goodsleepAdmin.imageButton || 'Usar esta imagen' },
