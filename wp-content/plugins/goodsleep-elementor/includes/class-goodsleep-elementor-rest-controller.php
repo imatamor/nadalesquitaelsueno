@@ -148,9 +148,6 @@ class Goodsleep_Elementor_REST_Controller {
 		}
 
 		$status = (string) get_post_meta( $story_id, '_goodsleep_story_generation_status', true );
-		if ( in_array( $status, array( 'processing', 'pending_backfill' ), true ) ) {
-			$this->video_service->process_story( $story_id );
-		}
 
 		return rest_ensure_response( $this->video_service->build_status_payload( $story_id ) );
 	}

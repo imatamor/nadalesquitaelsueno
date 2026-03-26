@@ -30,13 +30,6 @@ class Goodsleep_Elementor_Story_Video_Service {
 	protected $mailjet;
 
 	/**
-	 * Hook de cron.
-	 *
-	 * @var string
-	 */
-	protected $cron_hook = 'goodsleep_process_story_generation';
-
-	/**
 	 * Constructor.
 	 *
 	 * @param Goodsleep_Elementor_OpenAI_Video_Client $provider_client Cliente API.
@@ -47,8 +40,6 @@ class Goodsleep_Elementor_Story_Video_Service {
 		$this->provider_client = $provider_client;
 		$this->video_processor = $video_processor;
 		$this->mailjet         = $mailjet;
-
-		add_action( $this->cron_hook, array( $this, 'process_story_event' ), 10, 1 );
 	}
 
 	/**
@@ -193,19 +184,7 @@ class Goodsleep_Elementor_Story_Video_Service {
 			update_post_meta( $post_id, '_goodsleep_story_track_label', (string) $track['label'] );
 		}
 
-		$this->schedule_processing( $post_id );
-
 		return true;
-	}
-
-	/**
-	 * Procesa un story id por cron.
-	 *
-	 * @param int $post_id ID.
-	 * @return void
-	 */
-	public function process_story_event( $post_id ) {
-		$this->process_story( (int) $post_id );
 	}
 
 	/**
@@ -235,7 +214,6 @@ class Goodsleep_Elementor_Story_Video_Service {
 			$task = $this->provider_client->get_task( $task_id );
 			if ( is_wp_error( $task ) ) {
 				update_post_meta( $post_id, '_goodsleep_story_generation_error', $task->get_error_message() );
-				$this->schedule_processing( $post_id );
 				return $task;
 			}
 
@@ -279,7 +257,6 @@ class Goodsleep_Elementor_Story_Video_Service {
 
 		if ( $is_processing ) {
 			update_post_meta( $post_id, '_goodsleep_story_generation_status', 'processing' );
-			$this->schedule_processing( $post_id );
 			return $this->build_status_payload( $post_id );
 		}
 
@@ -365,20 +342,6 @@ class Goodsleep_Elementor_Story_Video_Service {
 	}
 
 	/**
-	 * Encola procesamiento por cron.
-	 *
-	 * @param int $post_id ID.
-	 * @return void
-	 */
-	protected function schedule_processing( $post_id ) {
-		$post_id = (int) $post_id;
-
-		if ( ! wp_next_scheduled( $this->cron_hook, array( $post_id ) ) ) {
-			wp_schedule_single_event( time() + 30, $this->cron_hook, array( $post_id ) );
-		}
-	}
-
-	/**
 	 * Devuelve los task ids asociados a una historia.
 	 *
 	 * @param int $post_id ID de la historia.
@@ -414,7 +377,6 @@ class Goodsleep_Elementor_Story_Video_Service {
 		$first_task = $this->provider_client->get_task( $first_task_id );
 		if ( is_wp_error( $first_task ) ) {
 			update_post_meta( $post_id, '_goodsleep_story_generation_error', $first_task->get_error_message() );
-			$this->schedule_processing( $post_id );
 			return $first_task;
 		}
 
@@ -424,7 +386,6 @@ class Goodsleep_Elementor_Story_Video_Service {
 		if ( in_array( $status, array( 'queued', 'pending', 'running', 'processing', 'submitted' ), true ) ) {
 			update_post_meta( $post_id, '_goodsleep_story_task_payload', wp_slash( wp_json_encode( $task_payloads ) ) );
 			update_post_meta( $post_id, '_goodsleep_story_generation_status', 'processing' );
-			$this->schedule_processing( $post_id );
 			return $this->build_status_payload( $post_id );
 		}
 
@@ -470,7 +431,6 @@ class Goodsleep_Elementor_Story_Video_Service {
 		update_post_meta( $post_id, '_goodsleep_story_task_payload', wp_slash( wp_json_encode( $task_payloads ) ) );
 		update_post_meta( $post_id, '_goodsleep_story_generation_status', 'processing' );
 		update_post_meta( $post_id, '_goodsleep_story_generation_error', '' );
-		$this->schedule_processing( $post_id );
 
 		return $this->build_status_payload( $post_id );
 	}
