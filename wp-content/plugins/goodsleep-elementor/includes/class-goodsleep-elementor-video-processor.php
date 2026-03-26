@@ -32,11 +32,44 @@ class Goodsleep_Elementor_Video_Processor {
 	 * @return array<string,string>|WP_Error
 	 */
 	public function finalize_video( $video_source, $track, $base_name ) {
+		return $this->finalize_videos( array( $video_source ), $track, $base_name );
+	}
+
+	/**
+	 * Concatena uno o varios clips y mezcla el track musical final.
+	 *
+	 * @param array<int,array<string,mixed>> $video_sources Clips generados.
+	 * @param array<string,mixed>            $track         Track musical.
+	 * @param string                         $base_name     Nombre base.
+	 * @return array<string,string>|WP_Error
+	 */
+	public function finalize_videos( $video_sources, $track, $base_name ) {
 		$this->ensure_wp_file_functions();
 
-		$video_path = $this->create_video_source_file( $video_source, $base_name );
+		$video_sources = is_array( $video_sources ) ? array_values( array_filter( $video_sources, 'is_array' ) ) : array();
+		if ( empty( $video_sources ) ) {
+			return new WP_Error( 'goodsleep_video_empty', __( 'No se recibieron clips para finalizar el video.', 'goodsleep-elementor' ) );
+		}
+
+		$clip_paths = array();
+		foreach ( $video_sources as $index => $video_source ) {
+			$clip_path = $this->create_video_source_file( $video_source, $base_name . '-clip-' . ( $index + 1 ) );
+			if ( is_wp_error( $clip_path ) ) {
+				$this->cleanup_files( $clip_paths );
+				return $clip_path;
+			}
+
+			$clip_paths[] = $clip_path;
+		}
+
+		$video_path = $this->merge_video_files( $clip_paths, $base_name );
 		if ( is_wp_error( $video_path ) ) {
+			$this->cleanup_files( $clip_paths );
 			return $video_path;
+		}
+
+		if ( ! empty( $clip_paths ) ) {
+			$this->cleanup_files( $clip_paths, array( $video_path ) );
 		}
 
 		if ( empty( $track['url'] ) || empty( goodsleep_get_setting( 'video_music_enabled', 1 ) ) ) {
@@ -98,6 +131,68 @@ class Goodsleep_Elementor_Video_Processor {
 			'path'   => $output_path,
 			'format' => 'mp4',
 		);
+	}
+
+	/**
+	 * Concatena varios clips en un solo MP4.
+	 *
+	 * @param array<int,string> $clip_paths Rutas locales.
+	 * @param string            $base_name  Nombre base.
+	 * @return string|WP_Error
+	 */
+	protected function merge_video_files( $clip_paths, $base_name ) {
+		$clip_paths = array_values( array_filter( array_map( 'strval', (array) $clip_paths ) ) );
+
+		if ( empty( $clip_paths ) ) {
+			return new WP_Error( 'goodsleep_video_empty', __( 'No hay clips para unir.', 'goodsleep-elementor' ) );
+		}
+
+		if ( 1 === count( $clip_paths ) ) {
+			return $clip_paths[0];
+		}
+
+		if ( ! $this->can_run_shell_commands() || ! $this->is_available() ) {
+			return new WP_Error( 'goodsleep_concat_unavailable', __( 'No se pudo unir los clips porque ffmpeg no esta disponible.', 'goodsleep-elementor' ) );
+		}
+
+		$list_path = $this->create_temp_file_path( $base_name . '-concat.txt' );
+		if ( ! $list_path ) {
+			return new WP_Error( 'goodsleep_video_temp_failed', __( 'No se pudo preparar la lista de clips.', 'goodsleep-elementor' ) );
+		}
+
+		$list_content = '';
+		foreach ( $clip_paths as $clip_path ) {
+			$list_content .= "file '" . str_replace( "'", "'\\''", $clip_path ) . "'\n";
+		}
+
+		if ( false === file_put_contents( $list_path, $list_content ) ) {
+			@unlink( $list_path );
+			return new WP_Error( 'goodsleep_video_write_failed', __( 'No se pudo preparar la lista de clips para ffmpeg.', 'goodsleep-elementor' ) );
+		}
+
+		$output_path = $this->create_temp_file_path( $base_name . '-merged.mp4' );
+		if ( ! $output_path ) {
+			@unlink( $list_path );
+			return new WP_Error( 'goodsleep_video_temp_failed', __( 'No se pudo preparar el video concatenado.', 'goodsleep-elementor' ) );
+		}
+
+		$concat_command = sprintf(
+			'ffmpeg -y -f concat -safe 0 -i %1$s -c:v libx264 -preset veryfast -crf 20 -c:a aac -movflags +faststart %2$s 2>&1',
+			escapeshellarg( $list_path ),
+			escapeshellarg( $output_path )
+		);
+
+		$command_output = array();
+		$command_code   = 0;
+		exec( $concat_command, $command_output, $command_code );
+		@unlink( $list_path );
+
+		if ( 0 !== $command_code || ! file_exists( $output_path ) || 0 === filesize( $output_path ) ) {
+			@unlink( $output_path );
+			return new WP_Error( 'goodsleep_concat_failed', __( 'No se pudieron unir los clips generados.', 'goodsleep-elementor' ) );
+		}
+
+		return $output_path;
 	}
 
 	/**
@@ -229,5 +324,26 @@ class Goodsleep_Elementor_Video_Processor {
 		$temp_path = wp_tempnam( sanitize_file_name( $filename ) );
 
 		return $temp_path ? $temp_path : '';
+	}
+
+	/**
+	 * Elimina archivos temporales locales.
+	 *
+	 * @param array<int,string> $paths  Rutas a borrar.
+	 * @param array<int,string> $except Rutas a conservar.
+	 * @return void
+	 */
+	protected function cleanup_files( $paths, $except = array() ) {
+		$except = array_filter( array_map( 'strval', (array) $except ) );
+
+		foreach ( array_filter( array_map( 'strval', (array) $paths ) ) as $path ) {
+			if ( in_array( $path, $except, true ) ) {
+				continue;
+			}
+
+			if ( file_exists( $path ) ) {
+				@unlink( $path );
+			}
+		}
 	}
 }

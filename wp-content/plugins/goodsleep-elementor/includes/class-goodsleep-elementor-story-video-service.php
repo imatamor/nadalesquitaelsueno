@@ -137,38 +137,51 @@ class Goodsleep_Elementor_Story_Video_Service {
 			return new WP_Error( 'goodsleep_story_without_content', __( 'La historia no tiene contenido narrativo para generar video.', 'goodsleep-elementor' ) );
 		}
 
-		$scene_count = goodsleep_estimate_scene_count( $combined );
-		$prompt      = goodsleep_build_video_prompt(
-			'' !== trim( $story_text ) ? $story_text : $combined,
-			$story_name,
-			$closing_phrase
-		);
-		$task        = $this->provider_client->create_video_task(
-			array(
-				'model'    => goodsleep_get_setting( 'openai_video_model', 'sora-2' ),
-				'prompt'   => $prompt,
-				'duration' => (int) goodsleep_get_setting( 'video_duration', 12 ),
-				'size'     => $this->resolve_video_size(),
-			)
-		);
+		$primary_story_text = '' !== trim( $story_text ) ? $story_text : $combined;
+		$clip_count         = goodsleep_should_use_two_video_clips( $primary_story_text ) ? 2 : 1;
+		$story_segments     = goodsleep_split_story_for_video_clips( $primary_story_text, $clip_count );
+		$story_segments     = array_values( array_filter( array_map( 'trim', $story_segments ) ) );
+		$clip_count         = max( 1, count( $story_segments ) );
+		$scene_count        = goodsleep_estimate_scene_count( $combined );
+		$task_ids           = array();
+		$task_payloads      = array();
+		$clip_prompts       = array();
 
-		if ( is_wp_error( $task ) ) {
-			$status = $backfill ? 'failed_backfill' : 'failed';
-			update_post_meta( $post_id, '_goodsleep_story_generation_status', $status );
-			update_post_meta( $post_id, '_goodsleep_story_generation_error', $task->get_error_message() );
-			return $task;
-		}
+		foreach ( $story_segments as $clip_index => $story_segment ) {
+			$clip_prompt  = goodsleep_build_video_clip_prompt( $story_segment, $story_name, $closing_phrase, $clip_index, $clip_count );
+			$clip_prompts[] = $clip_prompt;
+			$task = $this->provider_client->create_video_task(
+				array(
+					'model'    => goodsleep_get_setting( 'openai_video_model', 'sora-2' ),
+					'prompt'   => $clip_prompt,
+					'duration' => (int) goodsleep_get_setting( 'video_duration', 12 ),
+					'size'     => $this->resolve_video_size(),
+				)
+			);
 
-		$task_id = $this->provider_client->extract_task_id( $task );
-		if ( '' === $task_id ) {
-			return new WP_Error( 'goodsleep_sora_missing_task', __( 'Sora no devolvio un identificador de video valido.', 'goodsleep-elementor' ) );
+			if ( is_wp_error( $task ) ) {
+				$status = $backfill ? 'failed_backfill' : 'failed';
+				update_post_meta( $post_id, '_goodsleep_story_generation_status', $status );
+				update_post_meta( $post_id, '_goodsleep_story_generation_error', $task->get_error_message() );
+				return $task;
+			}
+
+			$task_id = $this->provider_client->extract_task_id( $task );
+			if ( '' === $task_id ) {
+				return new WP_Error( 'goodsleep_sora_missing_task', __( 'Sora no devolvio un identificador de video valido.', 'goodsleep-elementor' ) );
+			}
+
+			$task_ids[]      = $task_id;
+			$task_payloads[] = $task;
 		}
 
 		update_post_meta( $post_id, '_goodsleep_story_generation_provider', 'sora-2' );
 		update_post_meta( $post_id, '_goodsleep_story_generation_status', $backfill ? 'pending_backfill' : 'processing' );
-		update_post_meta( $post_id, '_goodsleep_story_task_id', $task_id );
-		update_post_meta( $post_id, '_goodsleep_story_task_payload', wp_json_encode( $task ) );
-		update_post_meta( $post_id, '_goodsleep_story_prompt', $prompt );
+		update_post_meta( $post_id, '_goodsleep_story_task_id', ! empty( $task_ids[0] ) ? $task_ids[0] : '' );
+		update_post_meta( $post_id, '_goodsleep_story_task_ids', wp_json_encode( $task_ids ) );
+		update_post_meta( $post_id, '_goodsleep_story_task_payload', wp_json_encode( $task_payloads ) );
+		update_post_meta( $post_id, '_goodsleep_story_prompt', implode( "\n\n--- CLIP ---\n\n", $clip_prompts ) );
+		update_post_meta( $post_id, '_goodsleep_story_clip_count', $clip_count );
 		update_post_meta( $post_id, '_goodsleep_story_scene_count', $scene_count );
 		update_post_meta( $post_id, '_goodsleep_story_generation_error', '' );
 
@@ -199,59 +212,74 @@ class Goodsleep_Elementor_Story_Video_Service {
 	 * @return array<string,mixed>|WP_Error
 	 */
 	public function process_story( $post_id ) {
-		$post_id = (int) $post_id;
-		$task_id = (string) get_post_meta( $post_id, '_goodsleep_story_task_id', true );
+		$post_id  = (int) $post_id;
+		$task_ids = $this->get_story_task_ids( $post_id );
 
-		if ( '' === $task_id ) {
+		if ( empty( $task_ids ) ) {
 			return new WP_Error( 'goodsleep_missing_task_id', __( 'La historia no tiene task id para procesar.', 'goodsleep-elementor' ) );
 		}
 
-		$task = $this->provider_client->get_task( $task_id );
-		if ( is_wp_error( $task ) ) {
-			update_post_meta( $post_id, '_goodsleep_story_generation_error', $task->get_error_message() );
-			$this->schedule_processing( $post_id );
-			return $task;
+		$task_payloads  = array();
+		$video_sources  = array();
+		$is_processing  = false;
+
+		foreach ( $task_ids as $task_id ) {
+			$task = $this->provider_client->get_task( $task_id );
+			if ( is_wp_error( $task ) ) {
+				update_post_meta( $post_id, '_goodsleep_story_generation_error', $task->get_error_message() );
+				$this->schedule_processing( $post_id );
+				return $task;
+			}
+
+			$task_payloads[] = $task;
+			$status          = $this->provider_client->extract_status( $task );
+
+			if ( in_array( $status, array( 'queued', 'pending', 'running', 'processing', 'submitted' ), true ) ) {
+				$is_processing = true;
+				continue;
+			}
+
+			if ( in_array( $status, array( 'failed', 'error', 'canceled', 'cancelled' ), true ) ) {
+				update_post_meta( $post_id, '_goodsleep_story_generation_status', 'failed' );
+				update_post_meta( $post_id, '_goodsleep_story_generation_error', __( 'La tarea de Sora fallo durante la generacion.', 'goodsleep-elementor' ) );
+				update_post_meta( $post_id, '_goodsleep_story_task_payload', wp_json_encode( $task_payloads ) );
+				return new WP_Error( 'goodsleep_generation_failed', __( 'La tarea de Sora fallo durante la generacion.', 'goodsleep-elementor' ) );
+			}
+
+			$video_url  = $this->provider_client->extract_video_url( $task );
+			$video_path = '';
+
+			$downloaded_video = $this->provider_client->download_video_content( $task_id );
+			if ( ! is_wp_error( $downloaded_video ) ) {
+				$video_path = $downloaded_video;
+			}
+
+			if ( '' === $video_url && '' === $video_path ) {
+				update_post_meta( $post_id, '_goodsleep_story_generation_status', 'failed' );
+				update_post_meta( $post_id, '_goodsleep_story_generation_error', __( 'Sora no devolvio una URL de video utilizable.', 'goodsleep-elementor' ) );
+				update_post_meta( $post_id, '_goodsleep_story_task_payload', wp_json_encode( $task_payloads ) );
+				return new WP_Error( 'goodsleep_video_missing', __( 'Sora no devolvio una URL de video utilizable.', 'goodsleep-elementor' ) );
+			}
+
+			$video_sources[] = array(
+				'video_url'  => $video_url,
+				'video_path' => $video_path,
+			);
 		}
 
-		$status = $this->provider_client->extract_status( $task );
-		update_post_meta( $post_id, '_goodsleep_story_task_payload', wp_json_encode( $task ) );
+		update_post_meta( $post_id, '_goodsleep_story_task_payload', wp_json_encode( $task_payloads ) );
 
-		if ( in_array( $status, array( 'queued', 'pending', 'running', 'processing', 'submitted' ), true ) ) {
+		if ( $is_processing ) {
 			update_post_meta( $post_id, '_goodsleep_story_generation_status', 'processing' );
 			$this->schedule_processing( $post_id );
 			return $this->build_status_payload( $post_id );
 		}
 
-		if ( in_array( $status, array( 'failed', 'error', 'canceled', 'cancelled' ), true ) ) {
-			update_post_meta( $post_id, '_goodsleep_story_generation_status', 'failed' );
-			update_post_meta( $post_id, '_goodsleep_story_generation_error', __( 'La tarea de Sora fallo durante la generacion.', 'goodsleep-elementor' ) );
-			return new WP_Error( 'goodsleep_generation_failed', __( 'La tarea de Sora fallo durante la generacion.', 'goodsleep-elementor' ) );
-		}
-
-		$video_url  = $this->provider_client->extract_video_url( $task );
-		$video_path = '';
-
-		if ( '' === $video_url && 'completed' === $status ) {
-			$downloaded_video = $this->provider_client->download_video_content( $task_id );
-			if ( ! is_wp_error( $downloaded_video ) ) {
-				$video_path = $downloaded_video;
-			}
-		}
-
-		if ( '' === $video_url && '' === $video_path ) {
-			update_post_meta( $post_id, '_goodsleep_story_generation_status', 'failed' );
-			update_post_meta( $post_id, '_goodsleep_story_generation_error', __( 'Sora no devolvio una URL de video utilizable.', 'goodsleep-elementor' ) );
-			return new WP_Error( 'goodsleep_video_missing', __( 'Sora no devolvio una URL de video utilizable.', 'goodsleep-elementor' ) );
-		}
-
 		$track_id  = (string) get_post_meta( $post_id, '_goodsleep_story_track_id', true );
 		$track     = goodsleep_get_track_by_id( $track_id );
 		$base_name = goodsleep_normalize_slug( (string) get_post_meta( $post_id, '_goodsleep_story_name', true ) ) . '-' . $post_id;
-		$finalized = $this->video_processor->finalize_video(
-			array(
-				'video_url' => $video_url,
-				'video_path' => $video_path,
-			),
+		$finalized = $this->video_processor->finalize_videos(
+			$video_sources,
 			$track ? $track : array(),
 			$base_name
 		);
@@ -310,6 +338,8 @@ class Goodsleep_Elementor_Story_Video_Service {
 	public function build_status_payload( $post_id ) {
 		$post_id = (int) $post_id;
 		$media   = goodsleep_get_story_primary_media( $post_id );
+		$clip_count = max( 1, (int) get_post_meta( $post_id, '_goodsleep_story_clip_count', true ) );
+		$base_poll_attempts = (int) goodsleep_get_setting( 'video_poll_attempts', 24 );
 
 		return array(
 			'storyId'        => $post_id,
@@ -321,7 +351,7 @@ class Goodsleep_Elementor_Story_Video_Service {
 			'isReady'        => ! empty( $media['is_ready'] ),
 			'error'          => (string) get_post_meta( $post_id, '_goodsleep_story_generation_error', true ),
 			'pollInterval'   => (int) goodsleep_get_setting( 'video_poll_interval', 5 ),
-			'pollAttempts'   => (int) goodsleep_get_setting( 'video_poll_attempts', 24 ),
+			'pollAttempts'   => $base_poll_attempts * max( 1, $clip_count * 3 ),
 			'publicVideoOnly'=> goodsleep_is_video_public_only(),
 		);
 	}
@@ -338,6 +368,25 @@ class Goodsleep_Elementor_Story_Video_Service {
 		if ( ! wp_next_scheduled( $this->cron_hook, array( $post_id ) ) ) {
 			wp_schedule_single_event( time() + 30, $this->cron_hook, array( $post_id ) );
 		}
+	}
+
+	/**
+	 * Devuelve los task ids asociados a una historia.
+	 *
+	 * @param int $post_id ID de la historia.
+	 * @return array<int,string>
+	 */
+	protected function get_story_task_ids( $post_id ) {
+		$task_ids = json_decode( (string) get_post_meta( (int) $post_id, '_goodsleep_story_task_ids', true ), true );
+		$task_ids = is_array( $task_ids ) ? array_values( array_filter( array_map( 'sanitize_text_field', $task_ids ) ) ) : array();
+
+		if ( ! empty( $task_ids ) ) {
+			return $task_ids;
+		}
+
+		$legacy_task_id = (string) get_post_meta( (int) $post_id, '_goodsleep_story_task_id', true );
+
+		return '' !== $legacy_task_id ? array( sanitize_text_field( $legacy_task_id ) ) : array();
 	}
 
 	/**

@@ -141,6 +141,11 @@ function goodsleep_render_video_prompt_template( $template, $closing_phrase = ''
 		$template = goodsleep_get_default_video_prompt_style();
 	}
 
+	if ( '' === $closing_phrase ) {
+		$template = preg_replace( '/\s*La frase final obligatoria del relato es exactamente esta:\s*"\[FRASE_FINAL\]"\.\s*/u', ' ', $template );
+		$template = preg_replace( '/\s*Esa frase[^.]*\.\s*/u', ' ', $template );
+	}
+
 	return str_replace(
 		array( '[FRASE_FINAL]' ),
 		array( $closing_phrase ),
@@ -701,6 +706,115 @@ function goodsleep_build_video_prompt( $story_text, $story_name = '', $closing_p
 			$style,
 			'' !== $story_name ? 'Personaje central: ' . $story_name . '.' : '',
 			'' !== $story_text ? 'La narracion principal en espanol latino debe seguir esta historia: ' . $story_text : '',
+		)
+	);
+
+	return implode( ' ', $parts );
+}
+
+/**
+ * Devuelve si una historia debe dividirse en dos clips.
+ *
+ * @param string $story_text Historia principal sin cierre.
+ * @return bool
+ */
+function goodsleep_should_use_two_video_clips( $story_text ) {
+	$story_text = trim( (string) $story_text );
+	$length     = function_exists( 'mb_strlen' ) ? mb_strlen( $story_text ) : strlen( $story_text );
+
+	return $length > 260;
+}
+
+/**
+ * Divide una historia en bloques contiguos para varios clips.
+ *
+ * @param string $story_text Historia principal sin cierre.
+ * @param int    $clip_count Numero de clips.
+ * @return array<int,string>
+ */
+function goodsleep_split_story_for_video_clips( $story_text, $clip_count = 2 ) {
+	$story_text = trim( preg_replace( '/\s+/', ' ', (string) $story_text ) );
+	$clip_count = max( 1, (int) $clip_count );
+
+	if ( '' === $story_text ) {
+		return array();
+	}
+
+	if ( 1 === $clip_count ) {
+		return array( $story_text );
+	}
+
+	$sentences = preg_split( '/(?<=[\.\!\?])\s+/u', $story_text );
+	$sentences = array_values( array_filter( array_map( 'trim', (array) $sentences ) ) );
+
+	if ( count( $sentences ) <= 1 ) {
+		$midpoint = (int) ceil( strlen( $story_text ) / 2 );
+		$first    = trim( substr( $story_text, 0, $midpoint ) );
+		$second   = trim( substr( $story_text, $midpoint ) );
+
+		return array_values( array_filter( array( $first, $second ) ) );
+	}
+
+	$total_length    = 0;
+	$sentence_lengths = array();
+	foreach ( $sentences as $sentence ) {
+		$sentence_length    = function_exists( 'mb_strlen' ) ? mb_strlen( $sentence ) : strlen( $sentence );
+		$sentence_lengths[] = $sentence_length;
+		$total_length      += $sentence_length;
+	}
+
+	$target_length = max( 1, (int) ceil( $total_length / $clip_count ) );
+	$clips         = array();
+	$current_clip  = array();
+	$current_size  = 0;
+
+	foreach ( $sentences as $index => $sentence ) {
+		$remaining_sentences = count( $sentences ) - $index;
+		$remaining_slots     = $clip_count - count( $clips );
+
+		if ( ! empty( $current_clip ) && $current_size >= $target_length && $remaining_sentences >= $remaining_slots ) {
+			$clips[]      = trim( implode( ' ', $current_clip ) );
+			$current_clip = array();
+			$current_size = 0;
+		}
+
+		$current_clip[] = $sentence;
+		$current_size  += $sentence_lengths[ $index ];
+	}
+
+	if ( ! empty( $current_clip ) ) {
+		$clips[] = trim( implode( ' ', $current_clip ) );
+	}
+
+	return array_values( array_filter( $clips ) );
+}
+
+/**
+ * Construye el prompt para un clip especifico dentro de una historia.
+ *
+ * @param string $story_segment   Texto del clip actual.
+ * @param string $story_name      Nombre visible.
+ * @param string $closing_phrase  Frase final obligatoria.
+ * @param int    $clip_index      Posicion del clip.
+ * @param int    $clip_count      Total de clips.
+ * @return string
+ */
+function goodsleep_build_video_clip_prompt( $story_segment, $story_name = '', $closing_phrase = '', $clip_index = 0, $clip_count = 1 ) {
+	$story_name    = trim( wp_strip_all_tags( (string) $story_name ) );
+	$story_segment = trim( wp_strip_all_tags( (string) $story_segment ) );
+	$clip_index    = max( 0, (int) $clip_index );
+	$clip_count    = max( 1, (int) $clip_count );
+	$is_final_clip = $clip_index >= ( $clip_count - 1 );
+	$style         = goodsleep_render_video_prompt_template( (string) goodsleep_get_setting( 'video_prompt_style', '' ), $is_final_clip ? $closing_phrase : '' );
+
+	$parts = array_filter(
+		array(
+			$style,
+			$clip_count > 1 ? sprintf( 'Este es el clip %1$d de %2$d de una misma historia.', $clip_index + 1, $clip_count ) : '',
+			! $is_final_clip ? 'No cierres todavia la historia. No incluyas aun la frase final obligatoria ni el plano final de la persona B durmiendo; ese cierre pertenece exclusivamente al ultimo clip.' : '',
+			'' !== $story_name && $is_final_clip ? 'En el plano final, la persona B, identificada como ' . $story_name . ', debe aparecer durmiendo placidamente, en calma absoluta, como si nada le afectara.' : '',
+			'' !== $story_name ? 'Personaje B, quien provoca el conflicto y a quien corresponde la frase final: ' . $story_name . '.' : '',
+			'' !== $story_segment ? 'La narracion completa en espanol latino debe seguir esta historia: ' . $story_segment : '',
 		)
 	);
 
