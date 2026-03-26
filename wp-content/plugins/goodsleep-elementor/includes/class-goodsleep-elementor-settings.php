@@ -53,6 +53,7 @@ class Goodsleep_Elementor_Settings {
 		$this->add_text_field( 'openai_base_url', __( 'OpenAI Base URL', 'goodsleep-elementor' ), 'url' );
 		$this->add_text_field( 'openai_video_model', __( 'Modelo de video', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'openai_video_submit_path', __( 'Ruta de creacion de video', 'goodsleep-elementor' ) );
+		$this->add_text_field( 'openai_video_remix_path', __( 'Ruta de remix de video', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'openai_video_status_path', __( 'Ruta de consulta de video', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'mailjet_api_key', __( 'Mailjet API Key', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'mailjet_secret_key', __( 'Mailjet Secret Key', 'goodsleep-elementor' ) );
@@ -122,6 +123,7 @@ class Goodsleep_Elementor_Settings {
 		$sanitized['openai_base_url']        = isset( $input['openai_base_url'] ) ? esc_url_raw( $input['openai_base_url'] ) : '';
 		$sanitized['openai_video_model']     = isset( $input['openai_video_model'] ) ? sanitize_text_field( $input['openai_video_model'] ) : 'sora-2';
 		$sanitized['openai_video_submit_path'] = isset( $input['openai_video_submit_path'] ) ? sanitize_text_field( $input['openai_video_submit_path'] ) : '/videos';
+		$sanitized['openai_video_remix_path'] = isset( $input['openai_video_remix_path'] ) ? sanitize_text_field( $input['openai_video_remix_path'] ) : '/videos/%s/remix';
 		$sanitized['openai_video_status_path'] = isset( $input['openai_video_status_path'] ) ? sanitize_text_field( $input['openai_video_status_path'] ) : '/videos/%s';
 		$sanitized['video_resolution']       = isset( $input['video_resolution'] ) ? sanitize_text_field( $input['video_resolution'] ) : '720p';
 		$sanitized['video_aspect_ratio']     = isset( $input['video_aspect_ratio'] ) ? sanitize_text_field( $input['video_aspect_ratio'] ) : '9:16';

@@ -158,6 +158,46 @@ class Goodsleep_Elementor_OpenAI_Video_Client {
 	}
 
 	/**
+	 * Crea un remix a partir de un video ya completado.
+	 *
+	 * @param string              $video_id ID base.
+	 * @param array<string,mixed> $payload  Prompt del remix.
+	 * @return array<string,mixed>|WP_Error
+	 */
+	public function remix_video_task( $video_id, $payload ) {
+		$api_key = goodsleep_get_setting( 'openai_api_key', '' );
+		$base    = untrailingslashit( goodsleep_get_setting( 'openai_base_url', '' ) );
+		$path    = goodsleep_get_setting( 'openai_video_remix_path', '/videos/%s/remix' );
+		$url     = $base . sprintf( $path, rawurlencode( (string) $video_id ) );
+		$model   = ! empty( $payload['model'] ) ? sanitize_text_field( (string) $payload['model'] ) : sanitize_text_field( (string) goodsleep_get_setting( 'openai_video_model', 'sora-2' ) );
+		$prompt  = trim( (string) $payload['prompt'] );
+
+		if ( '' === $api_key || '' === $url || '' === (string) $video_id || '' === $prompt ) {
+			return new WP_Error( 'goodsleep_invalid_openai_remix_payload', __( 'Faltan datos para crear el remix en Sora.', 'goodsleep-elementor' ) );
+		}
+
+		$response = wp_remote_post(
+			$url,
+			array(
+				'timeout' => 60,
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $api_key,
+					'Content-Type'  => 'application/json',
+					'Accept'        => 'application/json',
+				),
+				'body'    => wp_json_encode(
+					array(
+						'model'  => $model,
+						'prompt' => $prompt,
+					)
+				),
+			)
+		);
+
+		return $this->decode_response( $response, 'goodsleep_openai_video_remix_failed', __( 'OpenAI devolvio un error al crear el remix del video.', 'goodsleep-elementor' ) );
+	}
+
+	/**
 	 * Descarga el MP4 final del video completado.
 	 *
 	 * @param string $task_id ID del video.
