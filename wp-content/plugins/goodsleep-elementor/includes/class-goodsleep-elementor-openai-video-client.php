@@ -72,6 +72,7 @@ class Goodsleep_Elementor_OpenAI_Video_Client {
 	protected function create_video_task_with_reference( $url, $api_key, $request_body, $input_reference ) {
 		$file_path = ! empty( $input_reference['path'] ) ? (string) $input_reference['path'] : '';
 		$mime_type = ! empty( $input_reference['mime_type'] ) ? (string) $input_reference['mime_type'] : 'image/jpeg';
+		$size      = ! empty( $request_body['size'] ) ? (string) $request_body['size'] : '720x1280';
 
 		if ( '' === $file_path || ! file_exists( $file_path ) ) {
 			return new WP_Error( 'goodsleep_invalid_video_reference', __( 'La imagen de referencia del producto no es valida.', 'goodsleep-elementor' ) );
@@ -81,7 +82,15 @@ class Goodsleep_Elementor_OpenAI_Video_Client {
 			return new WP_Error( 'goodsleep_missing_curl_reference', __( 'El servidor no puede enviar imagenes de referencia a Sora porque CURL no esta disponible.', 'goodsleep-elementor' ) );
 		}
 
-		$curl_file = curl_file_create( $file_path, $mime_type, wp_basename( $file_path ) );
+		$prepared_reference = $this->prepare_reference_image_for_size( $file_path, $size, $mime_type );
+		if ( is_wp_error( $prepared_reference ) ) {
+			return $prepared_reference;
+		}
+
+		$prepared_path = (string) $prepared_reference['path'];
+		$prepared_mime = (string) $prepared_reference['mime_type'];
+		$cleanup_path  = ! empty( $prepared_reference['cleanup_path'] ) ? (string) $prepared_reference['cleanup_path'] : '';
+		$curl_file     = curl_file_create( $prepared_path, $prepared_mime, wp_basename( $prepared_path ) );
 		$multipart = array_merge(
 			$request_body,
 			array(
@@ -110,6 +119,10 @@ class Goodsleep_Elementor_OpenAI_Video_Client {
 		$status     = (int) curl_getinfo( $ch, CURLINFO_RESPONSE_CODE );
 		curl_close( $ch );
 
+		if ( '' !== $cleanup_path && file_exists( $cleanup_path ) ) {
+			@unlink( $cleanup_path );
+		}
+
 		if ( false === $body ) {
 			return new WP_Error( 'goodsleep_openai_video_create_failed', $curl_error ? $curl_error : __( 'No se pudo conectar con OpenAI.', 'goodsleep-elementor' ) );
 		}
@@ -125,6 +138,84 @@ class Goodsleep_Elementor_OpenAI_Video_Client {
 		}
 
 		return $decoded;
+	}
+
+	/**
+	 * Ajusta una imagen de referencia al tamano exacto requerido por Sora.
+	 *
+	 * @param string $file_path Ruta original.
+	 * @param string $size      Resolucion esperada.
+	 * @param string $mime_type Mime original.
+	 * @return array<string,string>|WP_Error
+	 */
+	protected function prepare_reference_image_for_size( $file_path, $size, $mime_type ) {
+		$dimensions = $this->parse_video_size( $size );
+
+		if ( is_wp_error( $dimensions ) ) {
+			return $dimensions;
+		}
+
+		$image_size = @getimagesize( $file_path );
+		if ( ! is_array( $image_size ) || empty( $image_size[0] ) || empty( $image_size[1] ) ) {
+			return new WP_Error( 'goodsleep_invalid_video_reference', __( 'No se pudo leer la imagen de referencia del producto.', 'goodsleep-elementor' ) );
+		}
+
+		$width  = (int) $image_size[0];
+		$height = (int) $image_size[1];
+
+		if ( $width === $dimensions['width'] && $height === $dimensions['height'] ) {
+			return array(
+				'path'         => $file_path,
+				'mime_type'    => $mime_type,
+				'cleanup_path' => '',
+			);
+		}
+
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+		$editor = wp_get_image_editor( $file_path );
+
+		if ( is_wp_error( $editor ) ) {
+			return new WP_Error( 'goodsleep_invalid_video_reference', __( 'No se pudo preparar la imagen de referencia del producto.', 'goodsleep-elementor' ) );
+		}
+
+		$result = $editor->resize( $dimensions['width'], $dimensions['height'], true );
+		if ( is_wp_error( $result ) ) {
+			return new WP_Error( 'goodsleep_invalid_video_reference', __( 'No se pudo ajustar la imagen de referencia al tamano requerido por Sora.', 'goodsleep-elementor' ) );
+		}
+
+		$temp_path = wp_tempnam( 'goodsleep-reference-' . $dimensions['width'] . 'x' . $dimensions['height'] . '.png' );
+		if ( ! $temp_path ) {
+			return new WP_Error( 'goodsleep_invalid_video_reference', __( 'No se pudo preparar un archivo temporal para la imagen de referencia.', 'goodsleep-elementor' ) );
+		}
+
+		$saved = $editor->save( $temp_path, 'image/png' );
+		if ( is_wp_error( $saved ) || empty( $saved['path'] ) ) {
+			@unlink( $temp_path );
+			return new WP_Error( 'goodsleep_invalid_video_reference', __( 'No se pudo guardar la imagen de referencia ajustada.', 'goodsleep-elementor' ) );
+		}
+
+		return array(
+			'path'         => (string) $saved['path'],
+			'mime_type'    => 'image/png',
+			'cleanup_path' => (string) $saved['path'],
+		);
+	}
+
+	/**
+	 * Convierte un size 720x1280 en un arreglo util.
+	 *
+	 * @param string $size Resolucion solicitada.
+	 * @return array<string,int>|WP_Error
+	 */
+	protected function parse_video_size( $size ) {
+		if ( ! preg_match( '/^(\d+)x(\d+)$/', (string) $size, $matches ) ) {
+			return new WP_Error( 'goodsleep_invalid_video_size', __( 'La resolucion configurada para Sora no es valida.', 'goodsleep-elementor' ) );
+		}
+
+		return array(
+			'width'  => (int) $matches[1],
+			'height' => (int) $matches[2],
+		);
 	}
 
 	/**
