@@ -309,7 +309,11 @@ class Goodsleep_Elementor_Story_Video_Service {
 		$email = (string) get_post_meta( $post_id, '_goodsleep_story_email', true );
 		$email_sent_at = (string) get_post_meta( $post_id, '_goodsleep_story_email_sent_at', true );
 		if ( $email && '' === $email_sent_at ) {
-			$sent = $this->mailjet->send_story_email(
+			$lock_token = wp_generate_uuid4();
+			$has_lock   = add_post_meta( $post_id, '_goodsleep_story_email_lock', $lock_token, true );
+
+			if ( $has_lock ) {
+				$sent = $this->mailjet->send_story_email(
 				array(
 					'story_id' => $post_id,
 					'video_id' => $video_id,
@@ -318,8 +322,14 @@ class Goodsleep_Elementor_Story_Video_Service {
 				)
 			);
 
-			if ( ! is_wp_error( $sent ) ) {
-				update_post_meta( $post_id, '_goodsleep_story_email_sent_at', current_time( 'mysql' ) );
+				if ( ! is_wp_error( $sent ) ) {
+					update_post_meta( $post_id, '_goodsleep_story_email_sent_at', current_time( 'mysql' ) );
+				}
+
+				$current_lock = (string) get_post_meta( $post_id, '_goodsleep_story_email_lock', true );
+				if ( $current_lock === $lock_token ) {
+					delete_post_meta( $post_id, '_goodsleep_story_email_lock' );
+				}
 			}
 		}
 
