@@ -195,6 +195,13 @@ class Goodsleep_Elementor_Story_Video_Service {
 	 */
 	public function process_story( $post_id ) {
 		$post_id  = (int) $post_id;
+		$current_status = (string) get_post_meta( $post_id, '_goodsleep_story_generation_status', true );
+		$current_video_id = (int) get_post_meta( $post_id, '_goodsleep_story_video_id', true );
+
+		if ( 'ready' === $current_status && $current_video_id > 0 ) {
+			return $this->build_status_payload( $post_id );
+		}
+
 		$task_ids = $this->get_story_task_ids( $post_id );
 		$clip_count = max( 1, (int) get_post_meta( $post_id, '_goodsleep_story_clip_count', true ) );
 
@@ -300,8 +307,9 @@ class Goodsleep_Elementor_Story_Video_Service {
 		}
 
 		$email = (string) get_post_meta( $post_id, '_goodsleep_story_email', true );
-		if ( $email ) {
-			$this->mailjet->send_story_email(
+		$email_sent_at = (string) get_post_meta( $post_id, '_goodsleep_story_email_sent_at', true );
+		if ( $email && '' === $email_sent_at ) {
+			$sent = $this->mailjet->send_story_email(
 				array(
 					'story_id' => $post_id,
 					'video_id' => $video_id,
@@ -309,6 +317,10 @@ class Goodsleep_Elementor_Story_Video_Service {
 					'email'    => $email,
 				)
 			);
+
+			if ( ! is_wp_error( $sent ) ) {
+				update_post_meta( $post_id, '_goodsleep_story_email_sent_at', current_time( 'mysql' ) );
+			}
 		}
 
 		return $this->build_status_payload( $post_id );

@@ -62,6 +62,7 @@ class Goodsleep_Elementor_Story_Post_Type {
 			'_goodsleep_story_scene_count'           => 'integer',
 			'_goodsleep_story_generation_error'      => 'string',
 			'_goodsleep_story_generation_completed_at' => 'string',
+			'_goodsleep_story_email_sent_at'         => 'string',
 			'_goodsleep_short_slug'                  => 'string',
 			'_goodsleep_vote_score'                  => 'string',
 			'_goodsleep_vote_total'                  => 'integer',
