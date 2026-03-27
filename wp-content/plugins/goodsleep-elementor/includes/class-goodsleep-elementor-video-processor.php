@@ -184,7 +184,13 @@ class Goodsleep_Elementor_Video_Processor {
 
 		if ( 0 !== $command_code || ! file_exists( $output_path ) || 0 === filesize( $output_path ) ) {
 			@unlink( $output_path );
-			return new WP_Error( 'goodsleep_concat_failed', __( 'No se pudieron unir los clips generados.', 'goodsleep-elementor' ) );
+			return new WP_Error(
+				'goodsleep_concat_failed',
+				__( 'No se pudieron unir los clips generados.', 'goodsleep-elementor' ),
+				array(
+					'ffmpeg_output' => implode( "\n", $command_output ),
+				)
+			);
 		}
 
 		return $output_path;
@@ -316,9 +322,26 @@ class Goodsleep_Elementor_Video_Processor {
 	 */
 	protected function create_temp_file_path( $filename ) {
 		$this->ensure_wp_file_functions();
-		$temp_path = wp_tempnam( sanitize_file_name( $filename ) );
+		$filename  = sanitize_file_name( $filename );
+		$temp_base = wp_tempnam( $filename );
 
-		return $temp_path ? $temp_path : '';
+		if ( ! $temp_base ) {
+			return '';
+		}
+
+		$extension = pathinfo( $filename, PATHINFO_EXTENSION );
+		if ( '' === $extension ) {
+			return $temp_base;
+		}
+
+		$target_path = $temp_base . '.' . $extension;
+		if ( @rename( $temp_base, $target_path ) ) {
+			return $target_path;
+		}
+
+		@unlink( $temp_base );
+
+		return '';
 	}
 
 	/**

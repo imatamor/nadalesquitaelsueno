@@ -29,6 +29,7 @@ Sitio WordPress de campana "Nada les quita el sueno".
 - todo texto visible para usuario debe revisarse por ortografia, gramatica y tono antes de cerrar una tarea; no se permiten errores de redaccion en copies de frontend
 - si se modifica theme o plugin, indicar archivos tocados
 - no romper el flujo de deploy automatico
+- en operaciones de archivos sobre el servidor, mantener `www-data:www-data` como owner esperado del proyecto y corregir ownership si se detectan archivos o carpetas con otro owner que afecten el flujo web
 - antes de cualquier push a produccion o promocion de `main`, revisar y aplicar la skill `website-production-release`
 - antes de cualquier release a produccion, declarar explicitamente el protocolo a usar (`first go-live`, `repo-only` o `incremental live`)
 - antes de cualquier release a produccion, solicitar o confirmar la lista declarada de cambios esperados y reconciliarla con los cambios detectados antes de ejecutar
@@ -142,5 +143,6 @@ Define how agents should collaborate in this project.
 - No guardar passwords, tokens ni llaves privadas en Git, Engram ni documentos del proyecto.
 - Si se formaliza la conexion por variables de entorno, preferir nombres como `MARURI_DROPLET_HOST=159.223.141.225`, `MARURI_DROPLET_NAME=Maruri-2.0` y referencias separadas para usuario o llaves fuera del repo.
 - Los directorios operativos del proyecto en el droplet son `/var/www/html/maruri/casos/nada_les_quita_el_sueno/prod` y `/var/www/html/maruri/casos/nada_les_quita_el_sueno/staging`.
+- En este proyecto, el owner operativo esperado para archivos y carpetas del sitio en el droplet es `www-data:www-data`.
 - Con ese acceso se pueden hacer revisiones operativas y, cuando el usuario lo apruebe, modificaciones de archivos o base de datos directamente en el droplet, recordando que cualquier cambio de codigo debe volver al repo.
 - Para verificaciones locales con PHP, usar `C:\tools\php`.
