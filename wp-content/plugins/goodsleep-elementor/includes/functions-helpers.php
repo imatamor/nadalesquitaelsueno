@@ -186,6 +186,79 @@ function goodsleep_render_video_prompt_template( $template, $closing_phrase = ''
 }
 
 /**
+ * Devuelve una version compacta del prompt base para proveedores con limites bajos.
+ *
+ * Kling rechaza prompts largos por encima de 2500 caracteres, asi que se usa una
+ * instruccion equivalente, mas corta y enfocada en continuidad narrativa.
+ *
+ * @param string $closing_phrase Frase final obligatoria.
+ * @return string
+ */
+function goodsleep_get_compact_video_prompt_style( $closing_phrase = '' ) {
+	$closing_phrase = trim( wp_strip_all_tags( (string) $closing_phrase ) );
+
+	$parts = array(
+		'Video vertical 9:16, cinematografico publicitario, realista y emocional.',
+		'Escenas claras y coherentes con la historia.',
+		'La persona A sufre o cuenta el problema; la persona B lo provoca.',
+		'No inventar hechos, acciones, danos, dialogos u objetos que no existan en la historia.',
+		'Mantener exactamente la misma voz narradora y los mismos personajes entre clips.',
+		'' !== $closing_phrase ? 'La frase final obligatoria es exactamente esta: "' . goodsleep_escape_prompt_literal( $closing_phrase ) . '". Debe corresponder visualmente a la persona B, nunca a la persona A.' : '',
+		'Sin subtitulos, captions, palabras en pantalla, glitches, barras de color, interferencias ni frames danados.',
+		'Audio sincronizado con locucion clara en espanol latino ecuatoriano, tono natural y envolvente.',
+	);
+
+	return trim( preg_replace( '/\s+/', ' ', implode( ' ', array_filter( $parts ) ) ) );
+}
+
+/**
+ * Compacta prompts para proveedores con limites estrictos de longitud.
+ *
+ * @param array<int,string> $parts          Bloques del prompt.
+ * @param string            $closing_phrase Frase final obligatoria.
+ * @param int               $max_length     Longitud maxima deseada.
+ * @return string
+ */
+function goodsleep_compact_video_prompt_for_provider( $parts, $closing_phrase = '', $max_length = 2400 ) {
+	$provider = goodsleep_get_video_provider();
+	$parts    = array_values( array_filter( array_map( 'trim', (array) $parts ) ) );
+	$prompt   = trim( preg_replace( '/\s+/', ' ', implode( ' ', $parts ) ) );
+
+	if ( 'kling' !== $provider ) {
+		return $prompt;
+	}
+
+	$length_fn = function_exists( 'mb_strlen' ) ? 'mb_strlen' : 'strlen';
+	if ( $length_fn( $prompt ) <= $max_length ) {
+		return $prompt;
+	}
+
+	if ( ! empty( $parts ) ) {
+		$parts[0] = goodsleep_get_compact_video_prompt_style( $closing_phrase );
+	}
+
+	$prompt = trim( preg_replace( '/\s+/', ' ', implode( ' ', array_filter( $parts ) ) ) );
+	if ( $length_fn( $prompt ) <= $max_length ) {
+		return $prompt;
+	}
+
+	$last_index = count( $parts ) - 1;
+	if ( $last_index >= 0 ) {
+		$reserved  = trim( preg_replace( '/\s+/', ' ', implode( ' ', array_slice( $parts, 0, $last_index ) ) ) );
+		$reserved  = '' !== $reserved ? $reserved . ' ' : '';
+		$available = max( 80, $max_length - $length_fn( $reserved ) );
+
+		if ( function_exists( 'mb_substr' ) ) {
+			$parts[ $last_index ] = trim( mb_substr( $parts[ $last_index ], 0, $available ) );
+		} else {
+			$parts[ $last_index ] = trim( substr( $parts[ $last_index ], 0, $available ) );
+		}
+	}
+
+	return trim( preg_replace( '/\s+/', ' ', implode( ' ', array_filter( $parts ) ) ) );
+}
+
+/**
  * Devuelve el secret efectivo para callbacks del proveedor.
  *
  * Para Kling usamos un token propio en la URL del callback porque la
@@ -855,7 +928,7 @@ function goodsleep_build_video_prompt( $story_text, $story_name = '', $closing_p
 		)
 	);
 
-	return implode( ' ', $parts );
+	return goodsleep_compact_video_prompt_for_provider( $parts, $closing_phrase );
 }
 
 /**
@@ -968,7 +1041,7 @@ function goodsleep_build_video_clip_prompt( $story_segment, $story_name = '', $c
 		)
 	);
 
-	return implode( ' ', $parts );
+	return goodsleep_compact_video_prompt_for_provider( $parts, $is_final_clip ? $closing_phrase : '' );
 }
 
 /**
