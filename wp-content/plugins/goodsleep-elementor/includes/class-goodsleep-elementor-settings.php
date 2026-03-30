@@ -151,8 +151,8 @@ class Goodsleep_Elementor_Settings {
 		$sanitized['kling_webhook_secret']   = isset( $input['kling_webhook_secret'] ) ? sanitize_text_field( $input['kling_webhook_secret'] ) : '';
 		$sanitized['kling_text_submit_path'] = isset( $input['kling_text_submit_path'] ) ? sanitize_text_field( $input['kling_text_submit_path'] ) : '/v1/videos/text2video';
 		$sanitized['kling_text_status_path'] = isset( $input['kling_text_status_path'] ) ? sanitize_text_field( $input['kling_text_status_path'] ) : '/v1/videos/text2video/%s';
-		$sanitized['kling_extend_submit_path'] = isset( $input['kling_extend_submit_path'] ) ? sanitize_text_field( $input['kling_extend_submit_path'] ) : '/v1/videos/video_extension';
-		$sanitized['kling_extend_status_path'] = isset( $input['kling_extend_status_path'] ) ? sanitize_text_field( $input['kling_extend_status_path'] ) : '/v1/videos/video_extension/%s';
+		$sanitized['kling_extend_submit_path'] = isset( $input['kling_extend_submit_path'] ) ? sanitize_text_field( $input['kling_extend_submit_path'] ) : '/v1/videos/extend';
+		$sanitized['kling_extend_status_path'] = isset( $input['kling_extend_status_path'] ) ? sanitize_text_field( $input['kling_extend_status_path'] ) : '/v1/videos/%s';
 		$sanitized['video_resolution']       = isset( $input['video_resolution'] ) ? sanitize_text_field( $input['video_resolution'] ) : '720p';
 		$sanitized['video_aspect_ratio']     = isset( $input['video_aspect_ratio'] ) ? sanitize_text_field( $input['video_aspect_ratio'] ) : '9:16';
 		$sanitized['video_duration']         = isset( $input['video_duration'] ) ? max( 4, min( 15, absint( $input['video_duration'] ) ) ) : 12;

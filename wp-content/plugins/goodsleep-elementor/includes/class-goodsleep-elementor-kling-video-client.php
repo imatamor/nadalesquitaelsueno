@@ -78,7 +78,7 @@ class Goodsleep_Elementor_Kling_Video_Client implements Goodsleep_Elementor_Vide
 			return new WP_Error( 'goodsleep_missing_kling_task_id', __( 'Kling no devolvio un task id valido.', 'goodsleep-elementor' ) );
 		}
 
-		$path = 'video_extension' === $this->detect_task_kind( $context ) ? goodsleep_get_setting( 'kling_extend_status_path', '/v1/videos/video_extension/%s' ) : goodsleep_get_setting( 'kling_text_status_path', '/v1/videos/text2video/%s' );
+		$path = 'video_extension' === $this->detect_task_kind( $context ) ? goodsleep_get_setting( 'kling_extend_status_path', '/v1/videos/%s' ) : goodsleep_get_setting( 'kling_text_status_path', '/v1/videos/text2video/%s' );
 		$url  = $config['base_url'] . sprintf( $path, rawurlencode( $task_id ) );
 		$headers = $this->build_headers( $config );
 		if ( is_wp_error( $headers ) ) {
@@ -143,7 +143,7 @@ class Goodsleep_Elementor_Kling_Video_Client implements Goodsleep_Elementor_Vide
 		}
 
 		$response = wp_remote_post(
-			$config['base_url'] . goodsleep_get_setting( 'kling_extend_submit_path', '/v1/videos/video_extension' ),
+			$config['base_url'] . goodsleep_get_setting( 'kling_extend_submit_path', '/v1/videos/extend' ),
 			array(
 				'timeout' => 60,
 				'headers' => $headers,
@@ -412,19 +412,20 @@ class Goodsleep_Elementor_Kling_Video_Client implements Goodsleep_Elementor_Vide
 		}
 
 		$status_code = (int) wp_remote_retrieve_response_code( $response );
-		$decoded     = json_decode( wp_remote_retrieve_body( $response ), true );
+		$body        = (string) wp_remote_retrieve_body( $response );
+		$decoded     = json_decode( $body, true );
 
 		if ( $status_code >= 400 ) {
-			return new WP_Error( $error_key, $this->extract_error_message( $decoded, $fallback ), array( 'status' => 502, 'provider_status' => $status_code ) );
+			return new WP_Error( $error_key, $this->extract_error_message( $decoded, $fallback, $body ), array( 'status' => 502, 'provider_status' => $status_code ) );
 		}
 
 		if ( ! is_array( $decoded ) ) {
-			return new WP_Error( $error_key, $fallback );
+			return new WP_Error( $error_key, $this->extract_error_message( null, $fallback, $body ) );
 		}
 
 		$code = isset( $decoded['code'] ) ? (int) $decoded['code'] : 0;
 		if ( 0 !== $code ) {
-			return new WP_Error( $error_key, $this->extract_error_message( $decoded, $fallback ), array( 'status' => 502, 'provider_code' => $code ) );
+			return new WP_Error( $error_key, $this->extract_error_message( $decoded, $fallback, $body ), array( 'status' => 502, 'provider_code' => $code ) );
 		}
 
 		return $decoded;
@@ -433,12 +434,18 @@ class Goodsleep_Elementor_Kling_Video_Client implements Goodsleep_Elementor_Vide
 	/**
 	 * Extrae mensaje legible.
 	 *
-	 * @param array<string,mixed>|null $payload Payload.
+	 * @param array<string,mixed>|null $payload  Payload.
 	 * @param string                   $fallback Fallback.
+	 * @param string                   $raw_body Cuerpo bruto.
 	 * @return string
 	 */
-	protected function extract_error_message( $payload, $fallback ) {
+	protected function extract_error_message( $payload, $fallback, $raw_body = '' ) {
 		if ( ! is_array( $payload ) ) {
+			$raw_body = trim( wp_strip_all_tags( (string) $raw_body ) );
+			if ( '' !== $raw_body ) {
+				return function_exists( 'mb_substr' ) ? trim( mb_substr( $raw_body, 0, 240 ) ) : trim( substr( $raw_body, 0, 240 ) );
+			}
+
 			return $fallback;
 		}
 
@@ -449,7 +456,12 @@ class Goodsleep_Elementor_Kling_Video_Client implements Goodsleep_Elementor_Vide
 		}
 
 		if ( ! empty( $payload['data'] ) && is_array( $payload['data'] ) ) {
-			return $this->extract_error_message( $payload['data'], $fallback );
+			return $this->extract_error_message( $payload['data'], $fallback, $raw_body );
+		}
+
+		$raw_body = trim( wp_strip_all_tags( (string) $raw_body ) );
+		if ( '' !== $raw_body ) {
+			return function_exists( 'mb_substr' ) ? trim( mb_substr( $raw_body, 0, 240 ) ) : trim( substr( $raw_body, 0, 240 ) );
 		}
 
 		return $fallback;
