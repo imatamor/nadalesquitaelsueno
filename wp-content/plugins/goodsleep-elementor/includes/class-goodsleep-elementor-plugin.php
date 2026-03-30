@@ -44,7 +44,9 @@ class Goodsleep_Elementor_Plugin {
 	protected function includes() {
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-settings.php';
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-story-post-type.php';
+		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-video-provider-client-interface.php';
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-openai-video-client.php';
+		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-kling-video-client.php';
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-video-processor.php';
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-mailjet-client.php';
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-story-video-service.php';
@@ -61,8 +63,10 @@ class Goodsleep_Elementor_Plugin {
 	 * @return void
 	 */
 	protected function boot() {
+		$provider_client = 'openai' === goodsleep_get_video_provider() ? new Goodsleep_Elementor_OpenAI_Video_Client() : new Goodsleep_Elementor_Kling_Video_Client();
+
 		$video_service = new Goodsleep_Elementor_Story_Video_Service(
-			new Goodsleep_Elementor_OpenAI_Video_Client(),
+			$provider_client,
 			new Goodsleep_Elementor_Video_Processor(),
 			new Goodsleep_Elementor_Mailjet_Client()
 		);

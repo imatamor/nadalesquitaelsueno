@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-class Goodsleep_Elementor_OpenAI_Video_Client {
+class Goodsleep_Elementor_OpenAI_Video_Client implements Goodsleep_Elementor_Video_Provider_Client_Interface {
 	/**
 	 * Crea una tarea de generacion de video.
 	 *
@@ -228,7 +228,7 @@ class Goodsleep_Elementor_OpenAI_Video_Client {
 	 * @param string $task_id ID del video.
 	 * @return array<string,mixed>|WP_Error
 	 */
-	public function get_task( $task_id ) {
+	public function get_task( $task_id, $context = array() ) {
 		$api_key = goodsleep_get_setting( 'openai_api_key', '' );
 		$base    = untrailingslashit( goodsleep_get_setting( 'openai_base_url', '' ) );
 		$path    = goodsleep_get_setting( 'openai_video_status_path', '/videos/%s' );
@@ -259,7 +259,7 @@ class Goodsleep_Elementor_OpenAI_Video_Client {
 	 * @param array<string,mixed> $payload  Prompt del remix.
 	 * @return array<string,mixed>|WP_Error
 	 */
-	public function remix_video_task( $video_id, $payload ) {
+	public function remix_video_task( $video_id, $payload, $source_context = array() ) {
 		$api_key = goodsleep_get_setting( 'openai_api_key', '' );
 		$base    = untrailingslashit( goodsleep_get_setting( 'openai_base_url', '' ) );
 		$path    = goodsleep_get_setting( 'openai_video_remix_path', '/videos/%s/remix' );
@@ -296,7 +296,7 @@ class Goodsleep_Elementor_OpenAI_Video_Client {
 	 * @param string $task_id ID del video.
 	 * @return string|WP_Error
 	 */
-	public function download_video_content( $task_id ) {
+	public function download_video_content( $task_id, $context = array() ) {
 		$api_key = goodsleep_get_setting( 'openai_api_key', '' );
 		$base    = untrailingslashit( goodsleep_get_setting( 'openai_base_url', '' ) );
 		$path    = goodsleep_get_setting( 'openai_video_content_path', '/videos/%s/content' );
@@ -419,6 +419,16 @@ class Goodsleep_Elementor_OpenAI_Video_Client {
 		}
 
 		return '';
+	}
+
+	/**
+	 * Extrae el identificador real del clip cuando OpenAI lo expone.
+	 *
+	 * @param array<string,mixed> $payload Payload.
+	 * @return string
+	 */
+	public function extract_video_id( $payload ) {
+		return $this->extract_task_id( $payload );
 	}
 
 	/**

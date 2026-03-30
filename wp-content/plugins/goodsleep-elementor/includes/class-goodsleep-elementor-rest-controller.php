@@ -93,10 +93,20 @@ class Goodsleep_Elementor_REST_Controller {
 
 		register_rest_route(
 			'goodsleep/v1',
+			'/video-webhook',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'handle_video_webhook' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+
+		register_rest_route(
+			'goodsleep/v1',
 			'/openai-webhook',
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
-				'callback'            => array( $this, 'handle_openai_webhook' ),
+				'callback'            => array( $this, 'handle_video_webhook' ),
 				'permission_callback' => '__return_true',
 			)
 		);
@@ -158,29 +168,35 @@ class Goodsleep_Elementor_REST_Controller {
 	 * @param WP_REST_Request $request Request.
 	 * @return WP_REST_Response|WP_Error
 	 */
-	public function handle_openai_webhook( WP_REST_Request $request ) {
+	public function handle_video_webhook( WP_REST_Request $request ) {
 		$raw_body = (string) $request->get_body();
-		$secret   = (string) goodsleep_get_setting( 'openai_webhook_secret', '' );
+		$provider = sanitize_key( (string) $request->get_param( 'provider' ) );
+		$provider = $provider ? $provider : goodsleep_get_video_provider();
 
-		if ( '' === trim( $secret ) ) {
-			return new WP_Error( 'goodsleep_missing_webhook_secret', __( 'El webhook de OpenAI no tiene secret configurado.', 'goodsleep-elementor' ), array( 'status' => 500 ) );
-		}
+		if ( 'openai' === $provider ) {
+			$secret = (string) goodsleep_get_setting( 'openai_webhook_secret', '' );
+			if ( '' === trim( $secret ) ) {
+				return new WP_Error( 'goodsleep_missing_webhook_secret', __( 'El webhook de OpenAI no tiene secret configurado.', 'goodsleep-elementor' ), array( 'status' => 500 ) );
+			}
 
-		$signatures = $this->extract_webhook_signatures( $request );
-		$event_id  = sanitize_text_field( (string) $request->get_header( 'webhook-id' ) );
-		$timestamp = sanitize_text_field( (string) $request->get_header( 'webhook-timestamp' ) );
+			$signatures = $this->extract_webhook_signatures( $request );
+			$event_id   = sanitize_text_field( (string) $request->get_header( 'webhook-id' ) );
+			$timestamp  = sanitize_text_field( (string) $request->get_header( 'webhook-timestamp' ) );
 
-		if ( ! $this->is_valid_openai_webhook_signature( $raw_body, $event_id, $timestamp, $signatures, $secret ) ) {
-			return new WP_Error( 'goodsleep_invalid_webhook_signature', __( 'La firma del webhook de OpenAI no es valida.', 'goodsleep-elementor' ), array( 'status' => 401 ) );
+			if ( ! $this->is_valid_openai_webhook_signature( $raw_body, $event_id, $timestamp, $signatures, $secret ) ) {
+				return new WP_Error( 'goodsleep_invalid_webhook_signature', __( 'La firma del webhook de OpenAI no es valida.', 'goodsleep-elementor' ), array( 'status' => 401 ) );
+			}
+		} elseif ( ! $this->is_valid_kling_webhook_token( $request ) ) {
+			return new WP_Error( 'goodsleep_invalid_webhook_token', __( 'El token del callback de Kling no es valido.', 'goodsleep-elementor' ), array( 'status' => 401 ) );
 		}
 
 		$payload = json_decode( $raw_body, true );
 		if ( ! is_array( $payload ) ) {
-			return new WP_Error( 'goodsleep_invalid_webhook_payload', __( 'El webhook de OpenAI llego con un payload invalido.', 'goodsleep-elementor' ), array( 'status' => 400 ) );
+			return new WP_Error( 'goodsleep_invalid_webhook_payload', __( 'El callback del proveedor de video llego con un payload invalido.', 'goodsleep-elementor' ), array( 'status' => 400 ) );
 		}
 
 		$task_id    = $this->extract_webhook_task_id( $payload );
-		$event_type = isset( $payload['type'] ) ? sanitize_text_field( (string) $payload['type'] ) : '';
+		$event_type = $this->extract_webhook_event_type( $payload );
 		$story_id   = $this->video_service->find_story_id_by_task_id( $task_id );
 
 		if ( $story_id <= 0 ) {
@@ -195,7 +211,7 @@ class Goodsleep_Elementor_REST_Controller {
 
 		if ( $this->is_failed_webhook_event( $event_type ) ) {
 			$message = $this->extract_webhook_error_message( $payload );
-			$this->video_service->mark_story_failed( $story_id, $message ? $message : __( 'OpenAI reporto un error en la generacion del video.', 'goodsleep-elementor' ) );
+			$this->video_service->mark_story_failed( $story_id, $message ? $message : __( 'El proveedor de video reporto un error en la generacion.', 'goodsleep-elementor' ) );
 		} elseif ( $this->is_completed_webhook_event( $event_type ) ) {
 			$this->video_service->process_story( $story_id );
 		}
@@ -205,9 +221,20 @@ class Goodsleep_Elementor_REST_Controller {
 				'ok'        => true,
 				'storyId'   => $story_id,
 				'taskId'    => $task_id,
+				'provider'  => $provider,
 				'eventType' => $event_type,
 			)
 		);
+	}
+
+	/**
+	 * Alias retrocompatible del webhook previo.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function handle_openai_webhook( WP_REST_Request $request ) {
+		return $this->handle_video_webhook( $request );
 	}
 
 	/**
@@ -394,6 +421,14 @@ class Goodsleep_Elementor_REST_Controller {
 	 * @return string
 	 */
 	protected function extract_webhook_task_id( $payload ) {
+		if ( ! empty( $payload['task_id'] ) && is_string( $payload['task_id'] ) ) {
+			return sanitize_text_field( $payload['task_id'] );
+		}
+
+		if ( ! empty( $payload['data']['task_id'] ) && is_string( $payload['data']['task_id'] ) ) {
+			return sanitize_text_field( $payload['data']['task_id'] );
+		}
+
 		if ( ! empty( $payload['data']['id'] ) && is_string( $payload['data']['id'] ) ) {
 			return sanitize_text_field( $payload['data']['id'] );
 		}
@@ -412,7 +447,7 @@ class Goodsleep_Elementor_REST_Controller {
 	 * @return bool
 	 */
 	protected function is_completed_webhook_event( $event_type ) {
-		return false !== strpos( $event_type, 'completed' );
+		return false !== strpos( $event_type, 'completed' ) || false !== strpos( $event_type, 'succeed' ) || 'success' === $event_type;
 	}
 
 	/**
@@ -433,13 +468,57 @@ class Goodsleep_Elementor_REST_Controller {
 	 */
 	protected function extract_webhook_error_message( $payload ) {
 		foreach ( array( 'message', 'error', 'detail' ) as $key ) {
+			if ( ! empty( $payload[ $key ] ) && is_string( $payload[ $key ] ) ) {
+				return sanitize_text_field( $payload[ $key ] );
+			}
+
 			if ( ! empty( $payload['data'][ $key ] ) && is_string( $payload['data'][ $key ] ) ) {
 				return sanitize_text_field( $payload['data'][ $key ] );
 			}
 		}
 
+		if ( ! empty( $payload['task_status_msg'] ) && is_string( $payload['task_status_msg'] ) ) {
+			return sanitize_text_field( $payload['task_status_msg'] );
+		}
+
 		if ( ! empty( $payload['data']['error']['message'] ) && is_string( $payload['data']['error']['message'] ) ) {
 			return sanitize_text_field( $payload['data']['error']['message'] );
+		}
+
+		return '';
+	}
+
+	/**
+	 * Valida el token simple enviado por Kling en la callback URL.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return bool
+	 */
+	protected function is_valid_kling_webhook_token( WP_REST_Request $request ) {
+		$token = sanitize_text_field( (string) $request->get_param( 'token' ) );
+
+		return '' !== $token && hash_equals( goodsleep_get_video_callback_secret( 'kling' ), $token );
+	}
+
+	/**
+	 * Extrae un tipo de evento normalizado desde payloads heterogeneos.
+	 *
+	 * @param array<string,mixed> $payload Payload.
+	 * @return string
+	 */
+	protected function extract_webhook_event_type( $payload ) {
+		if ( ! empty( $payload['type'] ) && is_string( $payload['type'] ) ) {
+			return sanitize_key( (string) $payload['type'] );
+		}
+
+		foreach ( array( 'task_status', 'status', 'state' ) as $candidate ) {
+			if ( ! empty( $payload[ $candidate ] ) && is_string( $payload[ $candidate ] ) ) {
+				return sanitize_key( (string) $payload[ $candidate ] );
+			}
+
+			if ( ! empty( $payload['data'][ $candidate ] ) && is_string( $payload['data'][ $candidate ] ) ) {
+				return sanitize_key( (string) $payload['data'][ $candidate ] );
+			}
 		}
 
 		return '';

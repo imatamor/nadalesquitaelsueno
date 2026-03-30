@@ -14,6 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function goodsleep_get_settings() {
 	$defaults = array(
+		'video_provider'          => 'openai',
 		'openai_api_key'          => '',
 		'openai_base_url'         => 'https://api.openai.com/v1',
 		'openai_video_model'      => 'sora-2',
@@ -22,6 +23,18 @@ function goodsleep_get_settings() {
 		'openai_video_status_path'=> '/videos/%s',
 		'openai_video_content_path'=> '/videos/%s/content',
 		'openai_webhook_secret'   => '',
+		'kling_access_key'        => '',
+		'kling_secret_key'        => '',
+		'kling_base_url'          => 'https://api-singapore.klingai.com',
+		'kling_video_model'       => 'kling-v3',
+		'kling_video_mode'        => 'std',
+		'kling_video_sound'       => 'on',
+		'kling_negative_prompt'   => '',
+		'kling_text_submit_path'  => '/v1/videos/text2video',
+		'kling_text_status_path'  => '/v1/videos/text2video/%s',
+		'kling_extend_submit_path'=> '/v1/videos/video_extension',
+		'kling_extend_status_path'=> '/v1/videos/video_extension/%s',
+		'kling_webhook_secret'    => '',
 		'video_resolution'        => '720p',
 		'video_aspect_ratio'      => '9:16',
 		'video_duration'          => 12,
@@ -77,7 +90,18 @@ function goodsleep_get_setting( $key, $default = '' ) {
 }
 
 /**
- * Devuelve el prompt base recomendado para Sora 2.
+ * Devuelve el proveedor activo de video.
+ *
+ * @return string
+ */
+function goodsleep_get_video_provider() {
+	$provider = sanitize_key( (string) goodsleep_get_setting( 'video_provider', 'openai' ) );
+
+	return in_array( $provider, array( 'openai', 'kling' ), true ) ? $provider : 'openai';
+}
+
+/**
+ * Devuelve el prompt base recomendado para la generacion de video.
  *
  * @return string
  */
@@ -159,6 +183,77 @@ function goodsleep_render_video_prompt_template( $template, $closing_phrase = ''
 		array( $closing_phrase ),
 		$template
 	);
+}
+
+/**
+ * Devuelve el secret efectivo para callbacks del proveedor.
+ *
+ * Para Kling usamos un token propio en la URL del callback porque la
+ * documentacion disponible no expone una firma estandar tipo OpenAI.
+ *
+ * @param string $provider Proveedor.
+ * @return string
+ */
+function goodsleep_get_video_callback_secret( $provider = '' ) {
+	$provider = $provider ? sanitize_key( (string) $provider ) : goodsleep_get_video_provider();
+
+	if ( 'openai' === $provider ) {
+		return trim( (string) goodsleep_get_setting( 'openai_webhook_secret', '' ) );
+	}
+
+	$secret = trim( (string) goodsleep_get_setting( 'kling_webhook_secret', '' ) );
+	if ( '' !== $secret ) {
+		return $secret;
+	}
+
+	return wp_hash( home_url( '/' ) . '|goodsleep-video-webhook|' . $provider );
+}
+
+/**
+ * Construye la URL de callback del proveedor de video.
+ *
+ * @param string $provider Proveedor.
+ * @return string
+ */
+function goodsleep_get_video_callback_url( $provider = '' ) {
+	$provider = $provider ? sanitize_key( (string) $provider ) : goodsleep_get_video_provider();
+	$url      = rest_url( 'goodsleep/v1/video-webhook' );
+
+	return add_query_arg(
+		array(
+			'provider' => $provider,
+			'token'    => goodsleep_get_video_callback_secret( $provider ),
+		),
+		$url
+	);
+}
+
+/**
+ * Normaliza la duracion enviada al proveedor activo.
+ *
+ * Kling trabaja por segundos discretos y la configuracion actual puede
+ * venir heredada desde Sora con 12 segundos, asi que la traducimos al
+ * valor soportado mas cercano.
+ *
+ * @param int|null $duration Duracion deseada.
+ * @return int
+ */
+function goodsleep_get_provider_video_duration( $duration = null ) {
+	$duration = null === $duration ? (int) goodsleep_get_setting( 'video_duration', 12 ) : (int) $duration;
+
+	if ( 'kling' !== goodsleep_get_video_provider() ) {
+		return max( 4, $duration );
+	}
+
+	if ( $duration <= 5 ) {
+		return 5;
+	}
+
+	if ( $duration <= 10 ) {
+		return 10;
+	}
+
+	return 15;
 }
 
 /**

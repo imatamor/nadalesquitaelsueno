@@ -49,6 +49,7 @@ class Goodsleep_Elementor_Settings {
 		add_settings_section( 'goodsleep_video_section', __( 'Configuracion de video', 'goodsleep-elementor' ), '__return_false', 'goodsleep-elementor' );
 		add_settings_section( 'goodsleep_catalog_section', __( 'Tracks y salida publica', 'goodsleep-elementor' ), '__return_false', 'goodsleep-elementor' );
 
+		add_settings_field( 'video_provider', __( 'Proveedor de video', 'goodsleep-elementor' ), array( $this, 'render_select_field' ), 'goodsleep-elementor', 'goodsleep_api_section', array( 'key' => 'video_provider', 'options' => array( 'kling' => __( 'Kling', 'goodsleep-elementor' ), 'openai' => __( 'OpenAI Sora', 'goodsleep-elementor' ) ) ) );
 		$this->add_text_field( 'openai_api_key', __( 'OpenAI API Key', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'openai_base_url', __( 'OpenAI Base URL', 'goodsleep-elementor' ), 'url' );
 		$this->add_text_field( 'openai_video_model', __( 'Modelo de video', 'goodsleep-elementor' ) );
@@ -56,6 +57,18 @@ class Goodsleep_Elementor_Settings {
 		$this->add_text_field( 'openai_video_submit_path', __( 'Ruta de creacion de video', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'openai_video_remix_path', __( 'Ruta de remix de video', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'openai_video_status_path', __( 'Ruta de consulta de video', 'goodsleep-elementor' ) );
+		$this->add_text_field( 'kling_access_key', __( 'Kling Access Key', 'goodsleep-elementor' ) );
+		$this->add_text_field( 'kling_secret_key', __( 'Kling Secret Key', 'goodsleep-elementor' ) );
+		$this->add_text_field( 'kling_base_url', __( 'Kling Base URL', 'goodsleep-elementor' ), 'url' );
+		$this->add_text_field( 'kling_video_model', __( 'Kling modelo de video', 'goodsleep-elementor' ) );
+		add_settings_field( 'kling_video_mode', __( 'Kling modo', 'goodsleep-elementor' ), array( $this, 'render_select_field' ), 'goodsleep-elementor', 'goodsleep_api_section', array( 'key' => 'kling_video_mode', 'options' => array( 'std' => __( 'Standard', 'goodsleep-elementor' ), 'pro' => __( 'Professional', 'goodsleep-elementor' ) ) ) );
+		add_settings_field( 'kling_video_sound', __( 'Kling audio integrado', 'goodsleep-elementor' ), array( $this, 'render_select_field' ), 'goodsleep-elementor', 'goodsleep_api_section', array( 'key' => 'kling_video_sound', 'options' => array( 'on' => __( 'Activado', 'goodsleep-elementor' ), 'off' => __( 'Desactivado', 'goodsleep-elementor' ) ) ) );
+		$this->add_textarea_field( 'kling_negative_prompt', __( 'Kling negative prompt', 'goodsleep-elementor' ), 3, 'goodsleep_api_section' );
+		$this->add_text_field( 'kling_webhook_secret', __( 'Kling callback secret', 'goodsleep-elementor' ) );
+		$this->add_text_field( 'kling_text_submit_path', __( 'Kling ruta text-to-video', 'goodsleep-elementor' ) );
+		$this->add_text_field( 'kling_text_status_path', __( 'Kling ruta estado text-to-video', 'goodsleep-elementor' ) );
+		$this->add_text_field( 'kling_extend_submit_path', __( 'Kling ruta video extension', 'goodsleep-elementor' ) );
+		$this->add_text_field( 'kling_extend_status_path', __( 'Kling ruta estado extension', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'mailjet_api_key', __( 'Mailjet API Key', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'mailjet_secret_key', __( 'Mailjet Secret Key', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'mailjet_from_email', __( 'Mailjet From Email', 'goodsleep-elementor' ), 'email' );
@@ -120,6 +133,7 @@ class Goodsleep_Elementor_Settings {
 		$sanitized = goodsleep_get_settings();
 		$input     = is_array( $input ) ? $input : array();
 
+		$sanitized['video_provider']         = isset( $input['video_provider'] ) && in_array( $input['video_provider'], array( 'openai', 'kling' ), true ) ? sanitize_key( $input['video_provider'] ) : 'openai';
 		$sanitized['openai_api_key']         = isset( $input['openai_api_key'] ) ? sanitize_text_field( $input['openai_api_key'] ) : '';
 		$sanitized['openai_base_url']        = isset( $input['openai_base_url'] ) ? esc_url_raw( $input['openai_base_url'] ) : '';
 		$sanitized['openai_video_model']     = isset( $input['openai_video_model'] ) ? sanitize_text_field( $input['openai_video_model'] ) : 'sora-2';
@@ -127,9 +141,21 @@ class Goodsleep_Elementor_Settings {
 		$sanitized['openai_video_submit_path'] = isset( $input['openai_video_submit_path'] ) ? sanitize_text_field( $input['openai_video_submit_path'] ) : '/videos';
 		$sanitized['openai_video_remix_path'] = isset( $input['openai_video_remix_path'] ) ? sanitize_text_field( $input['openai_video_remix_path'] ) : '/videos/%s/remix';
 		$sanitized['openai_video_status_path'] = isset( $input['openai_video_status_path'] ) ? sanitize_text_field( $input['openai_video_status_path'] ) : '/videos/%s';
+		$sanitized['kling_access_key']       = isset( $input['kling_access_key'] ) ? sanitize_text_field( $input['kling_access_key'] ) : '';
+		$sanitized['kling_secret_key']       = isset( $input['kling_secret_key'] ) ? sanitize_text_field( $input['kling_secret_key'] ) : '';
+		$sanitized['kling_base_url']         = isset( $input['kling_base_url'] ) ? esc_url_raw( $input['kling_base_url'] ) : 'https://api-singapore.klingai.com';
+		$sanitized['kling_video_model']      = isset( $input['kling_video_model'] ) ? sanitize_text_field( $input['kling_video_model'] ) : 'kling-v3';
+		$sanitized['kling_video_mode']       = isset( $input['kling_video_mode'] ) && in_array( $input['kling_video_mode'], array( 'std', 'pro' ), true ) ? sanitize_key( $input['kling_video_mode'] ) : 'std';
+		$sanitized['kling_video_sound']      = isset( $input['kling_video_sound'] ) && in_array( $input['kling_video_sound'], array( 'on', 'off' ), true ) ? sanitize_key( $input['kling_video_sound'] ) : 'on';
+		$sanitized['kling_negative_prompt']  = isset( $input['kling_negative_prompt'] ) ? sanitize_textarea_field( $input['kling_negative_prompt'] ) : '';
+		$sanitized['kling_webhook_secret']   = isset( $input['kling_webhook_secret'] ) ? sanitize_text_field( $input['kling_webhook_secret'] ) : '';
+		$sanitized['kling_text_submit_path'] = isset( $input['kling_text_submit_path'] ) ? sanitize_text_field( $input['kling_text_submit_path'] ) : '/v1/videos/text2video';
+		$sanitized['kling_text_status_path'] = isset( $input['kling_text_status_path'] ) ? sanitize_text_field( $input['kling_text_status_path'] ) : '/v1/videos/text2video/%s';
+		$sanitized['kling_extend_submit_path'] = isset( $input['kling_extend_submit_path'] ) ? sanitize_text_field( $input['kling_extend_submit_path'] ) : '/v1/videos/video_extension';
+		$sanitized['kling_extend_status_path'] = isset( $input['kling_extend_status_path'] ) ? sanitize_text_field( $input['kling_extend_status_path'] ) : '/v1/videos/video_extension/%s';
 		$sanitized['video_resolution']       = isset( $input['video_resolution'] ) ? sanitize_text_field( $input['video_resolution'] ) : '720p';
 		$sanitized['video_aspect_ratio']     = isset( $input['video_aspect_ratio'] ) ? sanitize_text_field( $input['video_aspect_ratio'] ) : '9:16';
-		$sanitized['video_duration']         = isset( $input['video_duration'] ) ? max( 4, min( 12, absint( $input['video_duration'] ) ) ) : 12;
+		$sanitized['video_duration']         = isset( $input['video_duration'] ) ? max( 4, min( 15, absint( $input['video_duration'] ) ) ) : 12;
 		$sanitized['video_poll_interval']    = isset( $input['video_poll_interval'] ) ? max( 2, absint( $input['video_poll_interval'] ) ) : 5;
 		$sanitized['video_poll_attempts']    = isset( $input['video_poll_attempts'] ) ? max( 1, absint( $input['video_poll_attempts'] ) ) : 24;
 		$sanitized['video_prompt_style']     = isset( $input['video_prompt_style'] ) ? sanitize_textarea_field( $input['video_prompt_style'] ) : '';
@@ -226,6 +252,25 @@ class Goodsleep_Elementor_Settings {
 		$value = goodsleep_get_setting( $key, '' );
 		?>
 		<input class="regular-text" type="<?php echo esc_attr( $type ); ?>" name="goodsleep_elementor_settings[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( (string) $value ); ?>">
+		<?php
+	}
+
+	/**
+	 * Renderiza un select simple.
+	 *
+	 * @param array<string,mixed> $args Args.
+	 * @return void
+	 */
+	public function render_select_field( $args ) {
+		$key     = $args['key'];
+		$options = ! empty( $args['options'] ) && is_array( $args['options'] ) ? $args['options'] : array();
+		$value   = goodsleep_get_setting( $key, '' );
+		?>
+		<select name="goodsleep_elementor_settings[<?php echo esc_attr( $key ); ?>]">
+			<?php foreach ( $options as $option_value => $option_label ) : ?>
+				<option value="<?php echo esc_attr( (string) $option_value ); ?>" <?php selected( (string) $value, (string) $option_value ); ?>><?php echo esc_html( (string) $option_label ); ?></option>
+			<?php endforeach; ?>
+		</select>
 		<?php
 	}
 
