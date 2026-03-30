@@ -78,7 +78,7 @@ class Goodsleep_Elementor_Kling_Video_Client implements Goodsleep_Elementor_Vide
 			return new WP_Error( 'goodsleep_missing_kling_task_id', __( 'Kling no devolvio un task id valido.', 'goodsleep-elementor' ) );
 		}
 
-		$path = 'video_extension' === $this->detect_task_kind( $context ) ? goodsleep_get_setting( 'kling_extend_status_path', '/v1/videos/%s' ) : goodsleep_get_setting( 'kling_text_status_path', '/v1/videos/text2video/%s' );
+		$path = 'video_extension' === $this->detect_task_kind( $context ) ? goodsleep_get_setting( 'kling_extend_status_path', '/v1/videos/video-extend/%s' ) : goodsleep_get_setting( 'kling_text_status_path', '/v1/videos/text2video/%s' );
 		$url  = $config['base_url'] . sprintf( $path, rawurlencode( $task_id ) );
 		$headers = $this->build_headers( $config );
 		if ( is_wp_error( $headers ) ) {
@@ -125,9 +125,6 @@ class Goodsleep_Elementor_Kling_Video_Client implements Goodsleep_Elementor_Vide
 		$video_id = $this->extract_video_id( $source_context );
 		$request_body = array(
 			'prompt'           => $prompt,
-			'model_name'       => sanitize_text_field( (string) goodsleep_get_setting( 'kling_video_model', 'kling-v3' ) ),
-			'mode'             => sanitize_text_field( (string) goodsleep_get_setting( 'kling_video_mode', 'std' ) ),
-			'duration'         => (string) goodsleep_get_provider_video_duration( isset( $payload['duration'] ) ? (int) $payload['duration'] : null ),
 			'callback_url'     => goodsleep_get_video_callback_url( 'kling' ),
 			'external_task_id' => ! empty( $payload['external_task_id'] ) ? sanitize_text_field( (string) $payload['external_task_id'] ) : '',
 		);
@@ -143,7 +140,7 @@ class Goodsleep_Elementor_Kling_Video_Client implements Goodsleep_Elementor_Vide
 		}
 
 		$response = wp_remote_post(
-			$config['base_url'] . goodsleep_get_setting( 'kling_extend_submit_path', '/v1/videos/extend' ),
+			$config['base_url'] . goodsleep_get_setting( 'kling_extend_submit_path', '/v1/videos/video-extend' ),
 			array(
 				'timeout' => 60,
 				'headers' => $headers,
