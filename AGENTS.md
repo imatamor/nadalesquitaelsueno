@@ -146,3 +146,10 @@ Define how agents should collaborate in this project.
 - En este proyecto, el owner operativo esperado para archivos y carpetas del sitio en el droplet es `www-data:www-data`.
 - Con ese acceso se pueden hacer revisiones operativas y, cuando el usuario lo apruebe, modificaciones de archivos o base de datos directamente en el droplet, recordando que cualquier cambio de codigo debe volver al repo.
 - Para verificaciones locales con PHP, usar `C:\tools\php`.
+
+## Video Provider Notes
+- El proyecto puede operar con mas de un proveedor de video; cualquier cambio de proveedor debe preservar el wizard, el postproceso local (union de clips, mezcla de musica, adjunto en WordPress) y el envio final por correo.
+- Para Kling AI, tratar el flujo como asincrono y orientado a callbacks: generar video inicial, continuar por `video_extension` cuando aplique y dejar que el proveedor notifique el cierre al endpoint del proyecto.
+- No asumir todavia que Kling usa el mismo esquema de firma que skills o ejemplos externos; antes de depender de headers tipo `X-Kling-Signature`, validar con trafico real o documentacion oficial del proveedor.
+- Mientras no exista validacion oficial firme de firma HTTP en Kling, el callback del proyecto puede protegerse con token propio en la URL y debe mantenerse idempotente para evitar reprocesos o correos duplicados.
+- Los eventos utiles esperados en proveedores de video asincronos incluyen completion, failure y progreso; el codigo del proyecto debe normalizarlos a estados internos (`processing`, `ready`, `failed`) en vez de atarse a nombres exactos de un proveedor.
