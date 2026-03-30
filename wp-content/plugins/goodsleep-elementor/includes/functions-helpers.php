@@ -259,6 +259,37 @@ function goodsleep_compact_video_prompt_for_provider( $parts, $closing_phrase = 
 }
 
 /**
+ * Construye un prompt compacto y estable para Kling.
+ *
+ * @param string $story_segment  Texto narrativo del clip.
+ * @param string $story_name     Nombre visible de la persona B.
+ * @param string $closing_phrase Frase final obligatoria.
+ * @param int    $clip_index     Posicion del clip.
+ * @param int    $clip_count     Total de clips.
+ * @return string
+ */
+function goodsleep_build_kling_clip_prompt( $story_segment, $story_name = '', $closing_phrase = '', $clip_index = 0, $clip_count = 1 ) {
+	$story_name    = trim( wp_strip_all_tags( (string) $story_name ) );
+	$story_segment = trim( wp_strip_all_tags( (string) $story_segment ) );
+	$clip_index    = max( 0, (int) $clip_index );
+	$clip_count    = max( 1, (int) $clip_count );
+	$is_final_clip = $clip_index >= ( $clip_count - 1 );
+	$is_multi_clip = $clip_count > 1;
+
+	$parts = array(
+		goodsleep_get_compact_video_prompt_style( $is_final_clip ? $closing_phrase : '' ),
+		$is_multi_clip ? sprintf( 'Clip %1$d de %2$d.', $clip_index + 1, $clip_count ) : '',
+		! $is_final_clip ? 'Representa solo la primera mitad del relato. No cierres aun la historia. Mantener continuidad exacta para el siguiente clip.' : 'Continua exactamente desde el clip anterior. Resuelve con calma la segunda mitad del relato y reserva el cierre para los ultimos segundos.',
+		$is_multi_clip ? 'No incluyas producto, packshot ni frasco en el cierre final. El ultimo plano debe concentrarse solo en la persona B durmiendo.' : '',
+		$is_final_clip && '' !== $story_name ? 'En el plano final, la persona B, identificada como ' . $story_name . ', debe aparecer durmiendo placidamente, en calma absoluta, como si nada le afectara.' : '',
+		'' !== $story_name ? 'Personaje B: ' . $story_name . '.' : '',
+		'' !== $story_segment ? 'Historia completa: ' . $story_segment : '',
+	);
+
+	return trim( preg_replace( '/\s+/', ' ', implode( ' ', array_filter( $parts ) ) ) );
+}
+
+/**
  * Devuelve el secret efectivo para callbacks del proveedor.
  *
  * Para Kling usamos un token propio en la URL del callback porque la
@@ -916,6 +947,10 @@ function goodsleep_get_story_combined_text( $story_id ) {
  * @return string
  */
 function goodsleep_build_video_prompt( $story_text, $story_name = '', $closing_phrase = '' ) {
+	if ( 'kling' === goodsleep_get_video_provider() ) {
+		return goodsleep_build_kling_clip_prompt( $story_text, $story_name, $closing_phrase, 0, 1 );
+	}
+
 	$style          = goodsleep_render_video_prompt_template( (string) goodsleep_get_setting( 'video_prompt_style', '' ), $closing_phrase );
 	$story_name     = trim( wp_strip_all_tags( (string) $story_name ) );
 	$story_text     = trim( wp_strip_all_tags( (string) $story_text ) );
@@ -1019,6 +1054,10 @@ function goodsleep_split_story_for_video_clips( $story_text, $clip_count = 2 ) {
  * @return string
  */
 function goodsleep_build_video_clip_prompt( $story_segment, $story_name = '', $closing_phrase = '', $clip_index = 0, $clip_count = 1 ) {
+	if ( 'kling' === goodsleep_get_video_provider() ) {
+		return goodsleep_build_kling_clip_prompt( $story_segment, $story_name, $closing_phrase, $clip_index, $clip_count );
+	}
+
 	$story_name    = trim( wp_strip_all_tags( (string) $story_name ) );
 	$story_segment = trim( wp_strip_all_tags( (string) $story_segment ) );
 	$clip_index    = max( 0, (int) $clip_index );
