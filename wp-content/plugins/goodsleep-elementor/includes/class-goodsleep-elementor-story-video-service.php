@@ -119,6 +119,7 @@ class Goodsleep_Elementor_Story_Video_Service {
 		$track_id       = (string) get_post_meta( $post_id, '_goodsleep_story_track_id', true );
 		$track          = goodsleep_get_track_by_id( $track_id );
 		$current_type   = goodsleep_get_story_primary_media( $post_id );
+		$provider       = goodsleep_get_video_provider();
 
 		if ( ! $force && 'video' === $current_type['type'] ) {
 			return new WP_Error( 'goodsleep_story_has_video', __( 'La historia ya tiene video generado.', 'goodsleep-elementor' ) );
@@ -138,21 +139,32 @@ class Goodsleep_Elementor_Story_Video_Service {
 		$task_payloads      = array();
 		$clip_prompts       = array();
 		$product_reference  = goodsleep_get_video_product_reference();
+		$create_payload     = array(
+			'model'            => 'openai' === $provider ? goodsleep_get_setting( 'openai_video_model', 'sora-2' ) : goodsleep_get_setting( 'kling_video_model', 'kling-v3' ),
+			'duration'         => goodsleep_get_provider_video_duration(),
+			'size'             => $this->resolve_video_size(),
+			'input_reference'  => 1 === $clip_count ? $product_reference : array(),
+			'external_task_id' => 'story-' . $post_id . '-clip-1',
+		);
 
-		foreach ( $story_segments as $clip_index => $story_segment ) {
-			$clip_prompts[] = goodsleep_build_video_clip_prompt( $story_segment, $story_name, $closing_phrase, $clip_index, $clip_count );
+		if ( 'kling' === $provider ) {
+			$clip_count    = 1;
+			$clip_prompts  = goodsleep_build_kling_multi_shot_prompts( $primary_story_text, $story_name, $closing_phrase );
+			$scene_count   = max( 1, count( $clip_prompts ) );
+			$create_payload['prompt'] = goodsleep_build_video_prompt( $primary_story_text, $story_name, $closing_phrase );
+			$create_payload['multi_shot'] = true;
+			$create_payload['shot_type'] = 'intelligence';
+			$create_payload['multi_prompt'] = $clip_prompts;
+			$create_payload['input_reference'] = array();
+		} else {
+			foreach ( $story_segments as $clip_index => $story_segment ) {
+				$clip_prompts[] = goodsleep_build_video_clip_prompt( $story_segment, $story_name, $closing_phrase, $clip_index, $clip_count );
+			}
+
+			$create_payload['prompt'] = $clip_prompts[0];
 		}
 
-		$initial_task = $this->provider_client->create_video_task(
-			array(
-				'model'           => 'openai' === goodsleep_get_video_provider() ? goodsleep_get_setting( 'openai_video_model', 'sora-2' ) : goodsleep_get_setting( 'kling_video_model', 'kling-v3' ),
-				'prompt'          => $clip_prompts[0],
-				'duration'        => goodsleep_get_provider_video_duration(),
-				'size'            => $this->resolve_video_size(),
-				'input_reference' => 1 === $clip_count ? $product_reference : array(),
-				'external_task_id' => 'story-' . $post_id . '-clip-1',
-			)
-		);
+		$initial_task = $this->provider_client->create_video_task( $create_payload );
 
 		if ( is_wp_error( $initial_task ) ) {
 			$status = $backfill ? 'failed_backfill' : 'failed';

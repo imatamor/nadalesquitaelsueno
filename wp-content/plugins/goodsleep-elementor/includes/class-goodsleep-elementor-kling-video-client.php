@@ -20,14 +20,19 @@ class Goodsleep_Elementor_Kling_Video_Client implements Goodsleep_Elementor_Vide
 			return $config;
 		}
 
-		$prompt = trim( (string) $payload['prompt'] );
-		if ( '' === $prompt ) {
+		$prompt       = trim( (string) $payload['prompt'] );
+		$multi_shot   = ! empty( $payload['multi_shot'] );
+		$multi_prompt = ! empty( $payload['multi_prompt'] ) && is_array( $payload['multi_prompt'] ) ? array_values( array_filter( array_map( 'trim', $payload['multi_prompt'] ) ) ) : array();
+		if ( ! $multi_shot && '' === $prompt ) {
+			return new WP_Error( 'goodsleep_invalid_kling_payload', __( 'Faltan datos para crear el video en Kling.', 'goodsleep-elementor' ) );
+		}
+
+		if ( $multi_shot && empty( $multi_prompt ) ) {
 			return new WP_Error( 'goodsleep_invalid_kling_payload', __( 'Faltan datos para crear el video en Kling.', 'goodsleep-elementor' ) );
 		}
 
 		$request_body = array(
 			'model_name'       => sanitize_text_field( (string) goodsleep_get_setting( 'kling_video_model', 'kling-v3' ) ),
-			'prompt'           => $prompt,
 			'negative_prompt'  => trim( (string) goodsleep_get_setting( 'kling_negative_prompt', '' ) ),
 			'mode'             => sanitize_text_field( (string) goodsleep_get_setting( 'kling_video_mode', 'std' ) ),
 			'sound'            => sanitize_text_field( (string) goodsleep_get_setting( 'kling_video_sound', 'on' ) ),
@@ -36,6 +41,15 @@ class Goodsleep_Elementor_Kling_Video_Client implements Goodsleep_Elementor_Vide
 			'callback_url'     => goodsleep_get_video_callback_url( 'kling' ),
 			'external_task_id' => ! empty( $payload['external_task_id'] ) ? sanitize_text_field( (string) $payload['external_task_id'] ) : '',
 		);
+
+		if ( $multi_shot ) {
+			$request_body['multi_shot']  = true;
+			$request_body['shot_type']   = ! empty( $payload['shot_type'] ) ? sanitize_text_field( (string) $payload['shot_type'] ) : 'intelligence';
+			$request_body['multi_prompt'] = $multi_prompt;
+		} else {
+			$request_body['prompt'] = $prompt;
+		}
+
 		$headers = $this->build_headers( $config );
 		if ( is_wp_error( $headers ) ) {
 			return $headers;

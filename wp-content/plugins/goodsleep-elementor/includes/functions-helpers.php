@@ -395,6 +395,49 @@ function goodsleep_build_kling_clip_prompt( $story_segment, $story_name = '', $c
 }
 
 /**
+ * Construye las tomas internas para Kling en modo multi_shot.
+ *
+ * Cada toma conserva el mismo contexto narrativo, pero concentra una porcion
+ * del relato para que Kling la resuelva dentro de una sola tarea.
+ *
+ * @param string $story_text      Historia principal sin cierre forzado.
+ * @param string $story_name      Nombre visible de la persona B.
+ * @param string $closing_phrase  Frase final obligatoria.
+ * @return array<int,string>
+ */
+function goodsleep_build_kling_multi_shot_prompts( $story_text, $story_name = '', $closing_phrase = '' ) {
+	$story_name     = trim( wp_strip_all_tags( (string) $story_name ) );
+	$story_text     = goodsleep_normalize_kling_narration_text( $story_text );
+	$closing_phrase = trim( wp_strip_all_tags( (string) $closing_phrase ) );
+	$scenes         = goodsleep_split_story_into_scenes( $story_text );
+	$scene_total    = max( 1, count( $scenes ) );
+	$prompts        = array();
+
+	foreach ( $scenes as $index => $scene_text ) {
+		$is_final_scene = $index >= ( $scene_total - 1 );
+		$parts          = array(
+			'Video vertical 9:16 nativo, composición vertical real, nunca metraje horizontal rotado ni girado.',
+			'Estilo cinematográfico publicitario, realista y de alto impacto emocional.',
+			'Estética premium, en blanco y negro, con algunas escenas en slow motion.',
+			'Mantener exactamente la misma voz narradora, los mismos personajes, la misma locación y el mismo tono visual entre todas las tomas.',
+			'No inventar acciones, objetos, accidentes, daños ni situaciones que no existan en la historia.',
+			'Priorizar acciones visuales simples, claras, realistas y físicamente coherentes.',
+			'' !== $story_name ? 'La persona B, quien provoca el conflicto, es ' . $story_name . '.' : '',
+			$scene_total > 1 ? sprintf( 'Toma %1$d de %2$d dentro de una misma historia.', $index + 1, $scene_total ) : '',
+			! $is_final_scene ? 'Esta toma desarrolla una parte intermedia del relato. No cierres todavía la historia.' : 'Esta toma resuelve el final del relato y debe cerrar con calma en los últimos segundos.',
+			$is_final_scene && '' !== $closing_phrase ? 'La frase final obligatoria es exactamente esta: "' . goodsleep_escape_prompt_literal( $closing_phrase ) . '". Debe corresponder visualmente a la persona B, nunca a la persona A.' : '',
+			$is_final_scene ? 'En el plano final, la persona B debe ser el foco principal del encuadre y aparecer durmiendo plácidamente, en calma absoluta, como si nada le afectara.' : '',
+			'Historia completa para mantener continuidad: ' . $story_text,
+			'Toma actual: ' . trim( $scene_text ),
+		);
+
+		$prompts[] = goodsleep_compact_video_prompt_for_provider( $parts, $is_final_scene ? $closing_phrase : '', 2200 );
+	}
+
+	return array_values( array_filter( $prompts ) );
+}
+
+/**
  * Devuelve el secret efectivo para callbacks del proveedor.
  *
  * Para Kling usamos un token propio en la URL del callback porque la
