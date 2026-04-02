@@ -26,7 +26,7 @@ function goodsleep_get_settings() {
 		'kling_access_key'        => '',
 		'kling_secret_key'        => '',
 		'kling_base_url'          => 'https://api-singapore.klingai.com',
-		'kling_video_model'       => 'kling-v3',
+		'kling_video_model'       => 'kling-v3-omni',
 		'kling_video_mode'        => 'std',
 		'kling_video_sound'       => 'on',
 		'kling_negative_prompt'   => '',
@@ -204,11 +204,116 @@ function goodsleep_get_compact_video_prompt_style( $closing_phrase = '' ) {
 		'No inventar hechos, acciones, danos, dialogos u objetos que no existan en la historia.',
 		'Mantener exactamente la misma voz narradora y los mismos personajes entre clips.',
 		'' !== $closing_phrase ? 'La frase final obligatoria es exactamente esta: "' . goodsleep_escape_prompt_literal( $closing_phrase ) . '". Debe corresponder visualmente a la persona B, nunca a la persona A.' : '',
-		'Sin subtitulos, captions, palabras en pantalla, glitches, barras de color, interferencias ni frames danados.',
 		'Audio sincronizado con locucion clara en espanol latino ecuatoriano, tono natural y envolvente.',
 	);
 
 	return trim( preg_replace( '/\s+/', ' ', implode( ' ', array_filter( $parts ) ) ) );
+}
+
+/**
+ * Convierte numeros pequenos a texto para mejorar la locucion de Kling.
+ *
+ * @param int $number Numero entero positivo.
+ * @return string
+ */
+function goodsleep_spanish_number_to_words( $number ) {
+	$number = (int) $number;
+
+	$units = array(
+		0  => 'cero',
+		1  => 'uno',
+		2  => 'dos',
+		3  => 'tres',
+		4  => 'cuatro',
+		5  => 'cinco',
+		6  => 'seis',
+		7  => 'siete',
+		8  => 'ocho',
+		9  => 'nueve',
+		10 => 'diez',
+		11 => 'once',
+		12 => 'doce',
+		13 => 'trece',
+		14 => 'catorce',
+		15 => 'quince',
+		16 => 'dieciseis',
+		17 => 'diecisiete',
+		18 => 'dieciocho',
+		19 => 'diecinueve',
+		20 => 'veinte',
+		21 => 'veintiuno',
+		22 => 'veintidos',
+		23 => 'veintitres',
+		24 => 'veinticuatro',
+		25 => 'veinticinco',
+		26 => 'veintiseis',
+		27 => 'veintisiete',
+		28 => 'veintiocho',
+		29 => 'veintinueve',
+	);
+
+	if ( isset( $units[ $number ] ) ) {
+		return $units[ $number ];
+	}
+
+	$tens = array(
+		30 => 'treinta',
+		40 => 'cuarenta',
+		50 => 'cincuenta',
+		60 => 'sesenta',
+		70 => 'setenta',
+		80 => 'ochenta',
+		90 => 'noventa',
+	);
+
+	if ( isset( $tens[ $number ] ) ) {
+		return $tens[ $number ];
+	}
+
+	if ( $number > 30 && $number < 100 ) {
+		$ten  = (int) floor( $number / 10 ) * 10;
+		$unit = $number % 10;
+
+		if ( isset( $tens[ $ten ] ) && isset( $units[ $unit ] ) ) {
+			return $tens[ $ten ] . ' y ' . $units[ $unit ];
+		}
+	}
+
+	return (string) $number;
+}
+
+/**
+ * Normaliza texto narrado para mejorar pronunciacion en Kling.
+ *
+ * @param string $text Texto base.
+ * @return string
+ */
+function goodsleep_normalize_kling_narration_text( $text ) {
+	$text = trim( wp_strip_all_tags( (string) $text ) );
+	if ( '' === $text ) {
+		return '';
+	}
+
+	$text = str_replace(
+		array( '“', '”', '’', '‘', '´', '`' ),
+		array( '"', '"', "'", "'", "'", "'" ),
+		$text
+	);
+
+	$text = preg_replace_callback(
+		'/\b\d+\b/u',
+		function ( $matches ) {
+			$value = isset( $matches[0] ) ? (int) $matches[0] : 0;
+			if ( $value < 0 || $value > 99 ) {
+				return (string) $matches[0];
+			}
+
+			return goodsleep_spanish_number_to_words( $value );
+		},
+		$text
+	);
+
+	return trim( preg_replace( '/\s+/', ' ', $text ) );
 }
 
 /**
@@ -270,7 +375,7 @@ function goodsleep_compact_video_prompt_for_provider( $parts, $closing_phrase = 
  */
 function goodsleep_build_kling_clip_prompt( $story_segment, $story_name = '', $closing_phrase = '', $clip_index = 0, $clip_count = 1 ) {
 	$story_name    = trim( wp_strip_all_tags( (string) $story_name ) );
-	$story_segment = trim( wp_strip_all_tags( (string) $story_segment ) );
+	$story_segment = goodsleep_normalize_kling_narration_text( $story_segment );
 	$clip_index    = max( 0, (int) $clip_index );
 	$clip_count    = max( 1, (int) $clip_count );
 	$is_final_clip = $clip_index >= ( $clip_count - 1 );

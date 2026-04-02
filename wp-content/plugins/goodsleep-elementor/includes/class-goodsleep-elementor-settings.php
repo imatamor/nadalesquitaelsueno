@@ -144,7 +144,7 @@ class Goodsleep_Elementor_Settings {
 		$sanitized['kling_access_key']       = isset( $input['kling_access_key'] ) ? sanitize_text_field( $input['kling_access_key'] ) : '';
 		$sanitized['kling_secret_key']       = isset( $input['kling_secret_key'] ) ? sanitize_text_field( $input['kling_secret_key'] ) : '';
 		$sanitized['kling_base_url']         = isset( $input['kling_base_url'] ) ? esc_url_raw( $input['kling_base_url'] ) : 'https://api-singapore.klingai.com';
-		$sanitized['kling_video_model']      = isset( $input['kling_video_model'] ) ? sanitize_text_field( $input['kling_video_model'] ) : 'kling-v3';
+		$sanitized['kling_video_model']      = isset( $input['kling_video_model'] ) ? sanitize_text_field( $input['kling_video_model'] ) : 'kling-v3-omni';
 		$sanitized['kling_video_mode']       = isset( $input['kling_video_mode'] ) && in_array( $input['kling_video_mode'], array( 'std', 'pro' ), true ) ? sanitize_key( $input['kling_video_mode'] ) : 'std';
 		$sanitized['kling_video_sound']      = isset( $input['kling_video_sound'] ) && in_array( $input['kling_video_sound'], array( 'on', 'off' ), true ) ? sanitize_key( $input['kling_video_sound'] ) : 'on';
 		$sanitized['kling_negative_prompt']  = isset( $input['kling_negative_prompt'] ) ? sanitize_textarea_field( $input['kling_negative_prompt'] ) : '';
