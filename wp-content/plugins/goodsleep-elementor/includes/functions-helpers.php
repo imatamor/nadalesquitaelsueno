@@ -26,7 +26,7 @@ function goodsleep_get_settings() {
 		'kling_access_key'        => '',
 		'kling_secret_key'        => '',
 		'kling_base_url'          => 'https://api-singapore.klingai.com',
-		'kling_video_model'       => 'kling-v3-omni',
+		'kling_video_model'       => 'kling-v3',
 		'kling_video_mode'        => 'std',
 		'kling_video_sound'       => 'on',
 		'kling_negative_prompt'   => '',
