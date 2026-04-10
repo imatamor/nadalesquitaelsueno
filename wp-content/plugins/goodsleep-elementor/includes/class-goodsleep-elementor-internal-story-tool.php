@@ -266,8 +266,20 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			return $this->build_error_state( $parsed->get_error_message() );
 		}
 
-		$token = 'goodsleep_sql_' . wp_generate_password( 12, false, false );
-		set_transient( $token, $parsed, 6 * HOUR_IN_SECONDS );
+		$token        = 'goodsleep_sql_' . wp_generate_password( 12, false, false );
+		$storage_path = $this->store_dataset_on_disk( $token, $parsed );
+		if ( is_wp_error( $storage_path ) ) {
+			return $this->build_error_state( $storage_path->get_error_message() );
+		}
+
+		set_transient(
+			$token,
+			array(
+				'summary'      => $this->build_summary_dataset( $parsed ),
+				'storage_path' => $storage_path,
+			),
+			6 * HOUR_IN_SECONDS
+		);
 
 		$table_name = $this->select_best_table_name( $parsed );
 		$mapping    = $this->merge_mapping_with_table( $this->get_current_mapping(), $table_name, $parsed );
@@ -325,7 +337,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	 */
 	protected function handle_test_execution() {
 		$dataset_token = ! empty( $_POST['dataset_token'] ) ? sanitize_text_field( wp_unslash( $_POST['dataset_token'] ) ) : '';
-		$dataset       = $dataset_token ? $this->load_dataset( $dataset_token ) : array();
+		$dataset       = $dataset_token ? $this->load_dataset( $dataset_token, true ) : array();
 		$mapping       = $this->extract_mapping_from_post();
 		$table_name    = ! empty( $mapping['table_name'] ) ? $mapping['table_name'] : $this->resolve_selected_table_name( $dataset, $mapping );
 		$table         = ! empty( $dataset['tables'][ $table_name ] ) ? $dataset['tables'][ $table_name ] : array();
@@ -378,7 +390,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	 */
 	protected function handle_batch_execution() {
 		$dataset_token   = ! empty( $_POST['dataset_token'] ) ? sanitize_text_field( wp_unslash( $_POST['dataset_token'] ) ) : '';
-		$dataset         = $dataset_token ? $this->load_dataset( $dataset_token ) : array();
+		$dataset         = $dataset_token ? $this->load_dataset( $dataset_token, true ) : array();
 		$mapping         = $this->extract_mapping_from_post();
 		$table_name      = ! empty( $mapping['table_name'] ) ? $mapping['table_name'] : $this->resolve_selected_table_name( $dataset, $mapping );
 		$table           = ! empty( $dataset['tables'][ $table_name ] ) ? $dataset['tables'][ $table_name ] : array();
@@ -592,12 +604,116 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	 * Carga el dataset almacenado temporalmente.
 	 *
 	 * @param string $dataset_token Token transient.
+	 * @param bool   $include_rows  Indica si debe cargar las filas completas.
 	 * @return array<string,mixed>
 	 */
-	protected function load_dataset( $dataset_token ) {
-		$dataset = get_transient( $dataset_token );
+	protected function load_dataset( $dataset_token, $include_rows = false ) {
+		$dataset_meta = get_transient( $dataset_token );
 
-		return is_array( $dataset ) ? $dataset : array();
+		if ( ! is_array( $dataset_meta ) ) {
+			return array();
+		}
+
+		$summary = ! empty( $dataset_meta['summary'] ) && is_array( $dataset_meta['summary'] ) ? $dataset_meta['summary'] : array();
+		if ( ! $include_rows ) {
+			return $summary;
+		}
+
+		$storage_path = ! empty( $dataset_meta['storage_path'] ) ? (string) $dataset_meta['storage_path'] : '';
+		if ( '' === $storage_path || ! file_exists( $storage_path ) || ! is_readable( $storage_path ) ) {
+			return array();
+		}
+
+		$raw_dataset = file_get_contents( $storage_path );
+		if ( false === $raw_dataset ) {
+			return array();
+		}
+
+		$decoded = json_decode( $raw_dataset, true );
+
+		return is_array( $decoded ) ? $decoded : array();
+	}
+
+	/**
+	 * Crea una version resumida del dataset para no cargar filas completas en admin.
+	 *
+	 * @param array<string,mixed> $dataset Dataset completo.
+	 * @return array<string,mixed>
+	 */
+	protected function build_summary_dataset( $dataset ) {
+		$summary = array(
+			'tables' => array(),
+		);
+
+		if ( empty( $dataset['tables'] ) || ! is_array( $dataset['tables'] ) ) {
+			return $summary;
+		}
+
+		foreach ( $dataset['tables'] as $table_name => $table ) {
+			$summary['tables'][ $table_name ] = array(
+				'columns'   => ! empty( $table['columns'] ) ? (array) $table['columns'] : array(),
+				'row_count' => ! empty( $table['row_count'] ) ? (int) $table['row_count'] : count( ! empty( $table['rows'] ) ? (array) $table['rows'] : array() ),
+				'sample'    => ! empty( $table['sample'] ) ? (array) $table['sample'] : array(),
+			);
+		}
+
+		return $summary;
+	}
+
+	/**
+	 * Guarda el dataset completo en un archivo temporal fuera de options/transients pesados.
+	 *
+	 * @param string              $token   Token de dataset.
+	 * @param array<string,mixed> $dataset Dataset completo.
+	 * @return string|WP_Error
+	 */
+	protected function store_dataset_on_disk( $token, $dataset ) {
+		$upload_dir = wp_upload_dir();
+		if ( ! empty( $upload_dir['error'] ) ) {
+			return new WP_Error( 'goodsleep_upload_dir_error', (string) $upload_dir['error'] );
+		}
+
+		$directory = trailingslashit( $upload_dir['basedir'] ) . 'goodsleep-internal-tool';
+		if ( ! wp_mkdir_p( $directory ) ) {
+			return new WP_Error( 'goodsleep_internal_storage_error', __( 'No se pudo crear el directorio temporal para el generador interno.', 'goodsleep-elementor' ) );
+		}
+
+		$this->cleanup_dataset_storage( $directory );
+
+		$file_path = trailingslashit( $directory ) . sanitize_file_name( $token ) . '.json';
+		$written   = file_put_contents( $file_path, wp_json_encode( $dataset ) );
+
+		if ( false === $written ) {
+			return new WP_Error( 'goodsleep_internal_storage_write_error', __( 'No se pudo guardar temporalmente el dataset SQL en disco.', 'goodsleep-elementor' ) );
+		}
+
+		return $file_path;
+	}
+
+	/**
+	 * Elimina datasets temporales antiguos para no acumular basura.
+	 *
+	 * @param string $directory Directorio temporal.
+	 * @return void
+	 */
+	protected function cleanup_dataset_storage( $directory ) {
+		$files = glob( trailingslashit( $directory ) . 'goodsleep_sql_*.json' );
+		if ( false === $files ) {
+			return;
+		}
+
+		$expiration = time() - ( 6 * HOUR_IN_SECONDS );
+
+		foreach ( $files as $file_path ) {
+			if ( ! is_string( $file_path ) || ! file_exists( $file_path ) ) {
+				continue;
+			}
+
+			$modified_time = filemtime( $file_path );
+			if ( false !== $modified_time && $modified_time < $expiration ) {
+				wp_delete_file( $file_path );
+			}
+		}
 	}
 
 	/**
