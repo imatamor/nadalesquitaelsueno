@@ -46,12 +46,18 @@ class Goodsleep_Elementor_Settings {
 		);
 
 		add_settings_section( 'goodsleep_api_section', __( 'Credenciales e integraciones', 'goodsleep-elementor' ), '__return_false', 'goodsleep-elementor' );
+		add_settings_section( 'goodsleep_openai_text_section', __( 'OpenAI texto para frase interna', 'goodsleep-elementor' ), '__return_false', 'goodsleep-elementor' );
 		add_settings_section( 'goodsleep_catalog_section', __( 'Catálogos de voces y tracks', 'goodsleep-elementor' ), '__return_false', 'goodsleep-elementor' );
 
 		$this->add_text_field( 'speechify_api_key', __( 'Speechify API Key', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'speechify_base_url', __( 'Speechify Base URL', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'speechify_audio_path', __( 'Speechify Audio Path', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'speechify_voices_path', __( 'Speechify Voices Path', 'goodsleep-elementor' ) );
+		$this->add_text_field( 'openai_text_api_key', __( 'OpenAI Text API Key', 'goodsleep-elementor' ), 'text', 'goodsleep_openai_text_section' );
+		$this->add_text_field( 'openai_text_model', __( 'Modelo de texto', 'goodsleep-elementor' ), 'text', 'goodsleep_openai_text_section' );
+		$this->add_text_field( 'openai_text_temperature', __( 'Temperatura de texto', 'goodsleep-elementor' ), 'number', 'goodsleep_openai_text_section' );
+		$this->add_text_field( 'openai_text_timeout', __( 'Timeout de texto (segundos)', 'goodsleep-elementor' ), 'number', 'goodsleep_openai_text_section' );
+		$this->add_textarea_field( 'openai_text_prompt', __( 'Prompt global para frase interna', 'goodsleep-elementor' ), 8, 'goodsleep_openai_text_section', __( 'Puedes usar placeholders como {{name}}, {{email}}, {{story_text}}, {{reference}} y cualquier columna detectada en el SQL.', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'mailjet_api_key', __( 'Mailjet API Key', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'mailjet_secret_key', __( 'Mailjet Secret Key', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'mailjet_from_email', __( 'Mailjet From Email', 'goodsleep-elementor' ), 'email' );
@@ -109,6 +115,11 @@ class Goodsleep_Elementor_Settings {
 		$sanitized['speechify_base_url']     = isset( $input['speechify_base_url'] ) ? esc_url_raw( $input['speechify_base_url'] ) : '';
 		$sanitized['speechify_audio_path']   = isset( $input['speechify_audio_path'] ) ? sanitize_text_field( $input['speechify_audio_path'] ) : '';
 		$sanitized['speechify_voices_path']  = isset( $input['speechify_voices_path'] ) ? sanitize_text_field( $input['speechify_voices_path'] ) : '';
+		$sanitized['openai_text_api_key']    = isset( $input['openai_text_api_key'] ) ? sanitize_text_field( $input['openai_text_api_key'] ) : '';
+		$sanitized['openai_text_model']      = isset( $input['openai_text_model'] ) ? sanitize_text_field( $input['openai_text_model'] ) : 'gpt-5-mini';
+		$sanitized['openai_text_temperature']= isset( $input['openai_text_temperature'] ) ? max( 0, min( 2, (float) $input['openai_text_temperature'] ) ) : 0.8;
+		$sanitized['openai_text_timeout']    = isset( $input['openai_text_timeout'] ) ? max( 5, absint( $input['openai_text_timeout'] ) ) : 30;
+		$sanitized['openai_text_prompt']     = isset( $input['openai_text_prompt'] ) ? sanitize_textarea_field( $input['openai_text_prompt'] ) : '';
 		$sanitized['mailjet_api_key']        = isset( $input['mailjet_api_key'] ) ? sanitize_text_field( $input['mailjet_api_key'] ) : '';
 		$sanitized['mailjet_secret_key']     = isset( $input['mailjet_secret_key'] ) ? sanitize_text_field( $input['mailjet_secret_key'] ) : '';
 		$sanitized['mailjet_from_email']     = isset( $input['mailjet_from_email'] ) ? goodsleep_normalize_email( $input['mailjet_from_email'] ) : '';

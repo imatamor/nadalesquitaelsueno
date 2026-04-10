@@ -18,6 +18,11 @@ function goodsleep_get_settings() {
 		'speechify_base_url'      => 'https://api.sws.speechify.com',
 		'speechify_audio_path'    => '/v1/audio/speech',
 		'speechify_voices_path'   => '/v1/voices',
+		'openai_text_api_key'     => '',
+		'openai_text_model'       => 'gpt-5-mini',
+		'openai_text_prompt'      => "Genera una frase final breve, natural y emotiva en espanol para esta historia. Devuelve solo la frase final, sin comillas y sin explicaciones.\n\nNombre: {{name}}\nEmail: {{email}}\nHistoria base: {{story_text}}\nReferencia: {{reference}}",
+		'openai_text_temperature' => 0.8,
+		'openai_text_timeout'     => 30,
 		'mailjet_api_key'         => '',
 		'mailjet_secret_key'      => '',
 		'mailjet_from_email'      => '',
@@ -51,6 +56,28 @@ function goodsleep_get_setting( $key, $default = '' ) {
 	$settings = goodsleep_get_settings();
 
 	return array_key_exists( $key, $settings ) ? $settings[ $key ] : $default;
+}
+
+/**
+ * Reemplaza placeholders {{clave}} dentro de una plantilla.
+ *
+ * @param string $template Plantilla base.
+ * @param array<string,string> $context Valores disponibles.
+ * @return string
+ */
+function goodsleep_render_template_placeholders( $template, $context ) {
+	$template = (string) $template;
+	$context  = is_array( $context ) ? $context : array();
+
+	return (string) preg_replace_callback(
+		'/{{\s*([a-zA-Z0-9_\-]+)\s*}}/',
+		static function ( $matches ) use ( $context ) {
+			$key = sanitize_key( (string) $matches[1] );
+
+			return isset( $context[ $key ] ) ? (string) $context[ $key ] : '';
+		},
+		$template
+	);
 }
 
 /**

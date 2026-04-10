@@ -47,6 +47,10 @@ class Goodsleep_Elementor_Plugin {
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-speechify-client.php';
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-audio-mixer.php';
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-mailjet-client.php';
+		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-openai-text-client.php';
+		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-story-generator.php';
+		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-sql-import-parser.php';
+		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-internal-story-tool.php';
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-campaign-404.php';
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-share-router.php';
 		require_once GOODSLEEP_ELEMENTOR_PATH . 'includes/class-goodsleep-elementor-rest-controller.php';
@@ -59,11 +63,17 @@ class Goodsleep_Elementor_Plugin {
 	 * @return void
 	 */
 	protected function boot() {
+		$speechify       = new Goodsleep_Elementor_Speechify_Client();
+		$audio_mixer     = new Goodsleep_Elementor_Audio_Mixer();
+		$mailjet         = new Goodsleep_Elementor_Mailjet_Client();
+		$story_generator = new Goodsleep_Elementor_Story_Generator( $speechify, $audio_mixer, $mailjet );
+
 		new Goodsleep_Elementor_Settings();
 		new Goodsleep_Elementor_Story_Post_Type();
 		new Goodsleep_Elementor_Campaign_404();
 		new Goodsleep_Elementor_Share_Router();
-		new Goodsleep_Elementor_REST_Controller( new Goodsleep_Elementor_Speechify_Client(), new Goodsleep_Elementor_Audio_Mixer(), new Goodsleep_Elementor_Mailjet_Client() );
+		new Goodsleep_Elementor_REST_Controller( $speechify, $story_generator );
+		new Goodsleep_Elementor_Internal_Story_Tool( $story_generator, new Goodsleep_Elementor_OpenAI_Text_Client(), new Goodsleep_Elementor_SQL_Import_Parser() );
 		new Goodsleep_Elementor_Elementor();
 
 		add_action( 'init', array( $this, 'load_textdomain' ) );
