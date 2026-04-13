@@ -19,6 +19,7 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 		$api_key = trim( (string) goodsleep_get_setting( 'openai_text_api_key', '' ) );
 		$model   = ! empty( $args['model'] ) ? sanitize_text_field( (string) $args['model'] ) : sanitize_text_field( (string) goodsleep_get_setting( 'openai_text_model', 'gpt-5-mini' ) );
 		$timeout = ! empty( $args['timeout'] ) ? max( 5, absint( $args['timeout'] ) ) : max( 5, absint( goodsleep_get_setting( 'openai_text_timeout', 30 ) ) );
+
 		if ( '' === $api_key ) {
 			return new WP_Error( 'goodsleep_missing_openai_text_config', __( 'OpenAI de texto no esta configurado.', 'goodsleep-elementor' ) );
 		}
@@ -29,10 +30,10 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 		}
 
 		$instruction = ! empty( $args['instruction'] ) ? (string) $args['instruction'] : 'Genera texto en espanol siguiendo exactamente las instrucciones del prompt del usuario. Devuelve solo el texto final, sin comillas, sin listas y sin explicaciones adicionales.';
-		$max_tokens  = ! empty( $args['max_output_tokens'] ) ? max( 32, absint( $args['max_output_tokens'] ) ) : 220;
+		$endpoint    = 'https://api.openai.com/v1/chat/completions';
 
 		$response = wp_remote_post(
-			'https://api.openai.com/v1/responses',
+			$endpoint,
 			array(
 				'timeout' => $timeout,
 				'headers' => array(
@@ -41,28 +42,18 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 				),
 				'body'    => wp_json_encode(
 					array(
-						'model'             => $model,
-						'max_output_tokens' => $max_tokens,
-						'input'             => array(
+						'model'       => $model,
+						'messages'    => array(
 							array(
-								'role'    => 'developer',
-								'content' => array(
-									array(
-										'type' => 'input_text',
-										'text' => $instruction,
-									),
-								),
+								'role'    => 'system',
+								'content' => $instruction,
 							),
 							array(
 								'role'    => 'user',
-								'content' => array(
-									array(
-										'type' => 'input_text',
-										'text' => $prompt,
-									),
-								),
+								'content' => $prompt,
 							),
 						),
+						'temperature' => 0.9,
 					)
 				),
 			)
@@ -79,7 +70,7 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 		if ( $code < 200 || $code >= 300 ) {
 			return new WP_Error(
 				'goodsleep_openai_text_failed',
-				$this->extract_error_message( $decoded ),
+				$this->extract_error_message( $decoded, $raw_body, $code ),
 				array(
 					'status'        => 502,
 					'openai_code'   => $code,
@@ -110,10 +101,40 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 	 * @return string|WP_Error
 	 */
 	public function generate_story_text( $prompt, $args = array() ) {
-		$args['instruction']       = ! empty( $args['instruction'] ) ? $args['instruction'] : 'Genera una historia breve en espanol. Debe sonar natural y emocional. Devuelve solo la historia final, sin comillas, sin listas, sin encabezados y con un maximo de 500 caracteres.';
-		$args['max_output_tokens'] = ! empty( $args['max_output_tokens'] ) ? $args['max_output_tokens'] : 320;
+		$attempts    = ! empty( $args['attempts'] ) ? max( 1, absint( $args['attempts'] ) ) : 3;
+		$instruction = ! empty( $args['instruction'] ) ? (string) $args['instruction'] : 'Genera una historia breve en espanol. Debe sonar natural y emocional. Devuelve solo la historia final, sin comillas, sin listas, sin encabezados y con un maximo de 500 caracteres.';
+		$last_error  = null;
 
-		return $this->generate_text( $prompt, $args );
+		for ( $attempt = 0; $attempt < $attempts; $attempt++ ) {
+			$generated = $this->generate_text(
+				$prompt,
+				array(
+					'instruction' => $instruction,
+					'model'       => ! empty( $args['model'] ) ? $args['model'] : '',
+					'timeout'     => ! empty( $args['timeout'] ) ? $args['timeout'] : 0,
+				)
+			);
+
+			if ( is_wp_error( $generated ) ) {
+				$last_error = $generated;
+				continue;
+			}
+
+			$generated = $this->sanitize_generated_text( $generated );
+			if ( '' === $generated ) {
+				$last_error = new WP_Error( 'goodsleep_openai_story_empty', __( 'OpenAI devolvio una historia vacia.', 'goodsleep-elementor' ) );
+				continue;
+			}
+
+			if ( strlen( $generated ) > 500 ) {
+				$last_error = new WP_Error( 'goodsleep_openai_story_too_long', __( 'OpenAI devolvio una historia que supera los 500 caracteres.', 'goodsleep-elementor' ) );
+				continue;
+			}
+
+			return $generated;
+		}
+
+		return $last_error ? $last_error : new WP_Error( 'goodsleep_openai_story_failed', __( 'No se pudo generar una historia valida con OpenAI.', 'goodsleep-elementor' ) );
 	}
 
 	/**
@@ -124,14 +145,13 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 	 * @return string|WP_Error
 	 */
 	public function generate_phrase( $prompt, $args = array() ) {
-		$args['instruction']       = ! empty( $args['instruction'] ) ? $args['instruction'] : 'Genera una sola frase final breve en espanol. Devuelve solo la frase, sin comillas, sin listas y sin explicaciones adicionales.';
-		$args['max_output_tokens'] = ! empty( $args['max_output_tokens'] ) ? $args['max_output_tokens'] : 120;
+		$args['instruction'] = ! empty( $args['instruction'] ) ? $args['instruction'] : 'Genera una sola frase final breve en espanol. Devuelve solo la frase, sin comillas, sin listas y sin explicaciones adicionales.';
 
 		return $this->generate_text( $prompt, $args );
 	}
 
 	/**
-	 * Extrae texto desde la respuesta de Responses API.
+	 * Extrae texto desde la respuesta de Chat Completions.
 	 *
 	 * @param array<string,mixed>|null $payload Respuesta decodificada.
 	 * @return string
@@ -141,56 +161,32 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 			return '';
 		}
 
-		if ( ! empty( $payload['output_text'] ) && is_string( $payload['output_text'] ) ) {
-			return trim( $payload['output_text'] );
+		if ( ! empty( $payload['choices'][0]['message']['content'] ) && is_string( $payload['choices'][0]['message']['content'] ) ) {
+			return trim( $payload['choices'][0]['message']['content'] );
 		}
 
-		if ( ! empty( $payload['response']['output_text'] ) && is_string( $payload['response']['output_text'] ) ) {
-			return trim( $payload['response']['output_text'] );
+		return '';
+	}
+
+	/**
+	 * Normaliza errores de OpenAI a un mensaje legible.
+	 *
+	 * @param array<string,mixed>|null $payload Error decodificado.
+	 * @param string                   $raw_body Body crudo.
+	 * @param int                      $code Codigo HTTP.
+	 * @return string
+	 */
+	protected function extract_error_message( $payload, $raw_body, $code ) {
+		if ( is_array( $payload ) && ! empty( $payload['error']['message'] ) && is_string( $payload['error']['message'] ) ) {
+			return sanitize_text_field( $payload['error']['message'] );
 		}
 
-		if ( ! empty( $payload['content'][0]['text'] ) && is_string( $payload['content'][0]['text'] ) ) {
-			return trim( $payload['content'][0]['text'] );
-		}
-
-		if ( ! empty( $payload['text'] ) && is_string( $payload['text'] ) ) {
-			return trim( $payload['text'] );
-		}
-
-		if ( empty( $payload['output'] ) || ! is_array( $payload['output'] ) ) {
-			return '';
-		}
-
-		$chunks = array();
-
-		foreach ( $payload['output'] as $item ) {
-			if ( empty( $item['content'] ) || ! is_array( $item['content'] ) ) {
-				continue;
-			}
-
-			foreach ( $item['content'] as $content_item ) {
-				if ( ! empty( $content_item['text'] ) && is_string( $content_item['text'] ) ) {
-					$chunks[] = trim( $content_item['text'] );
-					continue;
-				}
-
-				if ( ! empty( $content_item['type'] ) && 'output_text' === $content_item['type'] && ! empty( $content_item['text'] ) && is_string( $content_item['text'] ) ) {
-					$chunks[] = trim( $content_item['text'] );
-					continue;
-				}
-
-				if ( ! empty( $content_item['type'] ) && 'text' === $content_item['type'] && ! empty( $content_item['value'] ) && is_string( $content_item['value'] ) ) {
-					$chunks[] = trim( $content_item['value'] );
-					continue;
-				}
-
-				if ( ! empty( $content_item['type'] ) && 'refusal' === $content_item['type'] && ! empty( $content_item['refusal'] ) && is_string( $content_item['refusal'] ) ) {
-					$chunks[] = trim( $content_item['refusal'] );
-				}
-			}
-		}
-
-		return trim( implode( ' ', array_filter( $chunks ) ) );
+		return sprintf(
+			/* translators: 1: response code, 2: response body */
+			__( 'La API de OpenAI respondio con error (%1$s): %2$s', 'goodsleep-elementor' ),
+			$code,
+			sanitize_text_field( substr( wp_strip_all_tags( (string) $raw_body ), 0, 400 ) )
+		);
 	}
 
 	/**
@@ -209,28 +205,6 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 		}
 
 		return substr( (string) $raw_body, 0, 1200 );
-	}
-
-	/**
-	 * Normaliza errores de OpenAI a un mensaje legible.
-	 *
-	 * @param array<string,mixed>|null $payload Error decodificado.
-	 * @return string
-	 */
-	protected function extract_error_message( $payload ) {
-		if ( ! is_array( $payload ) ) {
-			return __( 'OpenAI devolvio un error al generar la frase.', 'goodsleep-elementor' );
-		}
-
-		if ( ! empty( $payload['error']['message'] ) && is_string( $payload['error']['message'] ) ) {
-			return sanitize_text_field( $payload['error']['message'] );
-		}
-
-		if ( ! empty( $payload['message'] ) && is_string( $payload['message'] ) ) {
-			return sanitize_text_field( $payload['message'] );
-		}
-
-		return __( 'OpenAI devolvio un error al generar la frase.', 'goodsleep-elementor' );
 	}
 
 	/**
