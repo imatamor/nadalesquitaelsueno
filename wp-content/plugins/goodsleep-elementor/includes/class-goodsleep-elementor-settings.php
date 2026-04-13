@@ -46,7 +46,7 @@ class Goodsleep_Elementor_Settings {
 		);
 
 		add_settings_section( 'goodsleep_api_section', __( 'Credenciales e integraciones', 'goodsleep-elementor' ), '__return_false', 'goodsleep-elementor' );
-		add_settings_section( 'goodsleep_openai_text_section', __( 'OpenAI texto para frase interna', 'goodsleep-elementor' ), '__return_false', 'goodsleep-elementor' );
+		add_settings_section( 'goodsleep_openai_text_section', __( 'OpenAI texto para historia interna', 'goodsleep-elementor' ), '__return_false', 'goodsleep-elementor' );
 		add_settings_section( 'goodsleep_catalog_section', __( 'Catálogos de voces y tracks', 'goodsleep-elementor' ), '__return_false', 'goodsleep-elementor' );
 
 		$this->add_text_field( 'speechify_api_key', __( 'Speechify API Key', 'goodsleep-elementor' ) );
@@ -57,7 +57,7 @@ class Goodsleep_Elementor_Settings {
 		$this->add_text_field( 'openai_text_model', __( 'Modelo de texto', 'goodsleep-elementor' ), 'text', 'goodsleep_openai_text_section' );
 		$this->add_text_field( 'openai_text_temperature', __( 'Temperatura de texto', 'goodsleep-elementor' ), 'number', 'goodsleep_openai_text_section' );
 		$this->add_text_field( 'openai_text_timeout', __( 'Timeout de texto (segundos)', 'goodsleep-elementor' ), 'number', 'goodsleep_openai_text_section' );
-		$this->add_textarea_field( 'openai_text_prompt', __( 'Prompt global para frase interna', 'goodsleep-elementor' ), 8, 'goodsleep_openai_text_section', __( 'Puedes usar placeholders como {{name}}, {{email}}, {{story_text}}, {{reference}} y cualquier columna detectada en el SQL.', 'goodsleep-elementor' ) );
+		$this->add_textarea_field( 'openai_text_prompt', __( 'Prompt global para historia interna', 'goodsleep-elementor' ), 8, 'goodsleep_openai_text_section', __( 'Puedes usar placeholders como {{name}}, {{full_name}}, {{email}} y cualquier columna detectada en el SQL.', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'mailjet_api_key', __( 'Mailjet API Key', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'mailjet_secret_key', __( 'Mailjet Secret Key', 'goodsleep-elementor' ) );
 		$this->add_text_field( 'mailjet_from_email', __( 'Mailjet From Email', 'goodsleep-elementor' ), 'email' );

@@ -1,6 +1,6 @@
 <?php
 /**
- * Cliente de OpenAI para generacion de frases internas.
+ * Cliente de OpenAI para generacion de texto interno.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -9,13 +9,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Goodsleep_Elementor_OpenAI_Text_Client {
 	/**
-	 * Genera una frase final a partir de un prompt renderizado.
+	 * Genera texto libre a partir de un prompt renderizado.
 	 *
 	 * @param string $prompt Prompt final enviado al modelo.
 	 * @param array<string,mixed> $args Configuracion opcional.
 	 * @return string|WP_Error
 	 */
-	public function generate_phrase( $prompt, $args = array() ) {
+	public function generate_text( $prompt, $args = array() ) {
 		$api_key = trim( (string) goodsleep_get_setting( 'openai_text_api_key', '' ) );
 		$model   = ! empty( $args['model'] ) ? sanitize_text_field( (string) $args['model'] ) : sanitize_text_field( (string) goodsleep_get_setting( 'openai_text_model', 'gpt-5-mini' ) );
 		$timeout = ! empty( $args['timeout'] ) ? max( 5, absint( $args['timeout'] ) ) : max( 5, absint( goodsleep_get_setting( 'openai_text_timeout', 30 ) ) );
@@ -30,6 +30,9 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 			return new WP_Error( 'goodsleep_empty_openai_prompt', __( 'El prompt para OpenAI no puede estar vacio.', 'goodsleep-elementor' ) );
 		}
 
+		$instruction = ! empty( $args['instruction'] ) ? (string) $args['instruction'] : 'Genera texto en espanol siguiendo exactamente las instrucciones del prompt del usuario. Devuelve solo el texto final, sin comillas, sin listas y sin explicaciones adicionales.';
+		$max_tokens  = ! empty( $args['max_output_tokens'] ) ? max( 32, absint( $args['max_output_tokens'] ) ) : 220;
+
 		$response = wp_remote_post(
 			'https://api.openai.com/v1/responses',
 			array(
@@ -42,14 +45,14 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 					array(
 						'model'             => $model,
 						'temperature'       => max( 0, min( 2, $temperature ) ),
-						'max_output_tokens' => 120,
+						'max_output_tokens' => $max_tokens,
 						'input'             => array(
 							array(
 								'role'    => 'developer',
 								'content' => array(
 									array(
 										'type' => 'input_text',
-										'text' => 'Genera una sola frase final breve en espanol. Devuelve solo la frase, sin comillas, sin listas y sin explicaciones adicionales.',
+										'text' => $instruction,
 									),
 								),
 							),
@@ -88,10 +91,38 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 
 		$text = $this->extract_output_text( $decoded );
 		if ( '' === $text ) {
-			return new WP_Error( 'goodsleep_openai_text_empty', __( 'OpenAI no devolvio una frase utilizable.', 'goodsleep-elementor' ) );
+			return new WP_Error( 'goodsleep_openai_text_empty', __( 'OpenAI no devolvio un texto utilizable.', 'goodsleep-elementor' ) );
 		}
 
-		return $this->sanitize_phrase( $text );
+		return $this->sanitize_generated_text( $text );
+	}
+
+	/**
+	 * Genera una historia corta respetando el limite del formulario actual.
+	 *
+	 * @param string $prompt Prompt final enviado al modelo.
+	 * @param array<string,mixed> $args Configuracion opcional.
+	 * @return string|WP_Error
+	 */
+	public function generate_story_text( $prompt, $args = array() ) {
+		$args['instruction']       = ! empty( $args['instruction'] ) ? $args['instruction'] : 'Genera una historia breve en espanol. Debe sonar natural y emocional. Devuelve solo la historia final, sin comillas, sin listas, sin encabezados y con un maximo de 500 caracteres.';
+		$args['max_output_tokens'] = ! empty( $args['max_output_tokens'] ) ? $args['max_output_tokens'] : 320;
+
+		return $this->generate_text( $prompt, $args );
+	}
+
+	/**
+	 * Mantiene compatibilidad con el nombre anterior del metodo.
+	 *
+	 * @param string $prompt Prompt final enviado al modelo.
+	 * @param array<string,mixed> $args Configuracion opcional.
+	 * @return string|WP_Error
+	 */
+	public function generate_phrase( $prompt, $args = array() ) {
+		$args['instruction']       = ! empty( $args['instruction'] ) ? $args['instruction'] : 'Genera una sola frase final breve en espanol. Devuelve solo la frase, sin comillas, sin listas y sin explicaciones adicionales.';
+		$args['max_output_tokens'] = ! empty( $args['max_output_tokens'] ) ? $args['max_output_tokens'] : 120;
+
+		return $this->generate_text( $prompt, $args );
 	}
 
 	/**
@@ -153,12 +184,12 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 	}
 
 	/**
-	 * Limpia la frase final devuelta por el modelo.
+	 * Limpia el texto devuelto por el modelo.
 	 *
 	 * @param string $text Texto crudo.
 	 * @return string
 	 */
-	protected function sanitize_phrase( $text ) {
+	protected function sanitize_generated_text( $text ) {
 		$text = trim( wp_strip_all_tags( (string) $text ) );
 		$text = preg_replace( '/^[\"\']+|[\"\']+$/', '', $text );
 		$text = preg_replace( '/\s+/', ' ', $text );

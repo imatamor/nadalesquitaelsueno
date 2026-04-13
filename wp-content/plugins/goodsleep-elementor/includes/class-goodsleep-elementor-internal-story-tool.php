@@ -9,6 +9,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Goodsleep_Elementor_Internal_Story_Tool {
 	/**
+	 * Hook de cron para la cola interna.
+	 *
+	 * @var string
+	 */
+	protected $cron_hook = 'goodsleep_internal_story_tool_process_queue';
+
+	/**
+	 * Opcion donde se guardan los jobs.
+	 *
+	 * @var string
+	 */
+	protected $jobs_option_key = 'goodsleep_internal_story_jobs';
+
+	/**
 	 * Servicio de generacion de historias.
 	 *
 	 * @var Goodsleep_Elementor_Story_Generator
@@ -39,9 +53,9 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	/**
 	 * Constructor.
 	 *
-	 * @param Goodsleep_Elementor_Story_Generator $story_generator Servicio base.
+	 * @param Goodsleep_Elementor_Story_Generator   $story_generator Servicio base.
 	 * @param Goodsleep_Elementor_OpenAI_Text_Client $openai_text_client Cliente OpenAI.
-	 * @param Goodsleep_Elementor_SQL_Import_Parser $sql_parser Parser SQL.
+	 * @param Goodsleep_Elementor_SQL_Import_Parser  $sql_parser Parser SQL.
 	 */
 	public function __construct( Goodsleep_Elementor_Story_Generator $story_generator, Goodsleep_Elementor_OpenAI_Text_Client $openai_text_client, Goodsleep_Elementor_SQL_Import_Parser $sql_parser ) {
 		$this->story_generator    = $story_generator;
@@ -49,6 +63,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 		$this->sql_parser         = $sql_parser;
 
 		add_action( 'admin_menu', array( $this, 'register_submenu' ) );
+		add_action( $this->cron_hook, array( $this, 'process_queue' ) );
 	}
 
 	/**
@@ -96,10 +111,11 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 		}
 
 		$table = ( $table_name && ! empty( $dataset['tables'][ $table_name ] ) ) ? $dataset['tables'][ $table_name ] : array();
+		$jobs  = $this->get_jobs();
 		?>
 		<div class="wrap goodsleep-internal-tool">
 			<h1><?php esc_html_e( 'Generador interno de historias desde SQL', 'goodsleep-elementor' ); ?></h1>
-			<p><?php esc_html_e( 'Esta herramienta usa el flujo productivo audio-only de Goodsleep y crea historias sin enviar correos.', 'goodsleep-elementor' ); ?></p>
+			<p><?php esc_html_e( 'Esta herramienta toma nombre y correo desde el SQL, genera la historia base con OpenAI y luego usa el mismo flujo audio-only actual de Goodsleep sin enviar correos.', 'goodsleep-elementor' ); ?></p>
 			<p><strong><?php esc_html_e( 'Ventana fija de fechas:', 'goodsleep-elementor' ); ?></strong> <?php esc_html_e( 'del 1 de febrero al 31 de marzo de 2026.', 'goodsleep-elementor' ); ?></p>
 
 			<?php $this->render_notices( $state['notices'] ); ?>
@@ -136,16 +152,10 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 									</td>
 								</tr>
 								<?php $this->render_mapping_select_row( 'name_column', __( 'Columna de nombre', 'goodsleep-elementor' ), $table, $mapping ); ?>
-								<?php $this->render_mapping_select_row( 'email_column', __( 'Columna de email', 'goodsleep-elementor' ), $table, $mapping ); ?>
-								<?php $this->render_mapping_select_row( 'story_text_column', __( 'Columna de historia base', 'goodsleep-elementor' ), $table, $mapping ); ?>
-								<?php $this->render_mapping_select_row( 'reference_column', __( 'Columna de referencia externa', 'goodsleep-elementor' ), $table, $mapping, true ); ?>
-								<?php $this->render_mapping_select_row( 'voice_id_column', __( 'Columna de voice_id', 'goodsleep-elementor' ), $table, $mapping, true ); ?>
-								<?php $this->render_mapping_select_row( 'voice_label_column', __( 'Columna de voice_label', 'goodsleep-elementor' ), $table, $mapping, true ); ?>
-								<?php $this->render_mapping_select_row( 'track_id_column', __( 'Columna de track_id', 'goodsleep-elementor' ), $table, $mapping, true ); ?>
-								<?php $this->render_mapping_select_row( 'track_label_column', __( 'Columna de track_label', 'goodsleep-elementor' ), $table, $mapping, true ); ?>
-								<?php $this->render_mapping_select_row( 'emotion_column', __( 'Columna de emocion', 'goodsleep-elementor' ), $table, $mapping, true ); ?>
+								<?php $this->render_mapping_select_row( 'email_column', __( 'Columna de correo electronico', 'goodsleep-elementor' ), $table, $mapping ); ?>
 							</tbody>
 						</table>
+						<p class="description"><?php esc_html_e( 'El nombre se recorta hasta el primer espacio y la historia base se genera automaticamente con OpenAI. Voz, track y frase final usan el flujo normal del plugin.', 'goodsleep-elementor' ); ?></p>
 						<?php submit_button( __( 'Guardar mapeo', 'goodsleep-elementor' ), 'secondary', 'submit', false ); ?>
 					</form>
 
@@ -194,36 +204,42 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 				</div>
 
 				<div class="goodsleep-internal-tool__section">
-					<h2><?php esc_html_e( '4. Lote secuencial', 'goodsleep-elementor' ); ?></h2>
+					<h2><?php esc_html_e( '4. Job para cron', 'goodsleep-elementor' ); ?></h2>
 					<form method="post">
 						<?php wp_nonce_field( 'goodsleep_internal_tool', '_goodsleep_internal_nonce' ); ?>
-						<input type="hidden" name="goodsleep_internal_action" value="run_batch">
+						<input type="hidden" name="goodsleep_internal_action" value="create_job">
 						<input type="hidden" name="dataset_token" value="<?php echo esc_attr( $dataset_token ); ?>">
 						<input type="hidden" name="mapping_payload" value="<?php echo esc_attr( wp_json_encode( $mapping ) ); ?>">
 						<p>
-							<label for="goodsleep-batch-limit"><?php esc_html_e( 'Cantidad de historias', 'goodsleep-elementor' ); ?></label><br>
-							<input id="goodsleep-batch-limit" type="number" min="1" max="<?php echo esc_attr( ! empty( $table['row_count'] ) ? (int) $table['row_count'] : 1 ); ?>" name="batch_limit" value="10">
+							<label for="goodsleep-job-total"><?php esc_html_e( 'Total de historias a generar', 'goodsleep-elementor' ); ?></label><br>
+							<input id="goodsleep-job-total" type="number" min="1" name="job_total" value="800">
 						</p>
 						<p>
-							<label for="goodsleep-batch-offset"><?php esc_html_e( 'Desde la fila', 'goodsleep-elementor' ); ?></label><br>
-							<input id="goodsleep-batch-offset" type="number" min="1" max="<?php echo esc_attr( ! empty( $table['row_count'] ) ? (int) $table['row_count'] : 1 ); ?>" name="batch_offset" value="1">
+							<label for="goodsleep-job-per-run"><?php esc_html_e( 'Historias exitosas por corrida', 'goodsleep-elementor' ); ?></label><br>
+							<input id="goodsleep-job-per-run" type="number" min="1" name="job_per_run" value="25">
 						</p>
 						<p>
-							<label for="goodsleep-batch-prompt-override"><?php esc_html_e( 'Override de prompt para este lote', 'goodsleep-elementor' ); ?></label><br>
-							<textarea id="goodsleep-batch-prompt-override" class="large-text code" rows="6" name="prompt_override" placeholder="<?php esc_attr_e( 'Si lo dejas vacio, se usa el prompt global de OpenAI texto.', 'goodsleep-elementor' ); ?>"></textarea>
+							<label for="goodsleep-job-start-row"><?php esc_html_e( 'Empezar desde la fila', 'goodsleep-elementor' ); ?></label><br>
+							<input id="goodsleep-job-start-row" type="number" min="1" max="<?php echo esc_attr( ! empty( $table['row_count'] ) ? (int) $table['row_count'] : 1 ); ?>" name="job_start_row" value="1">
 						</p>
-						<?php submit_button( __( 'Ejecutar lote', 'goodsleep-elementor' ), 'primary', 'submit', false ); ?>
+						<p>
+							<label for="goodsleep-job-prompt-override"><?php esc_html_e( 'Override de prompt para este job', 'goodsleep-elementor' ); ?></label><br>
+							<textarea id="goodsleep-job-prompt-override" class="large-text code" rows="6" name="prompt_override" placeholder="<?php esc_attr_e( 'Si lo dejas vacio, se usa el prompt global de OpenAI texto.', 'goodsleep-elementor' ); ?>"></textarea>
+						</p>
+						<p class="description"><?php esc_html_e( 'El job se procesa por cron con lock para evitar solapes. Las filas sin nombre valido se omiten automaticamente y se sigue con la siguiente.', 'goodsleep-elementor' ); ?></p>
+						<?php submit_button( __( 'Crear job', 'goodsleep-elementor' ), 'primary', 'submit', false ); ?>
 					</form>
 				</div>
 			<?php endif; ?>
 
 			<?php $this->render_results( $state['results'] ); ?>
+			<?php $this->render_jobs_section( $jobs ); ?>
 		</div>
 		<?php
 	}
 
 	/**
-	 * Procesa las acciones POST de la herramienta.
+	 * Procesa acciones POST de la herramienta.
 	 *
 	 * @return array<string,mixed>
 	 */
@@ -239,8 +255,8 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 				return $this->handle_mapping_save();
 			case 'run_test':
 				return $this->handle_test_execution();
-			case 'run_batch':
-				return $this->handle_batch_execution();
+			case 'create_job':
+				return $this->handle_job_creation();
 			default:
 				return $this->build_error_state( __( 'Accion interna no reconocida.', 'goodsleep-elementor' ) );
 		}
@@ -278,7 +294,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 				'summary'      => $this->build_summary_dataset( $parsed ),
 				'storage_path' => $storage_path,
 			),
-			6 * HOUR_IN_SECONDS
+			7 * DAY_IN_SECONDS
 		);
 
 		$table_name = $this->select_best_table_name( $parsed );
@@ -292,7 +308,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			'notices'       => array(
 				array(
 					'type' => 'success',
-					'text' => __( 'SQL analizado correctamente. Ya puedes revisar el mapeo y generar historias.', 'goodsleep-elementor' ),
+					'text' => __( 'SQL analizado correctamente. Ya puedes revisar el mapeo, probar una fila o crear un job de cron.', 'goodsleep-elementor' ),
 				),
 			),
 			'results'       => array(),
@@ -355,22 +371,16 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			array(
 				'row_index'       => $row_index,
 				'prompt_override' => ! empty( $_POST['prompt_override'] ) ? wp_unslash( $_POST['prompt_override'] ) : '',
-				'batch_id'        => '',
+				'job_id'          => '',
 			)
 		);
 
-		$notices = array();
-		if ( is_wp_error( $result['result'] ) ) {
-			$notices[] = array(
-				'type' => 'error',
-				'text' => $result['result']->get_error_message(),
-			);
-		} else {
-			$notices[] = array(
-				'type' => 'success',
-				'text' => __( 'La prueba individual se genero correctamente.', 'goodsleep-elementor' ),
-			);
-		}
+		$notices = array(
+			array(
+				'type' => 'success' === $result['status'] ? 'success' : ( 'skipped' === $result['status'] ? 'warning' : 'error' ),
+				'text' => 'success' === $result['status'] ? __( 'La prueba individual se genero correctamente.', 'goodsleep-elementor' ) : ( 'skipped' === $result['status'] ? __( 'La fila de prueba fue omitida por datos insuficientes.', 'goodsleep-elementor' ) : $result['message'] ),
+			),
+		);
 
 		return array(
 			'dataset_token' => $dataset_token,
@@ -384,50 +394,56 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	}
 
 	/**
-	 * Ejecuta un lote secuencial.
+	 * Crea un job persistente para procesamiento por cron.
 	 *
 	 * @return array<string,mixed>
 	 */
-	protected function handle_batch_execution() {
+	protected function handle_job_creation() {
 		$dataset_token   = ! empty( $_POST['dataset_token'] ) ? sanitize_text_field( wp_unslash( $_POST['dataset_token'] ) ) : '';
-		$dataset         = $dataset_token ? $this->load_dataset( $dataset_token, true ) : array();
+		$dataset         = $dataset_token ? $this->load_dataset( $dataset_token ) : array();
 		$mapping         = $this->extract_mapping_from_post();
 		$table_name      = ! empty( $mapping['table_name'] ) ? $mapping['table_name'] : $this->resolve_selected_table_name( $dataset, $mapping );
 		$table           = ! empty( $dataset['tables'][ $table_name ] ) ? $dataset['tables'][ $table_name ] : array();
-		$limit           = ! empty( $_POST['batch_limit'] ) ? max( 1, absint( $_POST['batch_limit'] ) ) : 1;
-		$offset          = ! empty( $_POST['batch_offset'] ) ? max( 1, absint( $_POST['batch_offset'] ) ) : 1;
-		$prompt_override = ! empty( $_POST['prompt_override'] ) ? wp_unslash( $_POST['prompt_override'] ) : '';
+		$total           = ! empty( $_POST['job_total'] ) ? max( 1, absint( $_POST['job_total'] ) ) : 1;
+		$per_run         = ! empty( $_POST['job_per_run'] ) ? max( 1, absint( $_POST['job_per_run'] ) ) : 1;
+		$start_row       = ! empty( $_POST['job_start_row'] ) ? max( 1, absint( $_POST['job_start_row'] ) ) : 1;
+		$prompt_override = ! empty( $_POST['prompt_override'] ) ? sanitize_textarea_field( wp_unslash( $_POST['prompt_override'] ) ) : '';
 
-		if ( empty( $table['rows'] ) ) {
-			return $this->build_error_state( __( 'La tabla seleccionada no tiene filas disponibles para ejecutar el lote.', 'goodsleep-elementor' ), $dataset_token, $mapping );
+		if ( empty( $table ) ) {
+			return $this->build_error_state( __( 'No se encontro la tabla seleccionada para crear el job.', 'goodsleep-elementor' ), $dataset_token, $mapping );
+		}
+
+		if ( $start_row > (int) $table['row_count'] ) {
+			return $this->build_error_state( __( 'La fila inicial del job supera la cantidad de filas disponibles.', 'goodsleep-elementor' ), $dataset_token, $mapping );
 		}
 
 		$this->persist_mapping( $mapping );
 
-		$batch_id = 'batch-' . gmdate( 'Ymd-His' ) . '-' . wp_generate_password( 6, false, false );
-		$results  = array();
-		$slice    = array_slice( $table['rows'], $offset - 1, $limit, true );
-
-		foreach ( $slice as $row_offset => $row ) {
-			$results[] = $this->generate_story_from_row(
-				$row,
-				$mapping,
-				array(
-					'row_index'       => $row_offset + 1,
-					'prompt_override' => $prompt_override,
-					'batch_id'        => $batch_id,
-				)
-			);
-		}
-
-		$success_count = count(
-			array_filter(
-				$results,
-				static function ( $item ) {
-					return ! is_wp_error( $item['result'] );
-				}
-			)
+		$job_id = 'job-' . gmdate( 'Ymd-His' ) . '-' . wp_generate_password( 6, false, false );
+		$job    = array(
+			'id'              => $job_id,
+			'status'          => 'active',
+			'dataset_token'   => $dataset_token,
+			'table_name'      => $table_name,
+			'mapping'         => $mapping,
+			'prompt_override' => $prompt_override,
+			'target_total'    => $total,
+			'per_run'         => $per_run,
+			'row_cursor'      => $start_row - 1,
+			'created_at'      => current_time( 'mysql' ),
+			'updated_at'      => current_time( 'mysql' ),
+			'processed_rows'  => 0,
+			'success_count'   => 0,
+			'error_count'     => 0,
+			'skipped_count'   => 0,
+			'last_message'    => __( 'Job creado y pendiente de cron.', 'goodsleep-elementor' ),
+			'last_results'    => array(),
 		);
+
+		$jobs             = $this->get_jobs();
+		$jobs[ $job_id ]  = $job;
+		$this->save_jobs( $jobs );
+		$this->schedule_next_queue_run();
 
 		return array(
 			'dataset_token' => $dataset_token,
@@ -435,21 +451,121 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			'mapping'       => $mapping,
 			'notices'       => array(
 				array(
-					'type' => $success_count > 0 ? 'success' : 'error',
+					'type' => 'success',
 					'text' => sprintf(
-						__( 'Lote completado. Historias exitosas: %1$d de %2$d.', 'goodsleep-elementor' ),
-						$success_count,
-						count( $results )
+						__( 'Job %1$s creado. Objetivo: %2$d historias. Historias por corrida: %3$d.', 'goodsleep-elementor' ),
+						$job_id,
+						$total,
+						$per_run
 					),
 				),
 			),
 			'results'       => array(
-				'batch' => array(
-					'batch_id' => $batch_id,
-					'items'    => $results,
-				),
+				'job' => $job,
 			),
 		);
+	}
+
+	/**
+	 * Procesa un job activo desde cron.
+	 *
+	 * @return void
+	 */
+	public function process_queue() {
+		$lock_key = 'goodsleep_internal_story_tool_lock';
+		if ( get_transient( $lock_key ) ) {
+			return;
+		}
+
+		set_transient( $lock_key, 1, 10 * MINUTE_IN_SECONDS );
+
+		$jobs   = $this->get_jobs();
+		$job_id = $this->find_next_active_job_id( $jobs );
+
+		if ( '' === $job_id ) {
+			delete_transient( $lock_key );
+			return;
+		}
+
+		$job           = $this->process_single_job_run( $jobs[ $job_id ] );
+		$jobs[ $job_id ] = $job;
+		$this->save_jobs( $jobs );
+
+		if ( $this->has_active_jobs( $jobs ) ) {
+			$this->schedule_next_queue_run();
+		}
+
+		delete_transient( $lock_key );
+	}
+
+	/**
+	 * Ejecuta una corrida de un job.
+	 *
+	 * @param array<string,mixed> $job Job actual.
+	 * @return array<string,mixed>
+	 */
+	protected function process_single_job_run( $job ) {
+		$dataset = $this->load_dataset( (string) $job['dataset_token'], true );
+		if ( empty( $dataset['tables'][ $job['table_name'] ]['rows'] ) ) {
+			$job['status']       = 'failed';
+			$job['updated_at']   = current_time( 'mysql' );
+			$job['last_message'] = __( 'No se pudo cargar el dataset del job o ya expiro.', 'goodsleep-elementor' );
+
+			return $job;
+		}
+
+		$table            = $dataset['tables'][ $job['table_name'] ];
+		$rows             = ! empty( $table['rows'] ) ? array_values( (array) $table['rows'] ) : array();
+		$row_count        = count( $rows );
+		$row_cursor       = isset( $job['row_cursor'] ) ? max( 0, absint( $job['row_cursor'] ) ) : 0;
+		$success_this_run = 0;
+		$results          = array();
+
+		while ( $row_cursor < $row_count && $success_this_run < (int) $job['per_run'] && (int) $job['success_count'] < (int) $job['target_total'] ) {
+			$result = $this->generate_story_from_row(
+				$rows[ $row_cursor ],
+				(array) $job['mapping'],
+				array(
+					'row_index'       => $row_cursor + 1,
+					'prompt_override' => (string) $job['prompt_override'],
+					'job_id'          => (string) $job['id'],
+				)
+			);
+
+			$row_cursor++;
+			$job['processed_rows'] = (int) $job['processed_rows'] + 1;
+			$results[]             = $result;
+
+			if ( 'success' === $result['status'] ) {
+				$job['success_count'] = (int) $job['success_count'] + 1;
+				$success_this_run++;
+			} elseif ( 'skipped' === $result['status'] ) {
+				$job['skipped_count'] = (int) $job['skipped_count'] + 1;
+			} else {
+				$job['error_count'] = (int) $job['error_count'] + 1;
+			}
+		}
+
+		$job['row_cursor']   = $row_cursor;
+		$job['updated_at']   = current_time( 'mysql' );
+		$job['last_results'] = array_slice( $results, -10 );
+
+		if ( (int) $job['success_count'] >= (int) $job['target_total'] ) {
+			$job['status']       = 'completed';
+			$job['last_message'] = __( 'Job completado con el total solicitado.', 'goodsleep-elementor' );
+		} elseif ( $row_cursor >= $row_count ) {
+			$job['status']       = 'completed';
+			$job['last_message'] = __( 'Job completado porque ya no quedan mas filas disponibles.', 'goodsleep-elementor' );
+		} else {
+			$job['status']       = 'active';
+			$job['last_message'] = sprintf(
+				__( 'Corrida completada. Historias creadas en esta corrida: %1$d. Total exitoso acumulado: %2$d.', 'goodsleep-elementor' ),
+				$success_this_run,
+				(int) $job['success_count']
+			);
+		}
+
+		return $job;
 	}
 
 	/**
@@ -461,37 +577,93 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	 * @return array<string,mixed>
 	 */
 	protected function generate_story_from_row( $row, $mapping, $context = array() ) {
-		$mapped_data   = $this->map_row_to_story_data( $row, $mapping );
-		$prompt_config = $this->resolve_prompt_text( ! empty( $context['prompt_override'] ) ? $context['prompt_override'] : '' );
-		$prompt_text   = goodsleep_render_template_placeholders( $prompt_config['prompt'], $this->build_prompt_context( $row, $mapped_data ) );
-		$phrase_result = $this->openai_text_client->generate_phrase( $prompt_text );
+		$mapped_data = $this->map_row_to_story_data( $row, $mapping );
 
-		if ( is_wp_error( $phrase_result ) ) {
+		if ( '' === $mapped_data['name'] ) {
 			return array(
-				'row_index'        => (int) $context['row_index'],
-				'mapped_data'      => $mapped_data,
-				'prompt_text'      => $prompt_text,
-				'generated_phrase' => '',
-				'combined_text'    => trim( $mapped_data['story_text'] . "\n" ),
-				'result'           => $phrase_result,
+				'status'        => 'skipped',
+				'row_index'     => (int) $context['row_index'],
+				'mapped_data'   => $mapped_data,
+				'prompt_text'   => '',
+				'story_text'    => '',
+				'phrase_text'   => '',
+				'combined_text' => '',
+				'post_date'     => '',
+				'message'       => __( 'La fila se omitio porque no tiene un nombre utilizable.', 'goodsleep-elementor' ),
 			);
 		}
 
-		$generated_phrase = sanitize_text_field( (string) $phrase_result );
-		$combined_text    = trim( $mapped_data['story_text'] . "\n" . $generated_phrase );
-		$post_date        = $this->generate_random_story_date_2026();
-		$story_result     = $this->story_generator->generate_story(
+		if ( '' === $mapped_data['email'] || ! is_email( $mapped_data['email'] ) ) {
+			return array(
+				'status'        => 'error',
+				'row_index'     => (int) $context['row_index'],
+				'mapped_data'   => $mapped_data,
+				'prompt_text'   => '',
+				'story_text'    => '',
+				'phrase_text'   => '',
+				'combined_text' => '',
+				'post_date'     => '',
+				'message'       => __( 'La fila no tiene un correo valido.', 'goodsleep-elementor' ),
+			);
+		}
+
+		$prompt_text = goodsleep_render_template_placeholders(
+			$this->resolve_prompt_text( ! empty( $context['prompt_override'] ) ? $context['prompt_override'] : '' ),
+			$this->build_prompt_context( $row, $mapped_data )
+		);
+		$story_text = $this->openai_text_client->generate_story_text( $prompt_text );
+
+		if ( is_wp_error( $story_text ) ) {
+			return array(
+				'status'        => 'error',
+				'row_index'     => (int) $context['row_index'],
+				'mapped_data'   => $mapped_data,
+				'prompt_text'   => $prompt_text,
+				'story_text'    => '',
+				'phrase_text'   => $mapped_data['name'],
+				'combined_text' => '',
+				'post_date'     => '',
+				'message'       => $story_text->get_error_message(),
+			);
+		}
+
+		$story_text = sanitize_textarea_field( (string) $story_text );
+		if ( '' === $story_text ) {
+			return array(
+				'status'        => 'error',
+				'row_index'     => (int) $context['row_index'],
+				'mapped_data'   => $mapped_data,
+				'prompt_text'   => $prompt_text,
+				'story_text'    => '',
+				'phrase_text'   => $mapped_data['name'],
+				'combined_text' => '',
+				'post_date'     => '',
+				'message'       => __( 'OpenAI no devolvio una historia utilizable.', 'goodsleep-elementor' ),
+			);
+		}
+
+		if ( strlen( $story_text ) > 500 ) {
+			return array(
+				'status'        => 'error',
+				'row_index'     => (int) $context['row_index'],
+				'mapped_data'   => $mapped_data,
+				'prompt_text'   => $prompt_text,
+				'story_text'    => $story_text,
+				'phrase_text'   => $mapped_data['name'],
+				'combined_text' => trim( $story_text . "\n" . $mapped_data['name'] ),
+				'post_date'     => '',
+				'message'       => __( 'La historia generada supera el maximo permitido de 500 caracteres.', 'goodsleep-elementor' ),
+			);
+		}
+
+		$post_date    = $this->generate_random_story_date_2026();
+		$story_result = $this->story_generator->generate_story(
 			array(
-				'name'             => $mapped_data['name'],
-				'email'            => $mapped_data['email'],
-				'story_text'       => $mapped_data['story_text'],
-				'generated_phrase' => $generated_phrase,
-				'phrase_emotion'   => $mapped_data['phrase_emotion'],
-				'voice_id'         => $mapped_data['voice_id'],
-				'voice_label'      => $mapped_data['voice_label'],
-				'track_id'         => $mapped_data['track_id'],
-				'track_label'      => $mapped_data['track_label'],
-				'accepted_terms'   => true,
+				'name'            => $mapped_data['name'],
+				'email'           => $mapped_data['email'],
+				'story_text'      => $story_text,
+				'phrase_template' => '%s',
+				'accepted_terms'  => true,
 			),
 			array(
 				'send_email'         => false,
@@ -499,21 +671,37 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 				'bypass_terms'       => true,
 				'post_date'          => $post_date,
 				'source'             => 'internal_sql_tool',
-				'external_reference' => $mapped_data['reference'],
-				'batch_id'           => ! empty( $context['batch_id'] ) ? $context['batch_id'] : '',
+				'batch_id'           => ! empty( $context['job_id'] ) ? (string) $context['job_id'] : '',
 				'import_row_index'   => (int) $context['row_index'],
 				'openai_prompt'      => $prompt_text,
 			)
 		);
 
+		if ( is_wp_error( $story_result ) ) {
+			return array(
+				'status'        => 'error',
+				'row_index'     => (int) $context['row_index'],
+				'mapped_data'   => $mapped_data,
+				'prompt_text'   => $prompt_text,
+				'story_text'    => $story_text,
+				'phrase_text'   => $mapped_data['name'],
+				'combined_text' => trim( $story_text . "\n" . $mapped_data['name'] ),
+				'post_date'     => $post_date,
+				'message'       => $story_result->get_error_message(),
+			);
+		}
+
 		return array(
-			'row_index'        => (int) $context['row_index'],
-			'mapped_data'      => $mapped_data,
-			'prompt_text'      => $prompt_text,
-			'generated_phrase' => $generated_phrase,
-			'combined_text'    => $combined_text,
-			'post_date'        => $post_date,
-			'result'           => $story_result,
+			'status'        => 'success',
+			'row_index'     => (int) $context['row_index'],
+			'mapped_data'   => $mapped_data,
+			'prompt_text'   => $prompt_text,
+			'story_text'    => $story_text,
+			'phrase_text'   => $mapped_data['name'],
+			'combined_text' => trim( $story_text . "\n" . $mapped_data['name'] ),
+			'post_date'     => $post_date,
+			'result'        => $story_result,
+			'message'       => __( 'Historia creada correctamente.', 'goodsleep-elementor' ),
 		);
 	}
 
@@ -525,16 +713,12 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	 * @return array<string,string>
 	 */
 	protected function map_row_to_story_data( $row, $mapping ) {
+		$raw_name = $this->get_row_value( $row, $mapping, 'name_column' );
+
 		return array(
-			'name'           => goodsleep_sanitize_story_name( $this->get_row_value( $row, $mapping, 'name_column' ) ),
-			'email'          => goodsleep_normalize_email( $this->get_row_value( $row, $mapping, 'email_column' ) ),
-			'story_text'     => sanitize_textarea_field( $this->get_row_value( $row, $mapping, 'story_text_column' ) ),
-			'reference'      => sanitize_text_field( $this->get_row_value( $row, $mapping, 'reference_column' ) ),
-			'voice_id'       => sanitize_text_field( $this->get_row_value( $row, $mapping, 'voice_id_column' ) ),
-			'voice_label'    => sanitize_text_field( $this->get_row_value( $row, $mapping, 'voice_label_column' ) ),
-			'track_id'       => sanitize_text_field( $this->get_row_value( $row, $mapping, 'track_id_column' ) ),
-			'track_label'    => sanitize_text_field( $this->get_row_value( $row, $mapping, 'track_label_column' ) ),
-			'phrase_emotion' => goodsleep_sanitize_speechify_emotion( $this->get_row_value( $row, $mapping, 'emotion_column' ), 'cheerful' ),
+			'name'      => $this->normalize_first_name( $raw_name ),
+			'full_name' => sanitize_text_field( (string) $raw_name ),
+			'email'     => goodsleep_normalize_email( $this->get_row_value( $row, $mapping, 'email_column' ) ),
 		);
 	}
 
@@ -563,14 +747,12 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	 * Resuelve prompt global u override puntual.
 	 *
 	 * @param string $override Prompt puntual.
-	 * @return array<string,string>
+	 * @return string
 	 */
 	protected function resolve_prompt_text( $override ) {
 		$override = trim( (string) $override );
 
-		return array(
-			'prompt' => '' !== $override ? $override : (string) goodsleep_get_setting( 'openai_text_prompt', '' ),
-		);
+		return '' !== $override ? $override : (string) goodsleep_get_setting( 'openai_text_prompt', '' );
 	}
 
 	/**
@@ -584,6 +766,24 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 		$stamp = wp_rand( $start, $end );
 
 		return gmdate( 'Y-m-d H:i:s', $stamp - (int) ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS ) );
+	}
+
+	/**
+	 * Extrae el primer nombre utilizable.
+	 *
+	 * @param string $value Nombre completo.
+	 * @return string
+	 */
+	protected function normalize_first_name( $value ) {
+		$value = trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( (string) $value ) ) );
+		if ( '' === $value ) {
+			return '';
+		}
+
+		$parts = explode( ' ', $value );
+		$name  = ! empty( $parts[0] ) ? $parts[0] : '';
+
+		return sanitize_text_field( $name );
 	}
 
 	/**
@@ -661,7 +861,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	}
 
 	/**
-	 * Guarda el dataset completo en un archivo temporal fuera de options/transients pesados.
+	 * Guarda el dataset completo en un archivo temporal.
 	 *
 	 * @param string              $token   Token de dataset.
 	 * @param array<string,mixed> $dataset Dataset completo.
@@ -691,7 +891,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	}
 
 	/**
-	 * Elimina datasets temporales antiguos para no acumular basura.
+	 * Elimina datasets temporales antiguos.
 	 *
 	 * @param string $directory Directorio temporal.
 	 * @return void
@@ -702,7 +902,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			return;
 		}
 
-		$expiration = time() - ( 6 * HOUR_IN_SECONDS );
+		$expiration = time() - ( 7 * DAY_IN_SECONDS );
 
 		foreach ( $files as $file_path ) {
 			if ( ! is_string( $file_path ) || ! file_exists( $file_path ) ) {
@@ -770,13 +970,6 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			'table_name',
 			'name_column',
 			'email_column',
-			'story_text_column',
-			'reference_column',
-			'voice_id_column',
-			'voice_label_column',
-			'track_id_column',
-			'track_label_column',
-			'emotion_column',
 		);
 		$result = array();
 
@@ -841,10 +1034,8 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 		$columns               = ! empty( $dataset['tables'][ $table_name ]['columns'] ) ? (array) $dataset['tables'][ $table_name ]['columns'] : array();
 
 		$mapping_defaults = array(
-			'name_column'       => array( 'name', 'nombre', 'first_name', 'fullname', 'full_name' ),
-			'email_column'      => array( 'email', 'correo', 'mail' ),
-			'story_text_column' => array( 'story', 'story_text', 'historia', 'texto', 'descripcion', 'description' ),
-			'reference_column'  => array( 'id', 'user_id', 'reference', 'codigo', 'code' ),
+			'name_column'  => array( 'name', 'nombre', 'first_name', 'fullname', 'full_name' ),
+			'email_column' => array( 'email', 'correo', 'mail', 'correo_electronico' ),
 		);
 
 		foreach ( $mapping_defaults as $mapping_key => $candidates ) {
@@ -870,10 +1061,9 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	 * @param string $label Etiqueta visible.
 	 * @param array<string,mixed> $table Tabla actual.
 	 * @param array<string,string> $mapping Mapeo seleccionado.
-	 * @param bool $allow_empty Permite no usar columna.
 	 * @return void
 	 */
-	protected function render_mapping_select_row( $key, $label, $table, $mapping, $allow_empty = false ) {
+	protected function render_mapping_select_row( $key, $label, $table, $mapping ) {
 		$columns = ! empty( $table['columns'] ) ? (array) $table['columns'] : array();
 		$current = ! empty( $mapping[ $key ] ) ? $mapping[ $key ] : '';
 		?>
@@ -881,9 +1071,6 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			<th scope="row"><label for="<?php echo esc_attr( 'goodsleep-' . $key ); ?>"><?php echo esc_html( $label ); ?></label></th>
 			<td>
 				<select id="<?php echo esc_attr( 'goodsleep-' . $key ); ?>" name="mapping[<?php echo esc_attr( $key ); ?>]">
-					<?php if ( $allow_empty ) : ?>
-						<option value=""><?php esc_html_e( 'Sin usar', 'goodsleep-elementor' ); ?></option>
-					<?php endif; ?>
 					<?php foreach ( $columns as $column_name ) : ?>
 						<option value="<?php echo esc_attr( $column_name ); ?>" <?php selected( $current, $column_name ); ?>><?php echo esc_html( $column_name ); ?></option>
 					<?php endforeach; ?>
@@ -917,7 +1104,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	}
 
 	/**
-	 * Renderiza resultados de prueba o lote.
+	 * Renderiza resultados de prueba o creacion de job.
 	 *
 	 * @param array<string,mixed> $results Resultados acumulados.
 	 * @return void
@@ -933,16 +1120,68 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			echo '</div>';
 		}
 
-		if ( ! empty( $results['batch']['items'] ) ) {
-			echo '<div class="goodsleep-internal-tool__section"><h2>' . esc_html__( 'Resultado del lote', 'goodsleep-elementor' ) . '</h2>';
-			echo '<p><strong>' . esc_html__( 'Batch ID:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( (string) $results['batch']['batch_id'] ) . '</p>';
-
-			foreach ( (array) $results['batch']['items'] as $item ) {
-				$this->render_generation_result_card( $item );
-			}
-
+		if ( ! empty( $results['job'] ) ) {
+			echo '<div class="goodsleep-internal-tool__section"><h2>' . esc_html__( 'Job creado', 'goodsleep-elementor' ) . '</h2>';
+			echo '<p><strong>' . esc_html__( 'ID del job:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( (string) $results['job']['id'] ) . '</p>';
+			echo '<p><strong>' . esc_html__( 'Objetivo:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( (string) $results['job']['target_total'] ) . '</p>';
+			echo '<p><strong>' . esc_html__( 'Historias por corrida:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( (string) $results['job']['per_run'] ) . '</p>';
+			echo '<p><strong>' . esc_html__( 'Estado:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( (string) $results['job']['status'] ) . '</p>';
 			echo '</div>';
 		}
+	}
+
+	/**
+	 * Renderiza la tabla de jobs.
+	 *
+	 * @param array<string,array<string,mixed>> $jobs Jobs disponibles.
+	 * @return void
+	 */
+	protected function render_jobs_section( $jobs ) {
+		echo '<div class="goodsleep-internal-tool__section"><h2>' . esc_html__( 'Jobs de cron', 'goodsleep-elementor' ) . '</h2>';
+
+		if ( empty( $jobs ) ) {
+			echo '<p>' . esc_html__( 'Todavia no hay jobs creados.', 'goodsleep-elementor' ) . '</p></div>';
+			return;
+		}
+
+		echo '<table class="widefat striped"><thead><tr>';
+		echo '<th>' . esc_html__( 'Job', 'goodsleep-elementor' ) . '</th>';
+		echo '<th>' . esc_html__( 'Estado', 'goodsleep-elementor' ) . '</th>';
+		echo '<th>' . esc_html__( 'Objetivo', 'goodsleep-elementor' ) . '</th>';
+		echo '<th>' . esc_html__( 'Exitosas', 'goodsleep-elementor' ) . '</th>';
+		echo '<th>' . esc_html__( 'Errores', 'goodsleep-elementor' ) . '</th>';
+		echo '<th>' . esc_html__( 'Omitidas', 'goodsleep-elementor' ) . '</th>';
+		echo '<th>' . esc_html__( 'Fila actual', 'goodsleep-elementor' ) . '</th>';
+		echo '<th>' . esc_html__( 'Ultimo mensaje', 'goodsleep-elementor' ) . '</th>';
+		echo '</tr></thead><tbody>';
+
+		foreach ( array_reverse( $jobs, true ) as $job ) {
+			echo '<tr>';
+			echo '<td>' . esc_html( (string) $job['id'] ) . '<br><small>' . esc_html( (string) $job['updated_at'] ) . '</small></td>';
+			echo '<td>' . esc_html( (string) $job['status'] ) . '</td>';
+			echo '<td>' . esc_html( (string) $job['target_total'] ) . ' / ' . esc_html( (string) $job['per_run'] ) . '</td>';
+			echo '<td>' . esc_html( (string) $job['success_count'] ) . '</td>';
+			echo '<td>' . esc_html( (string) $job['error_count'] ) . '</td>';
+			echo '<td>' . esc_html( (string) $job['skipped_count'] ) . '</td>';
+			echo '<td>' . esc_html( (string) ( (int) $job['row_cursor'] + 1 ) ) . '</td>';
+			echo '<td>' . esc_html( (string) $job['last_message'] ) . '</td>';
+			echo '</tr>';
+
+			if ( ! empty( $job['last_results'] ) ) {
+				echo '<tr><td colspan="8">';
+				echo '<strong>' . esc_html__( 'Ultimos resultados:', 'goodsleep-elementor' ) . '</strong>';
+				foreach ( (array) $job['last_results'] as $item ) {
+					echo '<div class="goodsleep-internal-tool__result ' . esc_attr( 'success' === $item['status'] ? 'is-success' : ( 'skipped' === $item['status'] ? 'is-warning' : 'is-error' ) ) . '">';
+					echo '<strong>' . esc_html( sprintf( __( 'Fila %d', 'goodsleep-elementor' ), (int) $item['row_index'] ) ) . ':</strong> ';
+					echo esc_html( (string) $item['message'] );
+					echo '</div>';
+				}
+				echo '</td></tr>';
+			}
+		}
+
+		echo '</tbody></table>';
+		echo '</div>';
 	}
 
 	/**
@@ -952,27 +1191,37 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	 * @return void
 	 */
 	protected function render_generation_result_card( $item ) {
-		$is_error = is_wp_error( $item['result'] );
-		$result   = $item['result'];
+		$status_class = 'success' === $item['status'] ? 'is-success' : ( 'skipped' === $item['status'] ? 'is-warning' : 'is-error' );
 
-		echo '<div class="goodsleep-internal-tool__result ' . esc_attr( $is_error ? 'is-error' : 'is-success' ) . '">';
+		echo '<div class="goodsleep-internal-tool__result ' . esc_attr( $status_class ) . '">';
 		echo '<h3>' . esc_html( sprintf( __( 'Fila %d', 'goodsleep-elementor' ), (int) $item['row_index'] ) ) . '</h3>';
 		echo '<p><strong>' . esc_html__( 'Nombre:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( (string) $item['mapped_data']['name'] ) . '</p>';
 		echo '<p><strong>' . esc_html__( 'Email:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( (string) $item['mapped_data']['email'] ) . '</p>';
-		echo '<p><strong>' . esc_html__( 'Fecha asignada:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( (string) $item['post_date'] ) . '</p>';
-		echo '<p><strong>' . esc_html__( 'Prompt final:', 'goodsleep-elementor' ) . '</strong></p>';
-		echo '<pre>' . esc_html( (string) $item['prompt_text'] ) . '</pre>';
-		echo '<p><strong>' . esc_html__( 'Frase generada:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( (string) $item['generated_phrase'] ) . '</p>';
-		echo '<p><strong>' . esc_html__( 'Texto combinado:', 'goodsleep-elementor' ) . '</strong></p>';
-		echo '<pre>' . esc_html( (string) $item['combined_text'] ) . '</pre>';
+		if ( ! empty( $item['post_date'] ) ) {
+			echo '<p><strong>' . esc_html__( 'Fecha asignada:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( (string) $item['post_date'] ) . '</p>';
+		}
+		if ( ! empty( $item['prompt_text'] ) ) {
+			echo '<p><strong>' . esc_html__( 'Prompt final:', 'goodsleep-elementor' ) . '</strong></p>';
+			echo '<pre>' . esc_html( (string) $item['prompt_text'] ) . '</pre>';
+		}
+		if ( '' !== (string) $item['story_text'] ) {
+			echo '<p><strong>' . esc_html__( 'Historia generada:', 'goodsleep-elementor' ) . '</strong></p>';
+			echo '<pre>' . esc_html( (string) $item['story_text'] ) . '</pre>';
+		}
+		if ( '' !== (string) $item['phrase_text'] ) {
+			echo '<p><strong>' . esc_html__( 'Frase final:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( (string) $item['phrase_text'] ) . '</p>';
+		}
+		if ( '' !== (string) $item['combined_text'] ) {
+			echo '<p><strong>' . esc_html__( 'Texto combinado:', 'goodsleep-elementor' ) . '</strong></p>';
+			echo '<pre>' . esc_html( (string) $item['combined_text'] ) . '</pre>';
+		}
+		echo '<p><strong>' . esc_html__( 'Resultado:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( (string) $item['message'] ) . '</p>';
 
-		if ( $is_error ) {
-			echo '<p><strong>' . esc_html__( 'Error:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( $result->get_error_message() ) . '</p>';
-		} else {
-			echo '<p><strong>' . esc_html__( 'Historia creada:', 'goodsleep-elementor' ) . '</strong> #' . esc_html( (string) $result['storyId'] ) . '</p>';
-			echo '<p><strong>' . esc_html__( 'Correo enviado:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( ! empty( $result['emailSent'] ) ? __( 'Si', 'goodsleep-elementor' ) : __( 'No', 'goodsleep-elementor' ) ) . '</p>';
-			echo '<p><strong>' . esc_html__( 'Correo suprimido:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( ! empty( $result['emailSuppressed'] ) ? __( 'Si', 'goodsleep-elementor' ) : __( 'No', 'goodsleep-elementor' ) ) . '</p>';
-			echo '<p><a class="button button-secondary" href="' . esc_url( (string) $result['shareUrl'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Abrir historia', 'goodsleep-elementor' ) . '</a></p>';
+		if ( 'success' === $item['status'] && ! empty( $item['result'] ) ) {
+			echo '<p><strong>' . esc_html__( 'Historia creada:', 'goodsleep-elementor' ) . '</strong> #' . esc_html( (string) $item['result']['storyId'] ) . '</p>';
+			echo '<p><strong>' . esc_html__( 'Correo enviado:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( ! empty( $item['result']['emailSent'] ) ? __( 'Si', 'goodsleep-elementor' ) : __( 'No', 'goodsleep-elementor' ) ) . '</p>';
+			echo '<p><strong>' . esc_html__( 'Correo suprimido:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( ! empty( $item['result']['emailSuppressed'] ) ? __( 'Si', 'goodsleep-elementor' ) : __( 'No', 'goodsleep-elementor' ) ) . '</p>';
+			echo '<p><a class="button button-secondary" href="' . esc_url( (string) $item['result']['shareUrl'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Abrir historia', 'goodsleep-elementor' ) . '</a></p>';
 		}
 
 		echo '</div>';
@@ -1014,5 +1263,63 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 		}
 
 		return substr( $value, 0, 87 ) . '...';
+	}
+
+	/**
+	 * Devuelve jobs guardados.
+	 *
+	 * @return array<string,array<string,mixed>>
+	 */
+	protected function get_jobs() {
+		$jobs = get_option( $this->jobs_option_key, array() );
+
+		return is_array( $jobs ) ? $jobs : array();
+	}
+
+	/**
+	 * Persiste jobs.
+	 *
+	 * @param array<string,array<string,mixed>> $jobs Jobs saneados.
+	 * @return void
+	 */
+	protected function save_jobs( $jobs ) {
+		update_option( $this->jobs_option_key, is_array( $jobs ) ? $jobs : array(), false );
+	}
+
+	/**
+	 * Busca el siguiente job activo.
+	 *
+	 * @param array<string,array<string,mixed>> $jobs Jobs existentes.
+	 * @return string
+	 */
+	protected function find_next_active_job_id( $jobs ) {
+		foreach ( $jobs as $job_id => $job ) {
+			if ( ! empty( $job['status'] ) && 'active' === $job['status'] ) {
+				return (string) $job_id;
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * Devuelve si existen jobs activos.
+	 *
+	 * @param array<string,array<string,mixed>> $jobs Jobs existentes.
+	 * @return bool
+	 */
+	protected function has_active_jobs( $jobs ) {
+		return '' !== $this->find_next_active_job_id( $jobs );
+	}
+
+	/**
+	 * Programa la siguiente corrida del cron interno si no hay una pendiente.
+	 *
+	 * @return void
+	 */
+	protected function schedule_next_queue_run() {
+		if ( ! wp_next_scheduled( $this->cron_hook ) ) {
+			wp_schedule_single_event( time() + MINUTE_IN_SECONDS, $this->cron_hook );
+		}
 	}
 }
