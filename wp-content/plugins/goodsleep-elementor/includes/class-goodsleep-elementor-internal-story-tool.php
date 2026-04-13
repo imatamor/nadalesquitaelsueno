@@ -700,6 +700,8 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 		);
 
 		if ( is_wp_error( $story_result ) ) {
+			$error_data = $story_result->get_error_data();
+
 			return array(
 				'status'        => 'error',
 				'row_index'     => (int) $context['row_index'],
@@ -710,6 +712,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 				'combined_text' => trim( $story_text . "\n" . $phrase_text ),
 				'post_date'     => $post_date,
 				'message'       => $story_result->get_error_message(),
+				'debug_sample'  => is_array( $error_data ) && ! empty( $error_data['speechifySample'] ) ? (string) $error_data['speechifySample'] : '',
 			);
 		}
 
@@ -1236,7 +1239,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 		}
 		echo '<p><strong>' . esc_html__( 'Resultado:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( (string) $item['message'] ) . '</p>';
 		if ( ! empty( $item['debug_sample'] ) ) {
-			echo '<p><strong>' . esc_html__( 'Muestra de respuesta OpenAI:', 'goodsleep-elementor' ) . '</strong></p>';
+			echo '<p><strong>' . esc_html__( 'Muestra de respuesta del servicio:', 'goodsleep-elementor' ) . '</strong></p>';
 			echo '<pre>' . esc_html( (string) $item['debug_sample'] ) . '</pre>';
 		}
 

@@ -126,17 +126,9 @@ class Goodsleep_Elementor_Story_Generator {
 			}
 		}
 
-		$combined_text = trim( $text . "\n" . $phrase );
-		$speech_input  = $this->build_speechify_input( $text, $phrase, $emotion );
-		$audio_response = $this->speechify->generate_audio(
-			array(
-				'text'     => $combined_text,
-				'ssml'     => $speech_input,
-				'voice_id' => $voice_id,
-				'model'    => 'simba-multilingual',
-				'language' => 'es-ES',
-			)
-		);
+		$combined_text  = trim( $text . "\n" . $phrase );
+		$speech_input   = $this->build_speechify_input( $text, $phrase, $emotion );
+		$audio_response = $this->generate_speechify_audio_with_fallback( $combined_text, $speech_input, $voice_id );
 
 		if ( is_wp_error( $audio_response ) ) {
 			return $audio_response;
@@ -285,6 +277,44 @@ class Goodsleep_Elementor_Story_Generator {
 	 */
 	protected function render_phrase_template( $template, $name ) {
 		return goodsleep_render_phrase_template( $template, $name );
+	}
+
+	/**
+	 * Genera audio con Speechify y reintenta en texto plano si falla el SSML.
+	 *
+	 * @param string $combined_text Texto completo a locutar.
+	 * @param string $speech_input SSML preparado.
+	 * @param string $voice_id Voz activa.
+	 * @return array<string,mixed>|WP_Error
+	 */
+	protected function generate_speechify_audio_with_fallback( $combined_text, $speech_input, $voice_id ) {
+		$base_payload = array(
+			'text'     => $combined_text,
+			'voice_id' => $voice_id,
+			'model'    => 'simba-multilingual',
+			'language' => 'es-ES',
+		);
+
+		$audio_response = $this->speechify->generate_audio(
+			array_merge(
+				$base_payload,
+				array(
+					'ssml' => $speech_input,
+				)
+			)
+		);
+
+		if ( ! is_wp_error( $audio_response ) || '' === trim( (string) $speech_input ) ) {
+			return $audio_response;
+		}
+
+		$fallback_response = $this->speechify->generate_audio( $base_payload );
+
+		if ( ! is_wp_error( $fallback_response ) ) {
+			return $fallback_response;
+		}
+
+		return $audio_response;
 	}
 
 	/**
