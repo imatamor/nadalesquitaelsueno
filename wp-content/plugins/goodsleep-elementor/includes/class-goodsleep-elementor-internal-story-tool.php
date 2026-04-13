@@ -287,7 +287,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 		$wp_root = untrailingslashit( str_replace( '\\', '/', ABSPATH ) );
 
 		return sprintf(
-			'cd %1$s && /usr/local/bin/wp cron event run %2$s --allow-root',
+			'cd %1$s && /usr/local/bin/wp cron event run %2$s',
 			$wp_root,
 			$this->cron_hook
 		);
