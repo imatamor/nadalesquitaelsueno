@@ -193,8 +193,13 @@ class Goodsleep_Elementor_Settings {
 		$key   = $args['key'];
 		$type  = isset( $args['type'] ) ? $args['type'] : 'text';
 		$value = goodsleep_get_setting( $key, '' );
+		$step  = '';
+
+		if ( 'number' === $type && 'openai_text_temperature' === $key ) {
+			$step = ' step="0.1" min="0" max="2"';
+		}
 		?>
-		<input class="regular-text" type="<?php echo esc_attr( $type ); ?>" name="goodsleep_elementor_settings[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $value ); ?>">
+		<input class="regular-text" type="<?php echo esc_attr( $type ); ?>" name="goodsleep_elementor_settings[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $value ); ?>"<?php echo $step; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 		<?php
 	}
 
