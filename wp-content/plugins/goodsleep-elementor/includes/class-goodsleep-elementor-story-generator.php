@@ -328,9 +328,8 @@ class Goodsleep_Elementor_Story_Generator {
 	protected function build_story_post_title( $name, $email, $options = array() ) {
 		$email_user   = $email ? sanitize_text_field( (string) current( explode( '@', $email ) ) ) : '';
 		$generated_at = ! empty( $options['post_date'] ) ? sanitize_text_field( (string) $options['post_date'] ) : current_time( 'Y-m-d H:i' );
-		$source       = ! empty( $options['source'] ) && 'public_form' !== $options['source'] ? sanitize_text_field( strtoupper( (string) $options['source'] ) ) : '';
 
-		return implode( ' | ', array_filter( array( trim( (string) $name ), $email_user ? '@' . $email_user : '', $generated_at, $source ) ) );
+		return implode( ' | ', array_filter( array( trim( (string) $name ), $email_user ? '@' . $email_user : '', $generated_at ) ) );
 	}
 
 	/**
