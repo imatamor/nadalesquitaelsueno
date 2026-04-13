@@ -125,12 +125,24 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 
 			$generated = $this->sanitize_generated_text( $generated );
 			if ( '' === $generated ) {
-				$last_error = new WP_Error( 'goodsleep_openai_story_empty', __( 'OpenAI devolvio una historia vacia.', 'goodsleep-elementor' ) );
+				$last_error = new WP_Error(
+					'goodsleep_openai_story_empty',
+					__( 'OpenAI devolvio una historia vacia.', 'goodsleep-elementor' ),
+					array(
+						'generated_text' => '',
+					)
+				);
 				continue;
 			}
 
 			if ( strlen( $generated ) > 500 ) {
-				$last_error = new WP_Error( 'goodsleep_openai_story_too_long', __( 'OpenAI devolvio una historia que supera los 500 caracteres.', 'goodsleep-elementor' ) );
+				$last_error = new WP_Error(
+					'goodsleep_openai_story_too_long',
+					__( 'OpenAI devolvio una historia que supera los 500 caracteres.', 'goodsleep-elementor' ),
+					array(
+						'generated_text' => $generated,
+					)
+				);
 				continue;
 			}
 

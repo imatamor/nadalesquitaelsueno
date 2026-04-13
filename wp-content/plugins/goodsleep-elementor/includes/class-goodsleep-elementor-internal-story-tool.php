@@ -631,17 +631,19 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 		$story_text = $this->openai_text_client->generate_story_text( $prompt_text );
 
 		if ( is_wp_error( $story_text ) ) {
+			$error_data = $story_text->get_error_data();
+
 			return array(
 				'status'        => 'error',
 				'row_index'     => (int) $context['row_index'],
 				'mapped_data'   => $mapped_data,
 				'prompt_text'   => $prompt_text,
-				'story_text'    => '',
+				'story_text'    => is_array( $error_data ) && ! empty( $error_data['generated_text'] ) ? (string) $error_data['generated_text'] : '',
 				'phrase_text'   => $mapped_data['name'],
 				'combined_text' => '',
 				'post_date'     => '',
 				'message'       => $story_text->get_error_message(),
-				'debug_sample'  => is_array( $story_text->get_error_data() ) && ! empty( $story_text->get_error_data()['openai_sample'] ) ? (string) $story_text->get_error_data()['openai_sample'] : '',
+				'debug_sample'  => is_array( $error_data ) && ! empty( $error_data['openai_sample'] ) ? (string) $error_data['openai_sample'] : '',
 			);
 		}
 
