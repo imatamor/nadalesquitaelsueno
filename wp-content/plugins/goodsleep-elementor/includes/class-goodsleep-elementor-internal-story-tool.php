@@ -243,6 +243,8 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 						<p class="description"><?php esc_html_e( 'El job se procesa por cron con lock para evitar solapes. Las filas sin nombre valido se omiten automaticamente y se sigue con la siguiente.', 'goodsleep-elementor' ); ?></p>
 						<?php submit_button( __( 'Crear job', 'goodsleep-elementor' ), 'primary', 'submit', false ); ?>
 					</form>
+					<p><strong><?php esc_html_e( 'Comando recomendado para cron:', 'goodsleep-elementor' ); ?></strong></p>
+					<pre><?php echo esc_html( $this->get_recommended_cron_command() ); ?></pre>
 				</div>
 			<?php endif; ?>
 
@@ -274,6 +276,21 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			default:
 				return $this->build_error_state( __( 'Accion interna no reconocida.', 'goodsleep-elementor' ) );
 		}
+	}
+
+	/**
+	 * Devuelve el comando sugerido para ejecutar la cola desde cron.
+	 *
+	 * @return string
+	 */
+	protected function get_recommended_cron_command() {
+		$wp_root = untrailingslashit( str_replace( '\\', '/', ABSPATH ) );
+
+		return sprintf(
+			'cd %1$s && /usr/local/bin/wp cron event run %2$s --allow-root',
+			$wp_root,
+			$this->cron_hook
+		);
 	}
 
 	/**
