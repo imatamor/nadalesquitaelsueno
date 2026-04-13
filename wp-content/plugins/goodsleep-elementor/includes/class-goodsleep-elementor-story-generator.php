@@ -284,18 +284,7 @@ class Goodsleep_Elementor_Story_Generator {
 	 * @return string
 	 */
 	protected function render_phrase_template( $template, $name ) {
-		$template = (string) $template;
-		$name     = (string) $name;
-
-		if ( '' === trim( $template ) ) {
-			return '';
-		}
-
-		try {
-			return sprintf( $template, $name );
-		} catch ( ValueError $error ) {
-			return str_replace( '%s', $name, $template );
-		}
+		return goodsleep_render_phrase_template( $template, $name );
 	}
 
 	/**

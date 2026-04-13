@@ -594,7 +594,9 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	 * @return array<string,mixed>
 	 */
 	protected function generate_story_from_row( $row, $mapping, $context = array() ) {
-		$mapped_data = $this->map_row_to_story_data( $row, $mapping );
+		$mapped_data     = $this->map_row_to_story_data( $row, $mapping );
+		$phrase_template = goodsleep_get_active_phrase_template();
+		$phrase_text     = goodsleep_render_phrase_template( $phrase_template, $mapped_data['name'] );
 
 		if ( '' === $mapped_data['name'] ) {
 			return array(
@@ -639,7 +641,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 				'mapped_data'   => $mapped_data,
 				'prompt_text'   => $prompt_text,
 				'story_text'    => is_array( $error_data ) && ! empty( $error_data['generated_text'] ) ? (string) $error_data['generated_text'] : '',
-				'phrase_text'   => $mapped_data['name'],
+				'phrase_text'   => $phrase_text,
 				'combined_text' => '',
 				'post_date'     => '',
 				'message'       => $story_text->get_error_message(),
@@ -655,7 +657,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 				'mapped_data'   => $mapped_data,
 				'prompt_text'   => $prompt_text,
 				'story_text'    => '',
-				'phrase_text'   => $mapped_data['name'],
+				'phrase_text'   => $phrase_text,
 				'combined_text' => '',
 				'post_date'     => '',
 				'message'       => __( 'OpenAI no devolvio una historia utilizable.', 'goodsleep-elementor' ),
@@ -669,8 +671,8 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 				'mapped_data'   => $mapped_data,
 				'prompt_text'   => $prompt_text,
 				'story_text'    => $story_text,
-				'phrase_text'   => $mapped_data['name'],
-				'combined_text' => trim( $story_text . "\n" . $mapped_data['name'] ),
+				'phrase_text'   => $phrase_text,
+				'combined_text' => trim( $story_text . "\n" . $phrase_text ),
 				'post_date'     => '',
 				'message'       => __( 'La historia generada supera el maximo permitido de 500 caracteres.', 'goodsleep-elementor' ),
 			);
@@ -682,7 +684,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 				'name'            => $mapped_data['name'],
 				'email'           => $mapped_data['email'],
 				'story_text'      => $story_text,
-				'phrase_template' => '%s',
+				'phrase_template' => $phrase_template,
 				'accepted_terms'  => true,
 			),
 			array(
@@ -704,8 +706,8 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 				'mapped_data'   => $mapped_data,
 				'prompt_text'   => $prompt_text,
 				'story_text'    => $story_text,
-				'phrase_text'   => $mapped_data['name'],
-				'combined_text' => trim( $story_text . "\n" . $mapped_data['name'] ),
+				'phrase_text'   => $phrase_text,
+				'combined_text' => trim( $story_text . "\n" . $phrase_text ),
 				'post_date'     => $post_date,
 				'message'       => $story_result->get_error_message(),
 			);
@@ -717,8 +719,8 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			'mapped_data'   => $mapped_data,
 			'prompt_text'   => $prompt_text,
 			'story_text'    => $story_text,
-			'phrase_text'   => $mapped_data['name'],
-			'combined_text' => trim( $story_text . "\n" . $mapped_data['name'] ),
+			'phrase_text'   => $phrase_text,
+			'combined_text' => trim( $story_text . "\n" . $phrase_text ),
 			'post_date'     => $post_date,
 			'result'        => $story_result,
 			'message'       => __( 'Historia creada correctamente.', 'goodsleep-elementor' ),

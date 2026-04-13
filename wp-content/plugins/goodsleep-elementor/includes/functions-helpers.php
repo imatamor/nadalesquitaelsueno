@@ -59,6 +59,136 @@ function goodsleep_get_setting( $key, $default = '' ) {
 }
 
 /**
+ * Devuelve la plantilla dinamica por defecto usada por el widget principal.
+ *
+ * @return string
+ */
+function goodsleep_get_default_phrase_template() {
+	return __( 'Nada le quita el sueño a %s porque toma Goodsleep.', 'goodsleep-elementor' );
+}
+
+/**
+ * Resuelve la plantilla dinamica activa del widget de Elementor.
+ *
+ * Busca primero una instancia publicada del widget para reutilizar la misma
+ * frase final del flujo publico. Si no encuentra una configuracion explicita,
+ * cae al default del plugin.
+ *
+ * @return string
+ */
+function goodsleep_get_active_phrase_template() {
+	$cache_key       = 'goodsleep_active_phrase_template';
+	$cached_template = get_transient( $cache_key );
+
+	if ( false !== $cached_template && is_string( $cached_template ) && '' !== trim( $cached_template ) ) {
+		return $cached_template;
+	}
+
+	$template   = goodsleep_get_default_phrase_template();
+	$post_types = get_post_types(
+		array(
+			'public' => true,
+		),
+		'names'
+	);
+
+	$query = new WP_Query(
+		array(
+			'post_type'              => array_values( (array) $post_types ),
+			'post_status'            => 'publish',
+			'posts_per_page'         => 50,
+			'fields'                 => 'ids',
+			'orderby'                => 'modified',
+			'order'                  => 'DESC',
+			'no_found_rows'          => true,
+			'ignore_sticky_posts'    => true,
+			'update_post_meta_cache' => false,
+			'update_post_term_cache' => false,
+			'meta_query'             => array(
+				array(
+					'key'     => '_elementor_data',
+					'compare' => 'EXISTS',
+				),
+			),
+		)
+	);
+
+	if ( ! empty( $query->posts ) ) {
+		foreach ( $query->posts as $post_id ) {
+			$elementor_data = get_post_meta( (int) $post_id, '_elementor_data', true );
+			$decoded_data   = json_decode( (string) $elementor_data, true );
+			$found_template = goodsleep_find_phrase_template_in_elementor_data( $decoded_data );
+
+			if ( '' !== $found_template ) {
+				$template = $found_template;
+				break;
+			}
+		}
+	}
+
+	set_transient( $cache_key, $template, DAY_IN_SECONDS );
+
+	return $template;
+}
+
+/**
+ * Recorre la estructura de Elementor hasta encontrar la plantilla del widget.
+ *
+ * @param mixed $elements Estructura de elementos de Elementor.
+ * @return string
+ */
+function goodsleep_find_phrase_template_in_elementor_data( $elements ) {
+	if ( ! is_array( $elements ) ) {
+		return '';
+	}
+
+	foreach ( $elements as $element ) {
+		if ( ! is_array( $element ) ) {
+			continue;
+		}
+
+		$widget_type = ! empty( $element['widgetType'] ) ? sanitize_key( (string) $element['widgetType'] ) : '';
+		$settings    = ! empty( $element['settings'] ) && is_array( $element['settings'] ) ? $element['settings'] : array();
+
+		if ( 'goodsleep-historia-generator' === $widget_type && ! empty( $settings['phrase_template'] ) ) {
+			return sanitize_textarea_field( (string) $settings['phrase_template'] );
+		}
+
+		if ( ! empty( $element['elements'] ) ) {
+			$nested_template = goodsleep_find_phrase_template_in_elementor_data( $element['elements'] );
+
+			if ( '' !== $nested_template ) {
+				return $nested_template;
+			}
+		}
+	}
+
+	return '';
+}
+
+/**
+ * Renderiza una plantilla de frase con el nombre visible.
+ *
+ * @param string $template Plantilla base.
+ * @param string $name Nombre saneado.
+ * @return string
+ */
+function goodsleep_render_phrase_template( $template, $name ) {
+	$template = (string) $template;
+	$name     = (string) $name;
+
+	if ( '' === trim( $template ) ) {
+		return '';
+	}
+
+	try {
+		return sprintf( $template, $name );
+	} catch ( ValueError $error ) {
+		return str_replace( '%s', $name, $template );
+	}
+}
+
+/**
  * Reemplaza placeholders {{clave}} dentro de una plantilla.
  *
  * @param string $template Plantilla base.
