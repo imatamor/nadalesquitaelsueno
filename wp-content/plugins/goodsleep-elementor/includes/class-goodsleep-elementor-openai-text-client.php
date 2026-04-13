@@ -19,8 +19,6 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 		$api_key = trim( (string) goodsleep_get_setting( 'openai_text_api_key', '' ) );
 		$model   = ! empty( $args['model'] ) ? sanitize_text_field( (string) $args['model'] ) : sanitize_text_field( (string) goodsleep_get_setting( 'openai_text_model', 'gpt-5-mini' ) );
 		$timeout = ! empty( $args['timeout'] ) ? max( 5, absint( $args['timeout'] ) ) : max( 5, absint( goodsleep_get_setting( 'openai_text_timeout', 30 ) ) );
-		$temperature = isset( $args['temperature'] ) ? (float) $args['temperature'] : (float) goodsleep_get_setting( 'openai_text_temperature', 0.8 );
-
 		if ( '' === $api_key ) {
 			return new WP_Error( 'goodsleep_missing_openai_text_config', __( 'OpenAI de texto no esta configurado.', 'goodsleep-elementor' ) );
 		}
@@ -44,7 +42,6 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 				'body'    => wp_json_encode(
 					array(
 						'model'             => $model,
-						'temperature'       => max( 0, min( 2, $temperature ) ),
 						'max_output_tokens' => $max_tokens,
 						'input'             => array(
 							array(
