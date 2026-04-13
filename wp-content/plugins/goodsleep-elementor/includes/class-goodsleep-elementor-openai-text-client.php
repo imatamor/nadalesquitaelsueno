@@ -72,23 +72,31 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 			return $response;
 		}
 
-		$code    = (int) wp_remote_retrieve_response_code( $response );
-		$decoded = json_decode( wp_remote_retrieve_body( $response ), true );
+		$code     = (int) wp_remote_retrieve_response_code( $response );
+		$raw_body = wp_remote_retrieve_body( $response );
+		$decoded  = json_decode( $raw_body, true );
 
 		if ( $code < 200 || $code >= 300 ) {
 			return new WP_Error(
 				'goodsleep_openai_text_failed',
 				$this->extract_error_message( $decoded ),
 				array(
-					'status'      => 502,
-					'openai_code' => $code,
+					'status'        => 502,
+					'openai_code'   => $code,
+					'openai_sample' => $this->build_debug_sample( $decoded, $raw_body ),
 				)
 			);
 		}
 
 		$text = $this->extract_output_text( $decoded );
 		if ( '' === $text ) {
-			return new WP_Error( 'goodsleep_openai_text_empty', __( 'OpenAI no devolvio un texto utilizable.', 'goodsleep-elementor' ) );
+			return new WP_Error(
+				'goodsleep_openai_text_empty',
+				__( 'OpenAI no devolvio un texto utilizable.', 'goodsleep-elementor' ),
+				array(
+					'openai_sample' => $this->build_debug_sample( $decoded, $raw_body ),
+				)
+			);
 		}
 
 		return $this->sanitize_generated_text( $text );
@@ -137,6 +145,18 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 			return trim( $payload['output_text'] );
 		}
 
+		if ( ! empty( $payload['response']['output_text'] ) && is_string( $payload['response']['output_text'] ) ) {
+			return trim( $payload['response']['output_text'] );
+		}
+
+		if ( ! empty( $payload['content'][0]['text'] ) && is_string( $payload['content'][0]['text'] ) ) {
+			return trim( $payload['content'][0]['text'] );
+		}
+
+		if ( ! empty( $payload['text'] ) && is_string( $payload['text'] ) ) {
+			return trim( $payload['text'] );
+		}
+
 		if ( empty( $payload['output'] ) || ! is_array( $payload['output'] ) ) {
 			return '';
 		}
@@ -151,11 +171,44 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 			foreach ( $item['content'] as $content_item ) {
 				if ( ! empty( $content_item['text'] ) && is_string( $content_item['text'] ) ) {
 					$chunks[] = trim( $content_item['text'] );
+					continue;
+				}
+
+				if ( ! empty( $content_item['type'] ) && 'output_text' === $content_item['type'] && ! empty( $content_item['text'] ) && is_string( $content_item['text'] ) ) {
+					$chunks[] = trim( $content_item['text'] );
+					continue;
+				}
+
+				if ( ! empty( $content_item['type'] ) && 'text' === $content_item['type'] && ! empty( $content_item['value'] ) && is_string( $content_item['value'] ) ) {
+					$chunks[] = trim( $content_item['value'] );
+					continue;
+				}
+
+				if ( ! empty( $content_item['type'] ) && 'refusal' === $content_item['type'] && ! empty( $content_item['refusal'] ) && is_string( $content_item['refusal'] ) ) {
+					$chunks[] = trim( $content_item['refusal'] );
 				}
 			}
 		}
 
 		return trim( implode( ' ', array_filter( $chunks ) ) );
+	}
+
+	/**
+	 * Construye una muestra acotada de la respuesta para debug.
+	 *
+	 * @param array<string,mixed>|null $payload Respuesta decodificada.
+	 * @param string                   $raw_body Body crudo.
+	 * @return string
+	 */
+	protected function build_debug_sample( $payload, $raw_body ) {
+		if ( is_array( $payload ) ) {
+			$encoded = wp_json_encode( $payload );
+			if ( is_string( $encoded ) && '' !== $encoded ) {
+				return substr( $encoded, 0, 1200 );
+			}
+		}
+
+		return substr( (string) $raw_body, 0, 1200 );
 	}
 
 	/**

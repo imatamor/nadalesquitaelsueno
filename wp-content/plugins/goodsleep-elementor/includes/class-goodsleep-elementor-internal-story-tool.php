@@ -634,6 +634,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 				'combined_text' => '',
 				'post_date'     => '',
 				'message'       => $story_text->get_error_message(),
+				'debug_sample'  => is_array( $story_text->get_error_data() ) && ! empty( $story_text->get_error_data()['openai_sample'] ) ? (string) $story_text->get_error_data()['openai_sample'] : '',
 			);
 		}
 
@@ -1226,6 +1227,10 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			echo '<pre>' . esc_html( (string) $item['combined_text'] ) . '</pre>';
 		}
 		echo '<p><strong>' . esc_html__( 'Resultado:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( (string) $item['message'] ) . '</p>';
+		if ( ! empty( $item['debug_sample'] ) ) {
+			echo '<p><strong>' . esc_html__( 'Muestra de respuesta OpenAI:', 'goodsleep-elementor' ) . '</strong></p>';
+			echo '<pre>' . esc_html( (string) $item['debug_sample'] ) . '</pre>';
+		}
 
 		if ( 'success' === $item['status'] && ! empty( $item['result'] ) ) {
 			echo '<p><strong>' . esc_html__( 'Historia creada:', 'goodsleep-elementor' ) . '</strong> #' . esc_html( (string) $item['result']['storyId'] ) . '</p>';
