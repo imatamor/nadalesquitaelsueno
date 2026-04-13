@@ -23,6 +23,13 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	protected $jobs_option_key = 'goodsleep_internal_story_jobs';
 
 	/**
+	 * Opcion que guarda el ultimo dataset activo en admin.
+	 *
+	 * @var string
+	 */
+	protected $current_dataset_option_key = 'goodsleep_internal_story_current_dataset';
+
+	/**
 	 * Servicio de generacion de historias.
 	 *
 	 * @var Goodsleep_Elementor_Story_Generator
@@ -101,7 +108,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			$state = $this->handle_postback();
 		}
 
-		$dataset_token = ! empty( $state['dataset_token'] ) ? $state['dataset_token'] : ( ! empty( $_REQUEST['dataset_token'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['dataset_token'] ) ) : '' );
+		$dataset_token = ! empty( $state['dataset_token'] ) ? $state['dataset_token'] : ( ! empty( $_REQUEST['dataset_token'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['dataset_token'] ) ) : $this->get_current_dataset_token() );
 		$dataset       = $dataset_token ? $this->load_dataset( $dataset_token ) : array();
 		$mapping       = ! empty( $state['mapping'] ) ? $state['mapping'] : $this->get_current_mapping();
 		$table_name    = ! empty( $state['table_name'] ) ? $state['table_name'] : $this->resolve_selected_table_name( $dataset, $mapping );
@@ -282,7 +289,8 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			return $this->build_error_state( $parsed->get_error_message() );
 		}
 
-		$token        = 'goodsleep_sql_' . wp_generate_password( 12, false, false );
+		$previous_token = $this->get_current_dataset_token();
+		$token          = 'goodsleep_sql_' . wp_generate_password( 12, false, false );
 		$storage_path = $this->store_dataset_on_disk( $token, $parsed );
 		if ( is_wp_error( $storage_path ) ) {
 			return $this->build_error_state( $storage_path->get_error_message() );
@@ -296,6 +304,8 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			),
 			7 * DAY_IN_SECONDS
 		);
+		$this->set_current_dataset_token( $token );
+		$this->maybe_delete_dataset( $previous_token, $token );
 
 		$table_name = $this->select_best_table_name( $parsed );
 		$mapping    = $this->merge_mapping_with_table( $this->get_current_mapping(), $table_name, $parsed );
@@ -1277,6 +1287,27 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	}
 
 	/**
+	 * Devuelve el token del ultimo dataset cargado en admin.
+	 *
+	 * @return string
+	 */
+	protected function get_current_dataset_token() {
+		$token = get_option( $this->current_dataset_option_key, '' );
+
+		return is_string( $token ) ? sanitize_text_field( $token ) : '';
+	}
+
+	/**
+	 * Persiste el token del dataset activo.
+	 *
+	 * @param string $dataset_token Token actual.
+	 * @return void
+	 */
+	protected function set_current_dataset_token( $dataset_token ) {
+		update_option( $this->current_dataset_option_key, sanitize_text_field( (string) $dataset_token ), false );
+	}
+
+	/**
 	 * Persiste jobs.
 	 *
 	 * @param array<string,array<string,mixed>> $jobs Jobs saneados.
@@ -1284,6 +1315,50 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	 */
 	protected function save_jobs( $jobs ) {
 		update_option( $this->jobs_option_key, is_array( $jobs ) ? $jobs : array(), false );
+	}
+
+	/**
+	 * Elimina un dataset viejo si ya no esta en uso por ningun job.
+	 *
+	 * @param string $dataset_token Token a eliminar.
+	 * @param string $current_token Token vigente.
+	 * @return void
+	 */
+	protected function maybe_delete_dataset( $dataset_token, $current_token = '' ) {
+		$dataset_token = sanitize_text_field( (string) $dataset_token );
+		$current_token = sanitize_text_field( (string) $current_token );
+
+		if ( '' === $dataset_token || $dataset_token === $current_token || $this->is_dataset_in_use( $dataset_token ) ) {
+			return;
+		}
+
+		$dataset_meta = get_transient( $dataset_token );
+		if ( is_array( $dataset_meta ) && ! empty( $dataset_meta['storage_path'] ) ) {
+			$storage_path = (string) $dataset_meta['storage_path'];
+			if ( '' !== $storage_path && file_exists( $storage_path ) ) {
+				wp_delete_file( $storage_path );
+			}
+		}
+
+		delete_transient( $dataset_token );
+	}
+
+	/**
+	 * Devuelve si un dataset sigue asociado a algun job.
+	 *
+	 * @param string $dataset_token Token a revisar.
+	 * @return bool
+	 */
+	protected function is_dataset_in_use( $dataset_token ) {
+		$jobs = $this->get_jobs();
+
+		foreach ( $jobs as $job ) {
+			if ( ! empty( $job['dataset_token'] ) && $dataset_token === (string) $job['dataset_token'] && ! empty( $job['status'] ) && 'failed' !== $job['status'] ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
