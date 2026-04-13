@@ -153,11 +153,13 @@ class Goodsleep_Elementor_REST_Controller {
 		foreach ( $query->posts as $post ) {
 			$audio_id          = (int) get_post_meta( $post->ID, '_goodsleep_story_audio_id', true );
 			$audio_url         = wp_get_attachment_url( $audio_id );
+			$story_text_meta   = (string) get_post_meta( $post->ID, '_goodsleep_story_text', true );
 			$stored_vote_score = (string) get_post_meta( $post->ID, '_goodsleep_vote_score', true );
 			$vote_total        = (int) get_post_meta( $post->ID, '_goodsleep_vote_total', true );
 			$vote_count        = (int) get_post_meta( $post->ID, '_goodsleep_vote_count', true );
 			$favorite_count    = (int) get_post_meta( $post->ID, '_goodsleep_favorite_count', true );
 			$story_name        = (string) get_post_meta( $post->ID, '_goodsleep_story_name', true );
+			$story_text        = $this->normalize_story_list_text( $story_text_meta ? $story_text_meta : $post->post_content );
 			$vote_score        = '' !== $stored_vote_score ? (float) $stored_vote_score : 0.0;
 
 			if ( $vote_count > 0 ) {
@@ -176,7 +178,7 @@ class Goodsleep_Elementor_REST_Controller {
 			$stories[] = array(
 				'id'             => $post->ID,
 				'title'          => $story_name ? $story_name : get_the_title( $post ),
-				'text'           => $post->post_content,
+				'text'           => $story_text,
 				'audioUrl'       => $audio_url,
 				'downloadUrl'    => $audio_url,
 				'shareUrl'       => goodsleep_get_story_share_url( $post->ID ),
@@ -207,6 +209,28 @@ class Goodsleep_Elementor_REST_Controller {
 				'page'     => $page,
 			)
 		);
+	}
+
+	/**
+	 * Limpia el texto de la historia para el widget de listado.
+	 *
+	 * @param string $text Texto almacenado.
+	 * @return string
+	 */
+	protected function normalize_story_list_text( $text ) {
+		$text = (string) $text;
+
+		if ( function_exists( 'excerpt_remove_blocks' ) ) {
+			$text = excerpt_remove_blocks( $text );
+		}
+
+		$text = preg_replace( '/<!--\s+wp:.*?-->/', '', $text );
+		$text = preg_replace( '/<!--\s+\/wp:.*?-->/', '', $text );
+		$text = wp_strip_all_tags( $text );
+		$text = preg_replace( "/[\r\n\t]+/", ' ', $text );
+		$text = preg_replace( '/\s{2,}/', ' ', $text );
+
+		return trim( (string) $text );
 	}
 
 	/**
