@@ -113,7 +113,6 @@ class Goodsleep_Elementor_Story_Post_Type {
 		$audio_id    = (int) get_post_meta( $post_id, '_goodsleep_story_audio_id', true );
 		$audio_url   = $audio_id ? wp_get_attachment_url( $audio_id ) : '';
 		$share_url   = goodsleep_get_story_share_url( $post_id );
-		$source      = (string) get_post_meta( $post_id, '_goodsleep_story_source', true );
 		$reference   = (string) get_post_meta( $post_id, '_goodsleep_story_external_reference', true );
 
 		echo '<div class="goodsleep-story-meta-box">';
@@ -121,7 +120,6 @@ class Goodsleep_Elementor_Story_Post_Type {
 		$this->render_meta_row( __( 'Correo', 'goodsleep-elementor' ), $email ? '<a href="mailto:' . esc_attr( $email ) . '">' . esc_html( $email ) . '</a>' : '' );
 		$this->render_meta_row( __( 'Voz', 'goodsleep-elementor' ), esc_html( $voice_label ) );
 		$this->render_meta_row( __( 'Música', 'goodsleep-elementor' ), esc_html( $track_label ) );
-		$this->render_meta_row( __( 'Origen', 'goodsleep-elementor' ), esc_html( $source ) );
 		$this->render_meta_row( __( 'Referencia externa', 'goodsleep-elementor' ), esc_html( $reference ) );
 		if ( $audio_url ) {
 			$this->render_meta_row(
