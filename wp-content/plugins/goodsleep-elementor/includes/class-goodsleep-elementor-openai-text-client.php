@@ -105,7 +105,7 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 	 */
 	public function generate_story_text( $prompt, $args = array() ) {
 		$attempts    = ! empty( $args['attempts'] ) ? max( 1, absint( $args['attempts'] ) ) : 3;
-		$instruction = ! empty( $args['instruction'] ) ? (string) $args['instruction'] : 'Genera una historia breve en espanol. Debe sonar natural y emocional. Devuelve solo la historia final, sin comillas, sin listas, sin encabezados y con un maximo de 500 caracteres.';
+		$instruction = ! empty( $args['instruction'] ) ? (string) $args['instruction'] : 'Genera una sola historia breve en espanol y devuelve unicamente la historia final. Debe respetar estrictamente un maximo de 500 caracteres, incluyendo espacios. Si la primera version supera el limite, debes acortarla antes de responder. No uses comillas, listas, encabezados, moraleja ni reflexion final.';
 		$last_error  = null;
 
 		for ( $attempt = 0; $attempt < $attempts; $attempt++ ) {

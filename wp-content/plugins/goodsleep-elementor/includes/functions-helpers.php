@@ -20,7 +20,7 @@ function goodsleep_get_settings() {
 		'speechify_voices_path'   => '/v1/voices',
 		'openai_text_api_key'     => '',
 		'openai_text_model'       => 'gpt-4o-mini',
-		'openai_text_prompt'      => "Genera una historia breve en espanol para el flujo de Goodsleep. Debe sonar natural, emocional y mantenerse dentro del mismo limite del textarea publico. Devuelve solo la historia final, sin comillas ni explicaciones.\n\nNombre: {{name}}\nNombre completo: {{full_name}}\nEmail: {{email}}",
+		'openai_text_prompt'      => "Escribe una sola historia corta en espanol, en tercera persona, sobre una persona llamada {{name}}. Debe describir una situacion concreta, cotidiana y realista en la que actua de forma egoista, manipuladora o hipocrita. Usa un tono observacional e ironico, pero natural y sobrio. No exageres, no moralices, no cierres con reflexion, no anadas remate final, no uses comillas, no uses titulo y no uses listas. La historia completa debe tener como maximo 500 caracteres exactos, incluyendo espacios. Si te pasas del limite, rehace la respuesta mas corta. Devuelve solo la historia final.\n\nNombre: {{name}}\nNombre completo: {{full_name}}\nEmail: {{email}}",
 		'openai_text_temperature' => 0.8,
 		'openai_text_timeout'     => 30,
 		'mailjet_api_key'         => '',
