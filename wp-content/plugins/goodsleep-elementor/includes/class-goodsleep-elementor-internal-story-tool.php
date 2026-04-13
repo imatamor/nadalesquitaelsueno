@@ -472,6 +472,8 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			'skipped_count'   => 0,
 			'last_message'    => __( 'Job creado y pendiente de cron.', 'goodsleep-elementor' ),
 			'last_results'    => array(),
+			'created_story_ids' => array(),
+			'recent_errors'     => array(),
 		);
 
 		$jobs             = $this->get_jobs();
@@ -573,10 +575,21 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			if ( 'success' === $result['status'] ) {
 				$job['success_count'] = (int) $job['success_count'] + 1;
 				$success_this_run++;
+				if ( ! empty( $result['result']['storyId'] ) ) {
+					$job['created_story_ids'][] = (int) $result['result']['storyId'];
+					$job['created_story_ids']   = array_values( array_unique( array_map( 'absint', (array) $job['created_story_ids'] ) ) );
+				}
 			} elseif ( 'skipped' === $result['status'] ) {
 				$job['skipped_count'] = (int) $job['skipped_count'] + 1;
 			} else {
 				$job['error_count'] = (int) $job['error_count'] + 1;
+				$job['recent_errors'][] = array(
+					'logged_at'  => current_time( 'mysql' ),
+					'row_index'  => isset( $result['row_index'] ) ? (int) $result['row_index'] : 0,
+					'code'       => ! empty( $result['error_code'] ) ? sanitize_key( (string) $result['error_code'] ) : 'generation_error',
+					'message'    => ! empty( $result['message'] ) ? sanitize_text_field( (string) $result['message'] ) : __( 'Error sin detalle.', 'goodsleep-elementor' ),
+				);
+				$job['recent_errors'] = array_slice( (array) $job['recent_errors'], -20 );
 			}
 		}
 
@@ -639,6 +652,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 				'phrase_text'   => '',
 				'combined_text' => '',
 				'post_date'     => '',
+				'error_code'    => 'invalid_email',
 				'message'       => __( 'La fila no tiene un correo valido.', 'goodsleep-elementor' ),
 			);
 		}
@@ -661,6 +675,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 				'phrase_text'   => $phrase_text,
 				'combined_text' => '',
 				'post_date'     => '',
+				'error_code'    => $story_text->get_error_code(),
 				'message'       => $story_text->get_error_message(),
 				'debug_sample'  => is_array( $error_data ) && ! empty( $error_data['openai_sample'] ) ? (string) $error_data['openai_sample'] : '',
 			);
@@ -677,6 +692,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 				'phrase_text'   => $phrase_text,
 				'combined_text' => '',
 				'post_date'     => '',
+				'error_code'    => 'empty_story_text',
 				'message'       => __( 'OpenAI no devolvio una historia utilizable.', 'goodsleep-elementor' ),
 			);
 		}
@@ -691,6 +707,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 				'phrase_text'   => $phrase_text,
 				'combined_text' => trim( $story_text . "\n" . $phrase_text ),
 				'post_date'     => '',
+				'error_code'    => 'story_text_too_long',
 				'message'       => __( 'La historia generada supera el maximo permitido de 500 caracteres.', 'goodsleep-elementor' ),
 			);
 		}
@@ -728,6 +745,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 				'phrase_text'   => $phrase_text,
 				'combined_text' => trim( $story_text . "\n" . $phrase_text ),
 				'post_date'     => $post_date,
+				'error_code'    => $story_result->get_error_code(),
 				'message'       => $story_result->get_error_message(),
 				'debug_sample'  => is_array( $error_data ) && ! empty( $error_data['speechifySample'] ) ? (string) $error_data['speechifySample'] : '',
 			);
@@ -1206,15 +1224,41 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			echo '<td>' . esc_html( (string) $job['last_message'] ) . '</td>';
 			echo '</tr>';
 
-			if ( ! empty( $job['last_results'] ) ) {
+			if ( ! empty( $job['last_results'] ) || ! empty( $job['created_story_ids'] ) || ! empty( $job['recent_errors'] ) ) {
 				echo '<tr><td colspan="8">';
-				echo '<strong>' . esc_html__( 'Ultimos resultados:', 'goodsleep-elementor' ) . '</strong>';
-				foreach ( (array) $job['last_results'] as $item ) {
-					echo '<div class="goodsleep-internal-tool__result ' . esc_attr( 'success' === $item['status'] ? 'is-success' : ( 'skipped' === $item['status'] ? 'is-warning' : 'is-error' ) ) . '">';
-					echo '<strong>' . esc_html( sprintf( __( 'Fila %d', 'goodsleep-elementor' ), (int) $item['row_index'] ) ) . ':</strong> ';
-					echo esc_html( (string) $item['message'] );
-					echo '</div>';
+				if ( ! empty( $job['last_results'] ) ) {
+					echo '<strong>' . esc_html__( 'Ultimos resultados:', 'goodsleep-elementor' ) . '</strong>';
+					foreach ( (array) $job['last_results'] as $item ) {
+						echo '<div class="goodsleep-internal-tool__result ' . esc_attr( 'success' === $item['status'] ? 'is-success' : ( 'skipped' === $item['status'] ? 'is-warning' : 'is-error' ) ) . '">';
+						echo '<strong>' . esc_html( sprintf( __( 'Fila %d', 'goodsleep-elementor' ), (int) $item['row_index'] ) ) . ':</strong> ';
+						echo esc_html( (string) $item['message'] );
+						echo '</div>';
+					}
 				}
+
+				if ( ! empty( $job['created_story_ids'] ) ) {
+					echo '<p><strong>' . esc_html__( 'Historias creadas:', 'goodsleep-elementor' ) . '</strong><br>';
+					echo esc_html( implode( ', ', array_map( 'absint', (array) $job['created_story_ids'] ) ) );
+					echo '</p>';
+				}
+
+				if ( ! empty( $job['recent_errors'] ) ) {
+					echo '<p><strong>' . esc_html__( 'Ultimos errores:', 'goodsleep-elementor' ) . '</strong></p>';
+					foreach ( (array) $job['recent_errors'] as $error_item ) {
+						echo '<div class="goodsleep-internal-tool__result is-error">';
+						echo esc_html(
+							sprintf(
+								'%1$s | fila %2$d | %3$s | %4$s',
+								! empty( $error_item['logged_at'] ) ? (string) $error_item['logged_at'] : '',
+								! empty( $error_item['row_index'] ) ? (int) $error_item['row_index'] : 0,
+								! empty( $error_item['code'] ) ? (string) $error_item['code'] : 'generation_error',
+								! empty( $error_item['message'] ) ? (string) $error_item['message'] : ''
+							)
+						);
+						echo '</div>';
+					}
+				}
+
 				echo '</td></tr>';
 			}
 		}
