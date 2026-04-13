@@ -30,6 +30,13 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	protected $current_dataset_option_key = 'goodsleep_internal_story_current_dataset';
 
 	/**
+	 * Opcion propia para el ultimo mapeo guardado.
+	 *
+	 * @var string
+	 */
+	protected $mapping_option_key = 'goodsleep_internal_story_last_mapping';
+
+	/**
 	 * Servicio de generacion de historias.
 	 *
 	 * @var Goodsleep_Elementor_Story_Generator
@@ -933,7 +940,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	 * @return array<string,string>
 	 */
 	protected function get_current_mapping() {
-		$mapping = goodsleep_get_setting( 'internal_sql_last_mapping', array() );
+		$mapping = get_option( $this->mapping_option_key, array() );
 
 		return $this->sanitize_mapping( is_array( $mapping ) ? $mapping : array() );
 	}
@@ -945,10 +952,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	 * @return void
 	 */
 	protected function persist_mapping( $mapping ) {
-		$settings                              = goodsleep_get_settings();
-		$settings['internal_sql_last_mapping'] = $this->sanitize_mapping( $mapping );
-
-		update_option( 'goodsleep_elementor_settings', $settings, false );
+		update_option( $this->mapping_option_key, $this->sanitize_mapping( $mapping ), false );
 	}
 
 	/**
@@ -1045,8 +1049,8 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 		$columns               = ! empty( $dataset['tables'][ $table_name ]['columns'] ) ? (array) $dataset['tables'][ $table_name ]['columns'] : array();
 
 		$mapping_defaults = array(
-			'name_column'  => array( 'name', 'nombre', 'first_name', 'fullname', 'full_name' ),
-			'email_column' => array( 'email', 'correo', 'mail', 'correo_electronico' ),
+			'name_column'  => array( 'name', 'nombre', 'nombres', 'first_name', 'fullname', 'full_name' ),
+			'email_column' => array( 'email', 'correo', 'correo_electronico', 'mail', 'e_mail' ),
 		);
 
 		foreach ( $mapping_defaults as $mapping_key => $candidates ) {
