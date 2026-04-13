@@ -474,6 +474,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			'last_results'    => array(),
 			'created_story_ids' => array(),
 			'recent_errors'     => array(),
+			'last_success_identity_key' => '',
 		);
 
 		$jobs             = $this->get_jobs();
@@ -556,8 +557,33 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 		$row_cursor       = isset( $job['row_cursor'] ) ? max( 0, absint( $job['row_cursor'] ) ) : 0;
 		$success_this_run = 0;
 		$results          = array();
+		$last_success_identity_key = ! empty( $job['last_success_identity_key'] ) ? sanitize_key( (string) $job['last_success_identity_key'] ) : '';
 
 		while ( $row_cursor < $row_count && $success_this_run < (int) $job['per_run'] && (int) $job['success_count'] < (int) $job['target_total'] ) {
+			$mapped_preview = $this->map_row_to_story_data( $rows[ $row_cursor ], (array) $job['mapping'] );
+			$identity_key   = $this->build_identity_key( $mapped_preview );
+
+			if ( '' !== $identity_key && $identity_key === $last_success_identity_key ) {
+				$result = array(
+					'status'        => 'skipped',
+					'row_index'     => $row_cursor + 1,
+					'mapped_data'   => $mapped_preview,
+					'prompt_text'   => '',
+					'story_text'    => '',
+					'phrase_text'   => '',
+					'combined_text' => '',
+					'post_date'     => '',
+					'error_code'    => 'duplicate_consecutive_identity',
+					'message'       => __( 'La fila se omitio porque repite consecutivamente el mismo nombre y correo de la ultima historia creada.', 'goodsleep-elementor' ),
+				);
+				$row_cursor++;
+				$job['processed_rows'] = (int) $job['processed_rows'] + 1;
+				$job['skipped_count']  = (int) $job['skipped_count'] + 1;
+				$results[]             = $result;
+
+				continue;
+			}
+
 			$result = $this->generate_story_from_row(
 				$rows[ $row_cursor ],
 				(array) $job['mapping'],
@@ -575,6 +601,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			if ( 'success' === $result['status'] ) {
 				$job['success_count'] = (int) $job['success_count'] + 1;
 				$success_this_run++;
+				$last_success_identity_key = $identity_key;
 				if ( ! empty( $result['result']['storyId'] ) ) {
 					$job['created_story_ids'][] = (int) $result['result']['storyId'];
 					$job['created_story_ids']   = array_values( array_unique( array_map( 'absint', (array) $job['created_story_ids'] ) ) );
@@ -596,6 +623,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 		$job['row_cursor']   = $row_cursor;
 		$job['updated_at']   = current_time( 'mysql' );
 		$job['last_results'] = array_slice( $results, -10 );
+		$job['last_success_identity_key'] = $last_success_identity_key;
 
 		if ( (int) $job['success_count'] >= (int) $job['target_total'] ) {
 			$job['status']       = 'completed';
@@ -780,6 +808,23 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			'full_name' => sanitize_text_field( (string) $raw_name ),
 			'email'     => goodsleep_normalize_email( $this->get_row_value( $row, $mapping, 'email_column' ) ),
 		);
+	}
+
+	/**
+	 * Construye una huella de identidad para evitar repeticiones consecutivas.
+	 *
+	 * @param array<string,string> $mapped_data Datos mapeados.
+	 * @return string
+	 */
+	protected function build_identity_key( $mapped_data ) {
+		$name  = ! empty( $mapped_data['name'] ) ? sanitize_key( (string) $mapped_data['name'] ) : '';
+		$email = ! empty( $mapped_data['email'] ) ? sanitize_key( str_replace( array( '@', '.', '+', '-' ), '_', strtolower( (string) $mapped_data['email'] ) ) ) : '';
+
+		if ( '' === $name || '' === $email ) {
+			return '';
+		}
+
+		return $name . '__' . $email;
 	}
 
 	/**
