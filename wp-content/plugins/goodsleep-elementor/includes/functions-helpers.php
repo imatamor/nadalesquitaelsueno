@@ -19,7 +19,7 @@ function goodsleep_get_settings() {
 		'speechify_audio_path'    => '/v1/audio/speech',
 		'speechify_voices_path'   => '/v1/voices',
 		'openai_text_api_key'     => '',
-		'openai_text_model'       => 'gpt-5-mini',
+		'openai_text_model'       => 'gpt-4o-mini',
 		'openai_text_prompt'      => "Genera una historia breve en espanol para el flujo de Goodsleep. Debe sonar natural, emocional y mantenerse dentro del mismo limite del textarea publico. Devuelve solo la historia final, sin comillas ni explicaciones.\n\nNombre: {{name}}\nNombre completo: {{full_name}}\nEmail: {{email}}",
 		'openai_text_temperature' => 0.8,
 		'openai_text_timeout'     => 30,

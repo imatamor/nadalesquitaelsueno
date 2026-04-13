@@ -116,7 +116,7 @@ class Goodsleep_Elementor_Settings {
 		$sanitized['speechify_audio_path']   = isset( $input['speechify_audio_path'] ) ? sanitize_text_field( $input['speechify_audio_path'] ) : '';
 		$sanitized['speechify_voices_path']  = isset( $input['speechify_voices_path'] ) ? sanitize_text_field( $input['speechify_voices_path'] ) : '';
 		$sanitized['openai_text_api_key']    = isset( $input['openai_text_api_key'] ) ? sanitize_text_field( $input['openai_text_api_key'] ) : '';
-		$sanitized['openai_text_model']      = isset( $input['openai_text_model'] ) ? sanitize_text_field( $input['openai_text_model'] ) : 'gpt-5-mini';
+		$sanitized['openai_text_model']      = isset( $input['openai_text_model'] ) ? sanitize_text_field( $input['openai_text_model'] ) : 'gpt-4o-mini';
 		$sanitized['openai_text_temperature']= isset( $input['openai_text_temperature'] ) ? max( 0, min( 2, (float) $input['openai_text_temperature'] ) ) : 0.8;
 		$sanitized['openai_text_timeout']    = isset( $input['openai_text_timeout'] ) ? max( 5, absint( $input['openai_text_timeout'] ) ) : 30;
 		$sanitized['openai_text_prompt']     = isset( $input['openai_text_prompt'] ) ? sanitize_textarea_field( $input['openai_text_prompt'] ) : '';

@@ -17,8 +17,9 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 	 */
 	public function generate_text( $prompt, $args = array() ) {
 		$api_key = trim( (string) goodsleep_get_setting( 'openai_text_api_key', '' ) );
-		$model   = ! empty( $args['model'] ) ? sanitize_text_field( (string) $args['model'] ) : sanitize_text_field( (string) goodsleep_get_setting( 'openai_text_model', 'gpt-5-mini' ) );
+		$model   = ! empty( $args['model'] ) ? sanitize_text_field( (string) $args['model'] ) : sanitize_text_field( (string) goodsleep_get_setting( 'openai_text_model', 'gpt-4o-mini' ) );
 		$timeout = ! empty( $args['timeout'] ) ? max( 5, absint( $args['timeout'] ) ) : max( 5, absint( goodsleep_get_setting( 'openai_text_timeout', 30 ) ) );
+		$temperature = isset( $args['temperature'] ) ? (float) $args['temperature'] : (float) goodsleep_get_setting( 'openai_text_temperature', 0.8 );
 
 		if ( '' === $api_key ) {
 			return new WP_Error( 'goodsleep_missing_openai_text_config', __( 'OpenAI de texto no esta configurado.', 'goodsleep-elementor' ) );
@@ -31,6 +32,23 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 
 		$instruction = ! empty( $args['instruction'] ) ? (string) $args['instruction'] : 'Genera texto en espanol siguiendo exactamente las instrucciones del prompt del usuario. Devuelve solo el texto final, sin comillas, sin listas y sin explicaciones adicionales.';
 		$endpoint    = 'https://api.openai.com/v1/chat/completions';
+		$payload     = array(
+			'model'    => $model,
+			'messages' => array(
+				array(
+					'role'    => 'system',
+					'content' => $instruction,
+				),
+				array(
+					'role'    => 'user',
+					'content' => $prompt,
+				),
+			),
+		);
+
+		if ( $this->model_supports_temperature( $model, $temperature ) ) {
+			$payload['temperature'] = max( 0, min( 2, $temperature ) );
+		}
 
 		$response = wp_remote_post(
 			$endpoint,
@@ -40,22 +58,7 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 					'Authorization' => 'Bearer ' . $api_key,
 					'Content-Type'  => 'application/json',
 				),
-				'body'    => wp_json_encode(
-					array(
-						'model'       => $model,
-						'messages'    => array(
-							array(
-								'role'    => 'system',
-								'content' => $instruction,
-							),
-							array(
-								'role'    => 'user',
-								'content' => $prompt,
-							),
-						),
-						'temperature' => 0.9,
-					)
-				),
+				'body'    => wp_json_encode( $payload ),
 			)
 		);
 
@@ -219,5 +222,26 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 		$text = preg_replace( '/\s+/', ' ', $text );
 
 		return sanitize_text_field( trim( (string) $text ) );
+	}
+
+	/**
+	 * Determina si el modelo permite enviar temperature explicitamente.
+	 *
+	 * @param string $model Modelo configurado.
+	 * @param float  $temperature Temperatura solicitada.
+	 * @return bool
+	 */
+	protected function model_supports_temperature( $model, $temperature ) {
+		$model = strtolower( trim( (string) $model ) );
+
+		if ( '' === $model ) {
+			return true;
+		}
+
+		if ( 0 === strpos( $model, 'gpt-5' ) ) {
+			return abs( (float) $temperature - 1.0 ) < 0.0001;
+		}
+
+		return true;
 	}
 }
