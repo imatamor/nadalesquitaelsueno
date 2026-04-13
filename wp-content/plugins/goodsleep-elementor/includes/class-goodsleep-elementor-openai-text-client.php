@@ -136,6 +136,23 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 			}
 
 			if ( strlen( $generated ) > 500 ) {
+				$shortened = $this->rewrite_story_to_max_length(
+					$generated,
+					500,
+					array(
+						'model'   => ! empty( $args['model'] ) ? $args['model'] : '',
+						'timeout' => ! empty( $args['timeout'] ) ? $args['timeout'] : 0,
+					)
+				);
+
+				if ( ! is_wp_error( $shortened ) ) {
+					$shortened = $this->sanitize_generated_text( $shortened );
+
+					if ( '' !== $shortened && strlen( $shortened ) <= 500 ) {
+						return $shortened;
+					}
+				}
+
 				$last_error = new WP_Error(
 					'goodsleep_openai_story_too_long',
 					__( 'OpenAI devolvio una historia que supera los 500 caracteres.', 'goodsleep-elementor' ),
@@ -150,6 +167,41 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 		}
 
 		return $last_error ? $last_error : new WP_Error( 'goodsleep_openai_story_failed', __( 'No se pudo generar una historia valida con OpenAI.', 'goodsleep-elementor' ) );
+	}
+
+	/**
+	 * Pide una reescritura mas corta reutilizando la historia ya generada.
+	 *
+	 * @param string              $story_text Historia base demasiado larga.
+	 * @param int                 $max_length Limite maximo.
+	 * @param array<string,mixed> $args Configuracion opcional.
+	 * @return string|WP_Error
+	 */
+	protected function rewrite_story_to_max_length( $story_text, $max_length, $args = array() ) {
+		$story_text = trim( (string) $story_text );
+		$max_length = max( 1, absint( $max_length ) );
+
+		if ( '' === $story_text ) {
+			return new WP_Error( 'goodsleep_openai_story_rewrite_empty', __( 'No hay historia base para acortar.', 'goodsleep-elementor' ) );
+		}
+
+		$rewrite_prompt = sprintf(
+			"Reescribe esta misma historia en espanol manteniendo la idea central, pero dejala en un maximo de %d caracteres contando espacios.\nNo agregues informacion nueva.\nNo uses comillas, listas, titulo, moraleja ni reflexion final.\nDevuelve solo la historia final.\n\nHistoria original:\n%s",
+			$max_length,
+			$story_text
+		);
+
+		return $this->generate_text(
+			$rewrite_prompt,
+			array(
+				'instruction' => sprintf(
+					'Acorta textos en espanol sin perder la idea principal. La respuesta debe tener como maximo %d caracteres contando espacios. Devuelve solo el texto final.',
+					$max_length
+				),
+				'model'       => ! empty( $args['model'] ) ? $args['model'] : '',
+				'timeout'     => ! empty( $args['timeout'] ) ? $args['timeout'] : 0,
+			)
+		);
 	}
 
 	/**
