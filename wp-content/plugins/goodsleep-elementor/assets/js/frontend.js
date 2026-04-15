@@ -6,6 +6,11 @@
 	const iconShare = '<svg viewBox="0 0 16 16" aria-hidden="true"><g fill="currentColor"><path d="M13.02 6 10.2 5.99c-.25 0-.48-.17-.5-.38-.03-.24.16-.51.43-.51l2.85.01c.67 0 1.39.55 1.39 1.28v8.23c0 .72-.7 1.28-1.39 1.28H3.04c-.7 0-1.4-.55-1.4-1.28V6.38c0-.73.71-1.28 1.39-1.28l2.63-.01c.25 0 .46.21.47.43 0 .22-.21.46-.47.46H3.12c-.33 0-.63.2-.63.58v7.86c0 .37.28.59.64.59h9.84c.32 0 .54-.27.54-.57v-7.9c0-.25-.18-.54-.47-.54"></path><path d="M8.48 10.08c0 .28-.23.45-.44.46-.18.01-.44-.16-.44-.4V1.65L5.4 3.77c-.16.16-.49.11-.62-.05-.12-.14-.13-.45.03-.6L7.7.29c.18-.18.5-.3.71-.09l2.89 2.89c.16.16.19.41.08.6-.08.16-.45.26-.61.1L8.48 1.53v8.55Z"></path></g></svg>';
 	const iconDownload = '<svg viewBox="0 0 16 16" aria-hidden="true"><g fill="currentColor"><path d="M13.02 6 10.2 5.99c-.25 0-.48-.17-.5-.38C9.67 5.37 9.86 5.1 10.13 5.1l2.85.01c.67 0 1.39.55 1.39 1.28v8.23c0 .72-.7 1.28-1.39 1.28H3.04c-.7 0-1.4-.55-1.4-1.28V6.38c0-.73.71-1.28 1.39-1.28l2.63-.01c.25 0 .46.21.47.43 0 .22-.21.46-.47.46H3.12c-.33 0-.63.2-.63.58v7.86c0 .37.28.59.64.59h9.84c.32 0 .54-.27.54-.57v-7.9c0-.25-.18-.54-.47-.54"></path><path d="M7.66.55c0-.28.23-.45.44-.46.18-.01.44.16.44.4v8.49l2.2-2.12c.16-.16.49-.11.62.05.12.14.13.45-.03.6l-2.89 2.83c-.18.18-.5.3-.71.09L4.84 7.54c-.16-.16-.19-.41-.08-.6.08-.16.45-.26.61-.1L7.66 9.1V.55Z"></path></g></svg>';
 	const iconFavorite = '<svg viewBox="0 0 16 16" aria-hidden="true"><polygon fill="none" stroke="currentColor" stroke-miterlimit="10" points="8.02,11.38 4.1,14.36 5.61,9.51 1.75,6.55 6.44,6.55 8.01,1.86 9.57,6.55 14.26,6.55 10.41,9.52 11.92,14.36"></polygon></svg>';
+	const i18n = goodsleepElementor.i18n || {};
+
+	function translate( key, fallback ) {
+		return i18n[ key ] || fallback;
+	}
 
 	function formatWhatsAppUrl( template, name, shareUrl ) {
 		const message = ( template || 'Nada le quita el sueno a %s. Escucha esta historia: %s' )
@@ -29,7 +34,7 @@
 		const voteAverage = Number( story.voteAverage || 0 );
 		const hasRating = voteCount > 0 || voteAverage > 0;
 
-		return hasRating ? `${ voteAverage.toFixed( 1 ) }/5` : 'Sin votos';
+		return hasRating ? `${ voteAverage.toFixed( 1 ) }/5` : translate( 'noVotes', 'Sin votos' );
 	}
 
 	function buildRatingMarkup( story ) {
@@ -38,12 +43,18 @@
 		const hasRating = voteCount > 0 || ratingValue > 0;
 		const moonCount = hasRating ? Math.min( 5, Math.max( 0, Math.round( ratingValue ) ) ) : 0;
 		const isReadonly = !! story.userHasVoted;
-		const tooltipBase = isReadonly ? 'Ya votaste hoy.' : 'Haz clic para votar una vez hoy.';
-		let markup = `<div class="goodsleep-story-card__rating${ isReadonly ? ' is-readonly' : '' }" data-rating-group data-readonly="${ isReadonly ? 'true' : 'false' }" aria-label="Promedio ${ ratingValue.toFixed( 1 ) } de 5 basado en ${ Number( story.voteCount || 0 ) } votos">`;
+		const tooltipBase = isReadonly ? translate( 'voteReadonly', 'Ya votaste hoy.' ) : translate( 'votePrompt', 'Haz clic para votar una vez hoy.' );
+		const ratingAriaLabel = ( translate( 'ratingAriaLabel', 'Promedio %1$s de 5 basado en %2$s votos' ) )
+			.replace( '%1$s', ratingValue.toFixed( 1 ) )
+			.replace( '%2$s', String( voteCount ) );
+		let markup = `<div class="goodsleep-story-card__rating${ isReadonly ? ' is-readonly' : '' }" data-rating-group data-readonly="${ isReadonly ? 'true' : 'false' }" aria-label="${ escapeHtml( ratingAriaLabel ) }">`;
 
 		for ( let index = 1; index <= 5; index += 1 ) {
 			const isActive = index <= moonCount;
-			const tooltip = isReadonly ? tooltipBase : `Votar con ${ index } ${ 1 === index ? 'luna' : 'lunas' }.`;
+			const tooltip = isReadonly
+				? tooltipBase
+				: ( 1 === index ? translate( 'voteWithSingular', 'Votar con %d luna.' ) : translate( 'voteWithPlural', 'Votar con %d lunas.' ) )
+					.replace( '%d', index );
 			markup += `
 				<button
 					type="button"
@@ -70,7 +81,7 @@
 		const publishedLabel = escapeHtml( story.publishedLabel || '' );
 		const audioMarkup = story.audioUrl ? `<audio controls preload="metadata" src="${ escapeHtml( story.audioUrl ) }"></audio>` : '';
 		const shareUrl = formatWhatsAppUrl( goodsleepElementor.whatsappTemplate, story.title, story.shareUrl || '' );
-		const favoriteLabel = story.favorite ? 'Quitar de favoritos' : 'Agregar a favoritos';
+		const favoriteLabel = story.favorite ? translate( 'favoriteRemove', 'Quitar de favoritos' ) : translate( 'favoriteAdd', 'Agregar a favoritos' );
 		const ratingSummary = formatRatingSummary( story );
 
 		return `
@@ -92,28 +103,28 @@
 							aria-pressed="${ story.favorite ? 'true' : 'false' }"
 						>
 							<span class="goodsleep-story-card__action-icon">${ iconFavorite }</span>
-							<span class="goodsleep-story-card__action-label">Favorito</span>
+							<span class="goodsleep-story-card__action-label">${ escapeHtml( translate( 'favorite', 'Favorito' ) ) }</span>
 						</button>
 						<a
 							href="${ escapeHtml( story.downloadUrl || '#' ) }"
 							class="goodsleep-story-card__action-button"
 							download
-							data-tooltip="Descargar audio"
-							aria-label="Descargar audio"
+							data-tooltip="${ escapeHtml( translate( 'downloadAudio', 'Descargar audio' ) ) }"
+							aria-label="${ escapeHtml( translate( 'downloadAudio', 'Descargar audio' ) ) }"
 						>
 							<span class="goodsleep-story-card__action-icon">${ iconDownload }</span>
-							<span class="goodsleep-story-card__action-label">Descargar</span>
+							<span class="goodsleep-story-card__action-label">${ escapeHtml( translate( 'download', 'Descargar' ) ) }</span>
 						</a>
 						<a
 							href="${ escapeHtml( shareUrl ) }"
 							class="goodsleep-story-card__action-button"
 							target="_blank"
 							rel="noopener noreferrer"
-							data-tooltip="Compartir historia"
-							aria-label="Compartir historia"
+							data-tooltip="${ escapeHtml( translate( 'shareStory', 'Compartir historia' ) ) }"
+							aria-label="${ escapeHtml( translate( 'shareStory', 'Compartir historia' ) ) }"
 						>
 							<span class="goodsleep-story-card__action-icon">${ iconShare }</span>
-							<span class="goodsleep-story-card__action-label">Compartir</span>
+							<span class="goodsleep-story-card__action-label">${ escapeHtml( translate( 'share', 'Compartir' ) ) }</span>
 						</a>
 					</div>
 					<div class="goodsleep-story-card__rating-wrap">
@@ -219,7 +230,7 @@
 		} );
 
 		if ( ! response.ok ) {
-			throw new Error( payload.message || 'Error en la solicitud.' );
+			throw new Error( payload.message || translate( 'requestError', 'Error en la solicitud.' ) );
 		}
 
 		return payload;
@@ -416,7 +427,7 @@
 			} catch ( error ) {
 				loadingSurface.hidden = true;
 				formSurface.hidden = false;
-				feedback.textContent = sanitizeFeedbackMessage( error.message ) || 'Ocurrio un error al generar el audio.';
+				feedback.textContent = sanitizeFeedbackMessage( error.message ) || translate( 'generatorAudioError', 'Ocurrió un error al generar el audio.' );
 				syncSurfaceMinHeight();
 			}
 		} );
@@ -455,7 +466,7 @@
 				maxPages = payload.maxPages || 1;
 
 				if ( ! payload.items.length && 1 === page ) {
-					list.innerHTML = `<p>${ container.dataset.emptyState || 'Todavia no hay historias.' }</p>`;
+					list.innerHTML = `<p>${ container.dataset.emptyState || translate( 'emptyStories', 'Todavía no hay historias.' ) }</p>`;
 				} else {
 					list.insertAdjacentHTML( 'beforeend', payload.items.map( renderStoryCard ).join( '' ) );
 				}
@@ -519,8 +530,8 @@
 					const payload = await requestJson( `stories/${ storyId }/favorite`, { method: 'POST', body: '{}' } );
 					button.classList.toggle( 'is-active', !! payload.favorite );
 					button.setAttribute( 'aria-pressed', payload.favorite ? 'true' : 'false' );
-					button.setAttribute( 'aria-label', payload.favorite ? 'Quitar de favoritos' : 'Agregar a favoritos' );
-					button.dataset.tooltip = payload.favorite ? 'Quitar de favoritos' : 'Agregar a favoritos';
+					button.setAttribute( 'aria-label', payload.favorite ? translate( 'favoriteRemove', 'Quitar de favoritos' ) : translate( 'favoriteAdd', 'Agregar a favoritos' ) );
+					button.dataset.tooltip = payload.favorite ? translate( 'favoriteRemove', 'Quitar de favoritos' ) : translate( 'favoriteAdd', 'Agregar a favoritos' );
 				}
 
 				if ( 'vote' === button.dataset.action ) {

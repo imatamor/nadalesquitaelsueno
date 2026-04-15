@@ -111,6 +111,24 @@ class Goodsleep_Elementor_Plugin {
 				'termsText'        => goodsleep_get_setting( 'terms_text', 'Acepto terminos y condiciones' ),
 				'termsUrl'         => esc_url_raw( goodsleep_get_setting( 'terms_url', '' ) ),
 				'whatsappTemplate' => goodsleep_get_setting( 'whatsapp_share_text', '' ),
+				'i18n'             => array(
+					'noVotes'             => __( 'Sin votos', 'goodsleep-elementor' ),
+					'favorite'            => __( 'Favorito', 'goodsleep-elementor' ),
+					'download'            => __( 'Descargar', 'goodsleep-elementor' ),
+					'share'               => __( 'Compartir', 'goodsleep-elementor' ),
+					'favoriteAdd'         => __( 'Agregar a favoritos', 'goodsleep-elementor' ),
+					'favoriteRemove'      => __( 'Quitar de favoritos', 'goodsleep-elementor' ),
+					'downloadAudio'       => __( 'Descargar audio', 'goodsleep-elementor' ),
+					'shareStory'          => __( 'Compartir historia', 'goodsleep-elementor' ),
+					'voteReadonly'        => __( 'Ya votaste hoy.', 'goodsleep-elementor' ),
+					'votePrompt'          => __( 'Haz clic para votar una vez hoy.', 'goodsleep-elementor' ),
+					'voteWithSingular'    => __( 'Votar con %d luna.', 'goodsleep-elementor' ),
+					'voteWithPlural'      => __( 'Votar con %d lunas.', 'goodsleep-elementor' ),
+					'ratingAriaLabel'     => __( 'Promedio %1$s de 5 basado en %2$s votos', 'goodsleep-elementor' ),
+					'requestError'        => __( 'Error en la solicitud.', 'goodsleep-elementor' ),
+					'generatorAudioError' => __( 'Ocurrió un error al generar el audio.', 'goodsleep-elementor' ),
+					'emptyStories'        => __( 'Todavía no hay historias.', 'goodsleep-elementor' ),
+				),
 			)
 		);
 	}
