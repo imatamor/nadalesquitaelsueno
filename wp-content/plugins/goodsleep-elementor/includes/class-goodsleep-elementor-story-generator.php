@@ -1,6 +1,11 @@
 <?php
 /**
- * Servicio reutilizable para generar historias audio-only.
+ * Nombre: Goodsleep_Elementor_Story_Generator
+ * Descripción: Orquesta el flujo productivo audio-only para crear historias,
+ * generar audio con Speechify, mezclar track, guardar adjuntos y registrar metadatos.
+ * Uso: Instanciarla en el bootstrap del plugin y reutilizar generate_story() desde
+ * el formulario público, REST o herramientas internas.
+ * Dependencias: Speechify, mezclador de audio, Mailjet y helpers del plugin.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -43,7 +48,11 @@ class Goodsleep_Elementor_Story_Generator {
 	}
 
 	/**
-	 * Genera una historia usando el flujo productivo audio-only.
+	 * Nombre: generate_story
+	 * Descripción: Valida la entrada, aplica defaults de voz y track, genera el audio,
+	 * crea el CPT goodsleep_story y resuelve el envío o supresión de correo.
+	 * Uso: generate_story( $params, $options ) desde cualquier punto que necesite
+	 * reutilizar el flujo productivo sin duplicar lógica.
 	 *
 	 * @param array<string,mixed> $params Datos de entrada.
 	 * @param array<string,mixed> $options Opciones de ejecucion.
@@ -280,7 +289,10 @@ class Goodsleep_Elementor_Story_Generator {
 	}
 
 	/**
-	 * Genera audio con Speechify y reintenta en texto plano si falla el SSML.
+	 * Nombre: generate_speechify_audio_with_fallback
+	 * Descripción: Intenta generar el audio con SSML y, si Speechify rechaza ese
+	 * formato, reintenta con texto plano para no perder la historia por un problema de marcado.
+	 * Uso: Helper interno dentro de generate_story().
 	 *
 	 * @param string $combined_text Texto completo a locutar.
 	 * @param string $speech_input SSML preparado.
@@ -318,7 +330,10 @@ class Goodsleep_Elementor_Story_Generator {
 	}
 
 	/**
-	 * Construye un titulo administrativo distintivo.
+	 * Nombre: build_story_post_title
+	 * Descripción: Arma el título administrativo del post con nombre, usuario del correo
+	 * y fecha de generación para facilitar búsqueda y trazabilidad en el admin.
+	 * Uso: Helper interno al preparar el array de wp_insert_post().
 	 *
 	 * @param string $name Nombre de la historia.
 	 * @param string $email Correo relacionado.
@@ -353,7 +368,10 @@ class Goodsleep_Elementor_Story_Generator {
 	}
 
 	/**
-	 * Guarda el audio como adjunto.
+	 * Nombre: store_audio_attachment
+	 * Descripción: Persiste el audio final como adjunto de WordPress usando archivo
+	 * local, URL remota o base64, según la fuente que devuelva la integración.
+	 * Uso: Se ejecuta después de mezclar el audio final y antes de actualizar metadatos.
 	 *
 	 * @param int $post_id ID del post.
 	 * @param string $name Nombre base.

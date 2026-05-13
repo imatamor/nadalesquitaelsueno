@@ -1,6 +1,10 @@
 <?php
 /**
- * Parser ligero para dumps SQL con sentencias INSERT INTO.
+ * Nombre: Goodsleep_Elementor_SQL_Import_Parser
+ * Descripción: Interpreta dumps SQL simples basados en sentencias INSERT INTO y
+ * los transforma en tablas, columnas y filas consumibles por la herramienta interna.
+ * Uso: Instanciarlo desde el plugin y llamar parse_dump() con el contenido del archivo SQL.
+ * Notas: Está diseñado para dumps tabulares simples, no para cubrir dialectos SQL complejos.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -9,7 +13,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Goodsleep_Elementor_SQL_Import_Parser {
 	/**
-	 * Parsea un dump SQL y devuelve las tablas detectadas con sus filas.
+	 * Nombre: parse_dump
+	 * Descripción: Recorre el dump completo, separa sentencias válidas y arma una
+	 * estructura homogénea de tablas con conteo de filas y muestra inicial.
+	 * Uso: parse_dump( $sql ) al recibir el archivo subido desde admin.
 	 *
 	 * @param string $sql Contenido del archivo SQL.
 	 * @return array<string,mixed>|WP_Error
@@ -58,7 +65,10 @@ class Goodsleep_Elementor_SQL_Import_Parser {
 	}
 
 	/**
-	 * Separa sentencias SQL respetando strings.
+	 * Nombre: split_sql_statements
+	 * Descripción: Divide el SQL en sentencias individuales sin romper cadenas,
+	 * comentarios ni bloques comentados.
+	 * Uso: Helper interno previo al parseo de INSERT INTO.
 	 *
 	 * @param string $sql SQL crudo.
 	 * @return array<int,string>
@@ -146,7 +156,10 @@ class Goodsleep_Elementor_SQL_Import_Parser {
 	}
 
 	/**
-	 * Parsea una sentencia INSERT INTO.
+	 * Nombre: parse_insert_statement
+	 * Descripción: Extrae nombre de tabla, columnas y grupos VALUES desde una
+	 * sentencia INSERT INTO compatible con el importador interno.
+	 * Uso: Se ejecuta sobre cada sentencia detectada por split_sql_statements().
 	 *
 	 * @param string $statement Sentencia SQL.
 	 * @return array<string,mixed>|WP_Error|array<int,mixed>
@@ -213,7 +226,10 @@ class Goodsleep_Elementor_SQL_Import_Parser {
 	}
 
 	/**
-	 * Parsea grupos VALUES y los alinea con las columnas.
+	 * Nombre: parse_values_groups
+	 * Descripción: Separa cada grupo de VALUES respetando strings y alinea cada
+	 * valor con la columna correspondiente para construir filas asociativas.
+	 * Uso: Helper interno después de parsear la sentencia INSERT.
 	 *
 	 * @param string $values_sql SQL de VALUES.
 	 * @param array<int,string> $columns Columnas detectadas.

@@ -1,6 +1,11 @@
 <?php
 /**
- * Cliente de OpenAI para generacion de texto interno.
+ * Nombre: Goodsleep_Elementor_OpenAI_Text_Client
+ * Descripción: Encapsula la integración con OpenAI para generar texto interno,
+ * historias cortas y reescrituras acotadas al límite del formulario.
+ * Uso: Instanciarla cuando se necesite generar story_text o frases derivadas desde prompts.
+ * Dependencias: Settings del plugin, wp_remote_post y helpers de saneamiento de WordPress.
+ * Notas: Mantiene compatibilidad con modelos que no aceptan temperature explícita.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -9,7 +14,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Goodsleep_Elementor_OpenAI_Text_Client {
 	/**
-	 * Genera texto libre a partir de un prompt renderizado.
+	 * Nombre: generate_text
+	 * Descripción: Envía un prompt final a Chat Completions y devuelve únicamente
+	 * el texto utilizable, con saneamiento y manejo uniforme de errores.
+	 * Uso: generate_text( $prompt, $args ) para cualquier generación textual base.
 	 *
 	 * @param string $prompt Prompt final enviado al modelo.
 	 * @param array<string,mixed> $args Configuracion opcional.
@@ -97,7 +105,10 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 	}
 
 	/**
-	 * Genera una historia corta respetando el limite del formulario actual.
+	 * Nombre: generate_story_text
+	 * Descripción: Genera una historia breve para el flujo interno, reintentando si
+	 * el modelo devuelve texto vacío o una historia que supera el límite permitido.
+	 * Uso: Se usa desde la herramienta de importación antes de delegar al generador productivo.
 	 *
 	 * @param string $prompt Prompt final enviado al modelo.
 	 * @param array<string,mixed> $args Configuracion opcional.
@@ -170,7 +181,10 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 	}
 
 	/**
-	 * Pide una reescritura mas corta reutilizando la historia ya generada.
+	 * Nombre: rewrite_story_to_max_length
+	 * Descripción: Solicita una segunda pasada de OpenAI para condensar una historia
+	 * demasiado larga sin cambiar la idea principal.
+	 * Uso: Se invoca automáticamente cuando generate_story_text detecta un exceso de longitud.
 	 *
 	 * @param string              $story_text Historia base demasiado larga.
 	 * @param int                 $max_length Limite maximo.
@@ -289,7 +303,10 @@ class Goodsleep_Elementor_OpenAI_Text_Client {
 	}
 
 	/**
-	 * Determina si el modelo permite enviar temperature explicitamente.
+	 * Nombre: model_supports_temperature
+	 * Descripción: Decide si conviene incluir temperature en el payload según el modelo
+	 * configurado, evitando requests incompatibles con ciertas variantes de GPT-5.
+	 * Uso: Se llama antes de construir el payload final hacia OpenAI.
 	 *
 	 * @param string $model Modelo configurado.
 	 * @param float  $temperature Temperatura solicitada.
