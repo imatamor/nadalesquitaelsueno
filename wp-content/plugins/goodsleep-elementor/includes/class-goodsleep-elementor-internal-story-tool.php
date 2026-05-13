@@ -1,6 +1,16 @@
 <?php
 /**
- * Pantalla interna para importar historias desde SQL.
+ * Nombre: Goodsleep_Elementor_Internal_Story_Tool
+ * Descripción: Gestiona la pantalla interna para importar historias desde SQL,
+ * ejecutar pruebas individuales y coordinar jobs masivos por cron usando el flujo
+ * productivo de generación de historias.
+ * Uso: Instanciarla desde el bootstrap del plugin con el generador de historias,
+ * el cliente de OpenAI y el parser SQL ya configurados.
+ * Dependencias: Goodsleep_Elementor_Story_Generator,
+ * Goodsleep_Elementor_OpenAI_Text_Client, Goodsleep_Elementor_SQL_Import_Parser,
+ * transients, opciones de WordPress y WP-Cron.
+ * Notas: Los datasets grandes se guardan temporalmente en disco para no sobrecargar
+ * la base de datos ni la memoria del admin.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -130,7 +140,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 		<div class="wrap goodsleep-internal-tool">
 			<h1><?php esc_html_e( 'Generador interno de historias desde SQL', 'goodsleep-elementor' ); ?></h1>
 			<p><?php esc_html_e( 'Esta herramienta toma nombre y correo desde el SQL, genera la historia base con OpenAI y luego usa el mismo flujo audio-only actual de Goodsleep sin enviar correos.', 'goodsleep-elementor' ); ?></p>
-			<p><strong><?php esc_html_e( 'Ventana fija de fechas:', 'goodsleep-elementor' ); ?></strong> <?php esc_html_e( 'del 1 de febrero al 31 de marzo de 2026.', 'goodsleep-elementor' ); ?></p>
+			<p><strong><?php esc_html_e( 'Rango de fechas:', 'goodsleep-elementor' ); ?></strong> <?php esc_html_e( 'cada job puede asignar fechas aleatorias dentro de un mínimo y máximo configurables.', 'goodsleep-elementor' ); ?></p>
 
 			<?php $this->render_notices( $state['notices'] ); ?>
 
@@ -237,10 +247,18 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 							<input id="goodsleep-job-start-row" type="number" min="1" max="<?php echo esc_attr( ! empty( $table['row_count'] ) ? (int) $table['row_count'] : 1 ); ?>" name="job_start_row" value="1">
 						</p>
 						<p>
+							<label for="goodsleep-job-date-min"><?php esc_html_e( 'Fecha mínima de creación', 'goodsleep-elementor' ); ?></label><br>
+							<input id="goodsleep-job-date-min" type="date" name="job_date_min" value="2026-02-01" required>
+						</p>
+						<p>
+							<label for="goodsleep-job-date-max"><?php esc_html_e( 'Fecha máxima de creación', 'goodsleep-elementor' ); ?></label><br>
+							<input id="goodsleep-job-date-max" type="date" name="job_date_max" value="2026-03-31" required>
+						</p>
+						<p>
 							<label for="goodsleep-job-prompt-override"><?php esc_html_e( 'Override de prompt para este job', 'goodsleep-elementor' ); ?></label><br>
 							<textarea id="goodsleep-job-prompt-override" class="large-text code" rows="6" name="prompt_override" placeholder="<?php esc_attr_e( 'Si lo dejas vacio, se usa el prompt global de OpenAI texto.', 'goodsleep-elementor' ); ?>"></textarea>
 						</p>
-						<p class="description"><?php esc_html_e( 'El job se procesa por cron con lock para evitar solapes. Las filas sin nombre valido se omiten automaticamente y se sigue con la siguiente.', 'goodsleep-elementor' ); ?></p>
+						<p class="description"><?php esc_html_e( 'El job se procesa por cron con lock para evitar solapes. Cada historia exitosa recibe una fecha aleatoria dentro del rango configurado. Las filas sin nombre válido se omiten automáticamente y se sigue con la siguiente.', 'goodsleep-elementor' ); ?></p>
 						<?php submit_button( __( 'Crear job', 'goodsleep-elementor' ), 'primary', 'submit', false ); ?>
 					</form>
 					<p><strong><?php esc_html_e( 'Comando recomendado para cron:', 'goodsleep-elementor' ); ?></strong></p>
@@ -442,6 +460,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 		$per_run         = ! empty( $_POST['job_per_run'] ) ? max( 1, absint( $_POST['job_per_run'] ) ) : 1;
 		$start_row       = ! empty( $_POST['job_start_row'] ) ? max( 1, absint( $_POST['job_start_row'] ) ) : 1;
 		$prompt_override = ! empty( $_POST['prompt_override'] ) ? sanitize_textarea_field( wp_unslash( $_POST['prompt_override'] ) ) : '';
+		$date_range      = $this->extract_story_date_range_from_post();
 
 		if ( empty( $table ) ) {
 			return $this->build_error_state( __( 'No se encontro la tabla seleccionada para crear el job.', 'goodsleep-elementor' ), $dataset_token, $mapping );
@@ -449,6 +468,10 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 
 		if ( $start_row > (int) $table['row_count'] ) {
 			return $this->build_error_state( __( 'La fila inicial del job supera la cantidad de filas disponibles.', 'goodsleep-elementor' ), $dataset_token, $mapping );
+		}
+
+		if ( is_wp_error( $date_range ) ) {
+			return $this->build_error_state( $date_range->get_error_message(), $dataset_token, $mapping );
 		}
 
 		$this->persist_mapping( $mapping );
@@ -461,6 +484,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			'table_name'      => $table_name,
 			'mapping'         => $mapping,
 			'prompt_override' => $prompt_override,
+			'date_range'      => $date_range,
 			'target_total'    => $total,
 			'per_run'         => $per_run,
 			'row_cursor'      => $start_row - 1,
@@ -490,10 +514,12 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 				array(
 					'type' => 'success',
 					'text' => sprintf(
-						__( 'Job %1$s creado. Objetivo: %2$d historias. Historias por corrida: %3$d.', 'goodsleep-elementor' ),
+						__( 'Job %1$s creado. Objetivo: %2$d historias. Historias por corrida: %3$d. Fechas: %4$s a %5$s.', 'goodsleep-elementor' ),
 						$job_id,
 						$total,
-						$per_run
+						$per_run,
+						$date_range['min'],
+						$date_range['max']
 					),
 				),
 			),
@@ -504,7 +530,10 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	}
 
 	/**
-	 * Procesa un job activo desde cron.
+	 * Nombre: process_queue
+	 * Descripción: Toma el siguiente job activo, lo procesa bajo un lock temporal
+	 * y agenda otra corrida si aún quedan jobs pendientes.
+	 * Uso: Se dispara desde el hook goodsleep_internal_story_tool_process_queue.
 	 *
 	 * @return void
 	 */
@@ -591,6 +620,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 					'row_index'       => $row_cursor + 1,
 					'prompt_override' => (string) $job['prompt_override'],
 					'job_id'          => (string) $job['id'],
+					'date_range'      => ! empty( $job['date_range'] ) && is_array( $job['date_range'] ) ? $job['date_range'] : array(),
 				)
 			);
 
@@ -644,7 +674,11 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	}
 
 	/**
-	 * Genera una historia a partir de una fila del SQL.
+	 * Nombre: generate_story_from_row
+	 * Descripción: Convierte una fila del SQL en datos válidos para el flujo actual,
+	 * genera el story_text con OpenAI y delega al generador productivo la creación
+	 * del CPT, el audio y los metadatos.
+	 * Uso: Se reutiliza tanto en la prueba individual del admin como en la cola masiva.
 	 *
 	 * @param array<string,string> $row Fila origen.
 	 * @param array<string,string> $mapping Mapeo configurado.
@@ -740,7 +774,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			);
 		}
 
-		$post_date    = $this->generate_random_story_date_2026();
+		$post_date    = $this->generate_random_story_date( ! empty( $context['date_range'] ) && is_array( $context['date_range'] ) ? $context['date_range'] : array() );
 		$story_result = $this->story_generator->generate_story(
 			array(
 				'name'            => $mapped_data['name'],
@@ -861,16 +895,94 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	}
 
 	/**
-	 * Genera una fecha aleatoria dentro de la ventana declarada.
+	 * Nombre: extract_story_date_range_from_post
+	 * Descripción: Lee y valida el rango de fechas configurado para un job interno.
+	 * Uso: Se ejecuta al crear jobs de cron desde la pantalla interna.
 	 *
+	 * @return array{min:string,max:string}|WP_Error
+	 */
+	protected function extract_story_date_range_from_post() {
+		$min = ! empty( $_POST['job_date_min'] ) ? sanitize_text_field( wp_unslash( $_POST['job_date_min'] ) ) : '';
+		$max = ! empty( $_POST['job_date_max'] ) ? sanitize_text_field( wp_unslash( $_POST['job_date_max'] ) ) : '';
+
+		return $this->normalize_story_date_range( $min, $max );
+	}
+
+	/**
+	 * Normaliza un rango de fechas en formato Y-m-d.
+	 *
+	 * @param string $min Fecha mínima.
+	 * @param string $max Fecha máxima.
+	 * @return array{min:string,max:string}|WP_Error
+	 */
+	protected function normalize_story_date_range( $min, $max ) {
+		$defaults = $this->get_default_story_date_range();
+		$min      = '' !== $min ? $min : $defaults['min'];
+		$max      = '' !== $max ? $max : $defaults['max'];
+
+		if ( ! $this->is_valid_story_date_input( $min ) || ! $this->is_valid_story_date_input( $max ) ) {
+			return new WP_Error( 'goodsleep_invalid_date_range', __( 'Configura fechas de creación válidas en formato año-mes-día.', 'goodsleep-elementor' ) );
+		}
+
+		if ( strtotime( $min . ' 00:00:00' ) > strtotime( $max . ' 23:59:59' ) ) {
+			return new WP_Error( 'goodsleep_invalid_date_range_order', __( 'La fecha mínima de creación no puede ser posterior a la fecha máxima.', 'goodsleep-elementor' ) );
+		}
+
+		return array(
+			'min' => $min,
+			'max' => $max,
+		);
+	}
+
+	/**
+	 * Devuelve el rango histórico usado por defecto.
+	 *
+	 * @return array{min:string,max:string}
+	 */
+	protected function get_default_story_date_range() {
+		return array(
+			'min' => '2026-02-01',
+			'max' => '2026-03-31',
+		);
+	}
+
+	/**
+	 * Verifica que un valor pueda usarse como fecha del formulario.
+	 *
+	 * @param string $date Fecha en formato Y-m-d.
+	 * @return bool
+	 */
+	protected function is_valid_story_date_input( $date ) {
+		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) $date ) ) {
+			return false;
+		}
+
+		list( $year, $month, $day ) = array_map( 'absint', explode( '-', (string) $date ) );
+
+		return checkdate( $month, $day, $year );
+	}
+
+	/**
+	 * Genera una fecha aleatoria dentro del rango declarado para el job.
+	 *
+	 * @param array<string,string> $date_range Rango con llaves min y max.
 	 * @return string
 	 */
-	protected function generate_random_story_date_2026() {
-		$start = strtotime( '2026-02-01 00:00:00' );
-		$end   = strtotime( '2026-03-31 23:59:59' );
-		$stamp = wp_rand( $start, $end );
+	protected function generate_random_story_date( $date_range = array() ) {
+		$defaults   = $this->get_default_story_date_range();
+		$date_range = wp_parse_args( is_array( $date_range ) ? $date_range : array(), $defaults );
+		$normalized = $this->normalize_story_date_range( (string) $date_range['min'], (string) $date_range['max'] );
 
-		return gmdate( 'Y-m-d H:i:s', $stamp - (int) ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS ) );
+		if ( is_wp_error( $normalized ) ) {
+			$normalized = $defaults;
+		}
+
+		$timezone = function_exists( 'wp_timezone' ) ? wp_timezone() : new DateTimeZone( 'UTC' );
+		$start    = ( new DateTimeImmutable( $normalized['min'] . ' 00:00:00', $timezone ) )->getTimestamp();
+		$end      = ( new DateTimeImmutable( $normalized['max'] . ' 23:59:59', $timezone ) )->getTimestamp();
+		$stamp    = wp_rand( $start, $end );
+
+		return function_exists( 'wp_date' ) ? wp_date( 'Y-m-d H:i:s', $stamp, $timezone ) : date_i18n( 'Y-m-d H:i:s', $stamp );
 	}
 
 	/**
@@ -906,7 +1018,11 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	}
 
 	/**
-	 * Carga el dataset almacenado temporalmente.
+	 * Nombre: load_dataset
+	 * Descripción: Recupera el dataset temporal desde transient y, si se solicita,
+	 * vuelve a hidratar las filas completas leyendo el archivo JSON guardado en uploads.
+	 * Uso: load_dataset( $token ) para resumen de admin y load_dataset( $token, true )
+	 * para trabajar con filas completas en pruebas o jobs.
 	 *
 	 * @param string $dataset_token Token transient.
 	 * @param bool   $include_rows  Indica si debe cargar las filas completas.
@@ -940,7 +1056,10 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 	}
 
 	/**
-	 * Crea una version resumida del dataset para no cargar filas completas en admin.
+	 * Nombre: build_summary_dataset
+	 * Descripción: Reduce el dataset completo a columnas, conteos y muestras pequeñas
+	 * para que la pantalla de administración pueda renderizarlo sin cargar todas las filas.
+	 * Uso: Se ejecuta antes de persistir el metadata liviano del dataset en transient.
 	 *
 	 * @param array<string,mixed> $dataset Dataset completo.
 	 * @return array<string,mixed>
@@ -1227,6 +1346,9 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			echo '<p><strong>' . esc_html__( 'ID del job:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( (string) $results['job']['id'] ) . '</p>';
 			echo '<p><strong>' . esc_html__( 'Objetivo:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( (string) $results['job']['target_total'] ) . '</p>';
 			echo '<p><strong>' . esc_html__( 'Historias por corrida:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( (string) $results['job']['per_run'] ) . '</p>';
+			if ( ! empty( $results['job']['date_range'] ) && is_array( $results['job']['date_range'] ) ) {
+				echo '<p><strong>' . esc_html__( 'Rango de fechas:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( (string) $results['job']['date_range']['min'] ) . ' - ' . esc_html( (string) $results['job']['date_range']['max'] ) . '</p>';
+			}
 			echo '<p><strong>' . esc_html__( 'Estado:', 'goodsleep-elementor' ) . '</strong> ' . esc_html( (string) $results['job']['status'] ) . '</p>';
 			echo '</div>';
 		}
@@ -1250,6 +1372,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 		echo '<th>' . esc_html__( 'Job', 'goodsleep-elementor' ) . '</th>';
 		echo '<th>' . esc_html__( 'Estado', 'goodsleep-elementor' ) . '</th>';
 		echo '<th>' . esc_html__( 'Objetivo', 'goodsleep-elementor' ) . '</th>';
+		echo '<th>' . esc_html__( 'Rango de fechas', 'goodsleep-elementor' ) . '</th>';
 		echo '<th>' . esc_html__( 'Exitosas', 'goodsleep-elementor' ) . '</th>';
 		echo '<th>' . esc_html__( 'Errores', 'goodsleep-elementor' ) . '</th>';
 		echo '<th>' . esc_html__( 'Omitidas', 'goodsleep-elementor' ) . '</th>';
@@ -1262,6 +1385,8 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			echo '<td>' . esc_html( (string) $job['id'] ) . '<br><small>' . esc_html( (string) $job['updated_at'] ) . '</small></td>';
 			echo '<td>' . esc_html( (string) $job['status'] ) . '</td>';
 			echo '<td>' . esc_html( (string) $job['target_total'] ) . ' / ' . esc_html( (string) $job['per_run'] ) . '</td>';
+			$date_range = ! empty( $job['date_range'] ) && is_array( $job['date_range'] ) ? wp_parse_args( $job['date_range'], $this->get_default_story_date_range() ) : $this->get_default_story_date_range();
+			echo '<td>' . esc_html( (string) $date_range['min'] ) . '<br>' . esc_html( (string) $date_range['max'] ) . '</td>';
 			echo '<td>' . esc_html( (string) $job['success_count'] ) . '</td>';
 			echo '<td>' . esc_html( (string) $job['error_count'] ) . '</td>';
 			echo '<td>' . esc_html( (string) $job['skipped_count'] ) . '</td>';
@@ -1270,7 +1395,7 @@ class Goodsleep_Elementor_Internal_Story_Tool {
 			echo '</tr>';
 
 			if ( ! empty( $job['last_results'] ) || ! empty( $job['created_story_ids'] ) || ! empty( $job['recent_errors'] ) ) {
-				echo '<tr><td colspan="8">';
+				echo '<tr><td colspan="9">';
 				if ( ! empty( $job['last_results'] ) ) {
 					echo '<strong>' . esc_html__( 'Ultimos resultados:', 'goodsleep-elementor' ) . '</strong>';
 					foreach ( (array) $job['last_results'] as $item ) {
